@@ -983,7 +983,7 @@ function render() {
   const app = document.getElementById('app');
   const scrolls = lastRoute === r ? [...app.querySelectorAll('.col')].map((c) => c.scrollTop) : [];
   document.getElementById('topnav').innerHTML = nav(v.tab);
-  app.className = `app ${v.layout || ''}`;
+  app.className = `app ${v.layout || 'layout-3'}`;
   const cols = [];
   if (v.left) cols.push(`<aside class="col" aria-label="Your shelf">${v.left}</aside>`);
   cols.push(`<main class="col${v.layout === 'layout-solo' ? '' : ''}" id="main">${v.main}</main>`);
@@ -1053,6 +1053,7 @@ const actions = {
   'sample-checkout': () => go('sample/checkout'),
   'sample-place': () => {
     const cost = { points: 1500, mixed: 750, cash: 0 }[state.sample.pay];
+    if (cost > state.points) { toast(`You need ${cost - state.points} more pts for this option`); return; }
     set({ points: state.points - cost, sample: { ...state.sample, status: 'placed' }, rewardDismissed: true });
     go('sample/placed');
   },
