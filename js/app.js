@@ -398,29 +398,44 @@ function setupPage(n) {
 }
 
 function setupDone() {
+  const pool = [['Same climate + lifestyle', '12.4k', 100], ['+ similar skin', '4.1k', 60], ['+ same goals + budget', '2.3k', 40], ['+ overlapping shelf', '1,486', 25]];
+  const unlocked = [['Picked for you', 'Your 4-step routine, one product per step'], ['Smarter home picks', 'Ranked by gaps, refills and upgrades'], ['Refill reminders', 'We nudge you before you run out'], ['Weekly check-ins', 'Track your skin, rate your products']];
   const main = `
-    <section class="hero hero-image" style="min-height:288px;justify-content:center;padding:32px">
-      <div class="row">${svg('hydrate', 30)}${svg('treat', 30)}${svg('protect', 30)}</div>
-      <span class="mono forest">4 of 4 ✓</span>
-      <h1 class="h1" style="white-space:normal;max-width:680px;color:var(--forest)">Congratulations, you’ve completed your skin profile</h1>
-      <p class="small" style="color:var(--forest)">Every pick, ranking and review you see is now matched on all four steps: lifestyle, skin, goals and shelf.</p>
-    </section>
-    <div class="grid-2">
-      <section class="card dark stack">
-        <span class="mono lime">Your match pool: unlocked</span>
-        <span style="font-size:64px;line-height:1">1,486</span>
-        <p class="xs" style="color:#d9e6d6">people like you who’ve reviewed or tracked products. Their results now rank everything you see.</p>
-        ${[['Same climate + lifestyle', '12.4k', 100], ['+ similar skin', '4.1k', 60], ['+ same goals + budget', '2.3k', 40], ['+ overlapping shelf', '1,486', 25]].map(([a, b, w]) => `<div class="stack" style="gap:4px"><div class="row between xs"><span>${a}</span><span class="mono lime">${b}</span></div><div class="meter" style="height:5px"><span style="width:${w}%"></span></div></div>`).join('')}
+    <div class="done-page">
+      <section class="done-banner">
+        <div class="stack" style="gap:10px;max-width:720px">
+          <div class="row" style="gap:6px">${svg('hydrate', 36)}${svg('treat', 38)}${svg('protect', 34)}</div>
+          <span class="mono" style="color:var(--ink)">4 of 4 ✓</span>
+          <h1 class="h1" style="color:var(--forest)">Congratulations, you’ve completed your skin profile</h1>
+          <p class="small" style="color:var(--ink)">Every pick, ranking and review you see is now matched on all four steps: lifestyle, skin, goals and shelf.</p>
+        </div>
+        <div class="done-strength">
+          <span class="mono lime">Profile strength</span>
+          <span class="big">100%</span>
+          <span class="mono lime">+200 pts earned</span>
+        </div>
       </section>
-      <section class="card stack">
-        <h3 class="h4">Unlocked for you</h3>
-        ${[['Picked for you', 'Your 4-step routine, one product per step'], ['Smarter home picks', 'Ranked by gaps, refills and upgrades'], ['Refill reminders', 'We nudge you before you run out'], ['Weekly check-ins', 'Track your skin, rate your products']].map(([a, b]) => `<div class="row" style="align-items:flex-start"><span class="ring sm" style="background:var(--forest);border-color:var(--forest);color:#fff">✓</span><div><div class="small" style="font-weight:500">${a}</div><div class="xs muted">${b}</div></div></div>`).join('')}
-        <span class="grow"></span>
-        <a class="btn dark block" href="#/for-you">Explore products →</a>
-      </section>
-    </div>
-    <p class="xs faint">You can edit any step later from your profile.</p>`;
-  return { layout: 'layout-solo', main: `<div class="stack" style="max-width:1200px;width:100%;margin:0 auto;gap:20px">${main}</div>` };
+      <div class="done-cards">
+        <section class="card dark stack" style="gap:12px;padding:22px">
+          <span class="mono lime">Your match pool: unlocked</span>
+          <span style="font-size:64px;line-height:1.1;letter-spacing:-.02em">1,486</span>
+          <p class="xs" style="color:#fff;max-width:340px">people like you who’ve reviewed or tracked products. Their results now rank everything you see.</p>
+          ${pool.map(([a, b, w]) => `
+            <div class="row" style="align-items:flex-end;gap:24px">
+              <div class="stack" style="gap:6px;width:56%"><span class="xs">${a}</span><div class="meter" style="height:5px;background:rgb(255 255 255 / 12%)"><span style="width:${w}%"></span></div></div>
+              <span class="grow"></span><span class="mono lime">${b}</span>
+            </div>`).join('')}
+        </section>
+        <section class="card stack" style="gap:12px;padding:22px">
+          <h3 style="font-size:15px;font-weight:500">Unlocked for you</h3>
+          ${unlocked.map(([a, b]) => `<div class="row" style="align-items:center;gap:12px"><span class="check">✓</span><div><div class="small">${a}</div><div class="xs faint">${b}</div></div></div>`).join('')}
+          <span class="grow"></span>
+          <a class="btn dark block" href="#/for-you" style="justify-content:flex-start">Explore products →</a>
+        </section>
+      </div>
+      <p class="xs faint">You can edit any step later from your profile.</p>
+    </div>`;
+  return { layout: 'layout-solo', main };
 }
 
 /* ================= creators ================= */
