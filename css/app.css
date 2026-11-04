@@ -193,7 +193,7 @@ h1, h2, h3, p { margin: 0; }
   position: relative; overflow: hidden; border-radius: 20px; padding: 24px 22px; color: #fff; background: var(--forest);
   display: flex; flex-direction: column; gap: 14px;
 }
-.hero.photo { background: #e7f0d8 url('../assets/img/hero.jpg') center / cover no-repeat; color: var(--ink); }
+.hero.hero-image { background: #e7f0d8 url('../assets/img/hero.jpg') center / cover no-repeat; color: var(--ink); }
 .hero { container-type: inline-size; }
 .hero .h1 { white-space: nowrap; letter-spacing: -.03em; font-size: min(40px, 6cqi); }
 .box-illo { position: relative; width: 220px; height: 140px; flex: none; }

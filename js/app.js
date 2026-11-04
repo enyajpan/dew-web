@@ -399,7 +399,7 @@ function setupPage(n) {
 
 function setupDone() {
   const main = `
-    <section class="hero photo" style="min-height:288px;justify-content:center;padding:32px">
+    <section class="hero hero-image" style="min-height:288px;justify-content:center;padding:32px">
       <div class="row">${svg('hydrate', 30)}${svg('treat', 30)}${svg('protect', 30)}</div>
       <span class="mono forest">4 of 4 ✓</span>
       <h1 class="h1" style="white-space:normal;max-width:680px;color:var(--forest)">Congratulations, you’ve completed your skin profile</h1>
@@ -557,7 +557,7 @@ const routineTotal = () => ROUTINE.reduce((a, r) => a + (r.owned && r.options[st
 function pickedPage() {
   const sample = state.pickedMode === 'sample';
   const hero = `
-    <section class="hero photo" style="padding:32px;min-height:240px;justify-content:center">
+    <section class="hero hero-image" style="padding:32px;min-height:240px;justify-content:center">
       <h1 class="h1" style="color:var(--forest);white-space:normal">${sample ? 'Your routine, sampled for you.' : 'Your routine, picked just for you.'}</h1>
       <p class="small" style="color:var(--forest);max-width:520px">${sample ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'One product per step. You already have a great sunscreen, so we kept it and only filled the gaps.'}</p>
       <div class="row wrap" style="gap:6px">${['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29', 'Dairy-free'].map((t) => `<span class="tag" style="background:#ffffffb0">${t}</span>`).join('')}</div>
