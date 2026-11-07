@@ -3,7 +3,7 @@ import {
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
 } from './data.js?v=6';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
-import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState } from './auth.js?v=1';
+import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=2';
 
 /* ================= state ================= */
 
@@ -127,6 +127,13 @@ function toast(msg) {
   toastTimer = setTimeout(() => { el.innerHTML = ''; }, 2600);
 }
 
+function addToShelf(id) {
+  if (signedOut()) { state = { ...state, authNotice: 'Create a free account to build your shelf.' }; go('signup'); return; }
+  if (shelfIds().includes(id)) { toast(`${P(id).name} is already on your shelf`); return; }
+  set({ shelfAdds: [...(state.shelfAdds ?? []), id] });
+  toast(`Added ${P(id).name} to your shelf`);
+}
+
 function addToCart(id, kind = 'pick', note = '') {
   if (signedOut()) { state = { ...state, authNotice: 'Create a free account to save products to your cart and shelf.' }; go('signup'); return; }
   const cart = [...state.cart];
@@ -155,10 +162,11 @@ function nav(active) {
       <input name="q" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off">
     </form>
     <span class="nav-spacer"></span>
+    <a class="tab ${active === 'reviews' ? 'active' : ''}" href="#/reviews">Public reviews</a>
     <a class="tab" href="#/login">Log in</a>
     <a class="btn primary" href="#/signup">Create account</a>`;
   }
-  const tabs = [['for-you', 'For you'], ['creators', 'Creators'], ['community', 'Community'], ['picked', 'Picked for you']];
+  const tabs = [['for-you', 'For you'], ['creators', 'Creators'], ['community', 'Community'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
   const n = cartCount();
   return `
     <a href="#/for-you" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
@@ -207,13 +215,14 @@ function shelfRows(items, { selectable = true, open } = {}) {
 }
 
 function myShelf() {
-  const items = [...SHELF, ...(state.orders.flatMap((o) => o.items.filter((i) => !SHELF.some((s) => s.id === i.id)).map((i) => ({ id: i.id, arriving: true, score: null }))))].slice(0, 12);
-  const open = state.shelfOpen ? shelfItem(state.shelfOpen) : null;
+  const added = (state.shelfAdds ?? []).filter((id) => !SHELF.some((s) => s.id === id)).map((id) => ({ id, weeks: 0, since: 'today', use: 'Just added', added: true }));
+  const items = [...SHELF, ...added, ...(state.orders.flatMap((o) => o.items.filter((i) => !SHELF.some((s) => s.id === i.id)).map((i) => ({ id: i.id, arriving: true, score: null }))))].slice(0, 12);
+  const open = state.shelfOpen ? (shelfItem(state.shelfOpen) ?? added.find((x) => x.id === state.shelfOpen)) : null;
   const rank = open ? [...SHELF].sort((a, b) => state.ratings[b.id] - state.ratings[a.id]).findIndex((s) => s.id === open.id) + 1 : 0;
   return `
     <section class="card stack" aria-label="My shelf" style="position:relative">
       <div class="row between">
-        <div><h2 class="h2" style="font-size:28px">My Shelf</h2><div class="xs muted">${SHELF.length} products  ranked by you</div></div>
+        <div><h2 class="h2" style="font-size:28px">My Shelf</h2><div class="xs muted">${SHELF.length + added.length} products  ranked by you</div></div>
         <a class="btn" href="#/search">+ Add</a>
       </div>
       ${shelfRows(items, { open: state.shelfOpen })}
@@ -223,13 +232,13 @@ function myShelf() {
           <div class="row between"><span class="mono">${esc(P(open.id).brand)}</span><button class="link" style="color:#fff" data-act="shelf-close">Close</button></div>
           <div class="h4" style="font-size:17px;font-weight:400">${esc(P(open.id).name)}</div>
           <div class="row" style="gap:22px">
-            <div><div class="k">Using for</div><div class="v">${open.weeks} weeks</div></div>
+            <div><div class="k">Using for</div><div class="v">${open.added ? 'Just added' : `${open.weeks} weeks`}</div></div>
             <div><div class="k">Your rank</div><div class="v">#${rank} of ${SHELF.length}</div></div>
-            <div><div class="k">Score</div><div class="v">${state.ratings[open.id].toFixed(1)}</div></div>
+            <div><div class="k">Score</div><div class="v">${state.ratings[open.id] != null ? state.ratings[open.id].toFixed(1) : '–'}</div></div>
           </div>
           <div class="bar"><span style="width:${open.daysLeft ? Math.min(100, open.daysLeft * 4) : 82}%"></span></div>
           <div class="xs" style="color:#c8dcc9">Since ${open.since}  ${esc(P(open.id).step)} step  ${open.use}${open.daysLeft ? `  ~${open.daysLeft} days left` : ''}</div>
-          <div class="row"><span class="k">Rate it</span><span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= Math.round(state.ratings[open.id] / 2) ? 'on' : ''}" data-act="rate-shelf" data-id="${open.id}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span></div>
+          <div class="row"><span class="k">Rate it</span><span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= Math.round((state.ratings[open.id] ?? 0) / 2) ? 'on' : ''}" data-act="rate-shelf" data-id="${open.id}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span></div>
           <div class="row">
             <a class="btn sm" href="#/check-in">Review</a>
             <a class="btn sm" href="#/product/${open.id}">Reviews</a>
@@ -269,40 +278,43 @@ function downloadApp() {
     </section>`;
 }
 
-const leftCol = (extra = '') => `${quickCheckin()}${myShelf()}${extra}`;
+function runningLow() {
+  return `
+    <section class="card stack running-low" aria-label="Running low">
+      <span class="mono">Running low</span>
+      ${REFILLS.map((r) => `
+        <div class="row" style="gap:10px">
+          ${thumb(r.id, 30, 36)}
+          <div class="grow"><div class="small" style="font-weight:500">${esc(P(r.id).name)}</div><div class="xs muted">${r.note}</div></div>
+          ${r.action === 'refill'
+            ? `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill</button>`
+            : `<button class="btn sm" data-act="swap" data-id="${r.replaceWith}" data-from="${r.id}">Replace</button>`}
+        </div>`).join('')}
+    </section>`;
+}
+
+const leftCol = (extra = '') => `${quickCheckin()}<div class="left-gap"></div>${myShelf()}${runningLow()}${extra}`;
 
 /* ================= right rail ================= */
 
 function rightRail() {
+  const saved = state.saved ?? [];
+  const shown = state.savedAll ? saved : saved.slice(0, 5);
   return `
-    <section class="card stack">
-      <h3 class="h4">New from brands you love</h3>
-      <p class="xs muted">Just launched by brands already on your shelf</p>
-      ${LAUNCHES.map((l) => `
-        <div class="row" style="align-items:flex-start">
-          ${thumb(l.id, 40, 48)}
-          <div class="grow stack" style="gap:2px">
-            <span class="mono">${esc(P(l.id).brand)}</span>
-            <span class="small" style="font-weight:500">${esc(P(l.id).name)}</span>
-            <span class="xs"><span class="mono" style="color:var(--forest)">${l.step}</span>  ${l.helps}  ${l.buy}% buy</span>
-          </div>
-          <button class="add-btn ${state.added[l.id] ? 'added' : ''}" data-act="add" data-id="${l.id}" aria-label="Add to cart">${state.added[l.id] ? '✓' : '+'}</button>
-        </div>`).join('')}
-      <button class="btn block" data-act="search" data-q="new">See all new launches</button>
-    </section>
     <section class="card stack" style="margin-bottom:56px">
-      <span class="mono forest">Running low</span>
-      <h3 class="h4" style="font-size:17px;font-weight:400">Want to refill or replace something on your shelf?</h3>
-      ${REFILLS.map((r) => `
-        <div class="card soft stack" style="padding:12px">
-          <div class="row">${thumb(r.id, 34, 42)}<div class="grow"><div class="small" style="font-weight:500">${esc(P(r.id).name)}</div><div class="xs muted">${r.note}</div></div></div>
-          <div class="row wrap" style="gap:6px">
-            ${r.action === 'refill'
-              ? `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill ${money(P(r.id).price)}</button>`
-              : `<button class="btn dark sm" data-act="swap" data-id="${r.replaceWith}" data-from="${r.id}">Replace</button>`}
-            <span class="btn sm" style="cursor:default">${r.alt}</span>
+      <div class="row between"><h3 class="h4">Want to try</h3><span class="mono">${saved.length} saved</span></div>
+      <p class="xs muted">Save products from your picks, reviews and Community. Buy them, or sample them with points.</p>
+      ${saved.length ? shown.map((id) => `
+        <div class="row" style="align-items:flex-start;gap:10px">
+          ${thumb(id, 40, 48)}
+          <div class="grow stack" style="gap:2px">
+            <span class="mono">${esc(P(id).brand)}</span>
+            ${productLink(id, `<span class="small" style="font-weight:500">${esc(P(id).name)}</span>`)}
+            <span class="row xs" style="gap:10px">${P(id).price ? `<span class="mono">${money(P(id).price)}</span>` : ''}<button class="link" data-act="add" data-id="${id}">${state.added[id] ? 'In cart ✓' : 'Add to cart'}</button><button class="link" data-act="save" data-id="${id}">Remove</button></span>
           </div>
-        </div>`).join('')}
+        </div>`).join('') : '<div class="empty" style="padding:20px 8px">Nothing saved yet. Tap “Save” on a review or pick.</div>'}
+      ${saved.length > 5 ? `<button class="btn block" data-act="saved-all">${state.savedAll ? 'Show fewer' : `Show all ${saved.length}`}</button>` : ''}
+      ${saved.length ? `<button class="btn dark block" data-act="add-many" data-ids="${saved.join(',')}">Add all to cart</button>` : ''}
     </section>`;
 }
 
@@ -311,10 +323,10 @@ function askDew() {
   return `
     <section class="askdew-panel" aria-label="Ask Dew">
       <div class="row">${svg('hydrate', 22)}<span class="h4 grow">Ask Dew</span><button class="link mono" data-act="ask-close">Minimize ↘</button></div>
-      <p class="xs muted">Your AI skincare assistant. Answers pull from your shelf, tracker and people like you.</p>
-      <div class="chat" id="chat">${state.chat.map((m) => `<div class="msg ${m.me ? 'me' : 'dew'}">${esc(m.text)}</div>`).join('')}</div>
+      <p class="xs muted">${currentUser() ? 'Your AI skincare assistant, powered by Claude. Answers use your skin profile, your shelf and DEW’s review data.' : 'Your AI skincare assistant. Log in to chat with Dew for real.'}</p>
+      <div class="chat" id="chat">${state.chat.map((m) => `<div class="msg ${m.me ? 'me' : 'dew'}${m.pending ? ' typing' : ''}">${m.pending ? '<span></span><span></span><span></span>' : esc(m.text)}</div>`).join('')}</div>
       <div class="row wrap" style="gap:6px">
-        ${['Swap my Bioré for winter?', 'Best SPF for humid days', 'What is a sample box?'].map((q) => `<button class="chip" data-act="ask" data-q="${q}">↳ ${q}</button>`).join('')}
+        ${['What should I add to my routine?', 'Best SPF for humid days', 'Can I use retinol and vitamin C together?'].map((q) => `<button class="chip" data-act="ask" data-q="${q}">↳ ${q}</button>`).join('')}
       </div>
       <form class="chat-input" data-form="ask"><input name="q" placeholder="Ask about your routine…" autocomplete="off"><button class="send" aria-label="Send">↑</button></form>
     </section>`;
@@ -375,6 +387,66 @@ function peopleLikeYou() {
     </section>`;
 }
 
+// Top 3 products for this person from real review data (see /api/recommendations).
+// Falls back to the prototype's picks if the API is unavailable.
+const shelfIds = () => [...SHELF.map((x) => x.id), ...(state.shelfAdds ?? [])];
+
+function recommendationsCard() {
+  const a = state.answers;
+  const owned = [...new Set(shelfIds().map((id) => P(id).step).filter(Boolean))];
+  const params = new URLSearchParams({ owned: owned.join(','), exclude: shelfIds().join(',') });
+  if (a.skinType?.[0]) params.set('skin_type', a.skinType[0]);
+  if (a.concerns?.length) params.set('concerns', a.concerns.join(','));
+  const recs = useJson(`/api/recommendations?${params}`);
+  if (recs.status === 'error' || (recs.status === 'ok' && !recs.data.picks?.length)) {
+    return `<section class="card"><h3 class="h4">Picked for your routine</h3>${PICKS.gaps.slice(0, 3).map(pickRow).join('')}</section>`;
+  }
+  const picks = recs.data?.picks ?? [];
+  const pick = (r, i) => {
+    const pr = r.product;
+    const pl = r.people_like_you;
+    const who = pl.skin_type ? `people with ${pl.skin_type.toLowerCase()} skin` : 'reviewers';
+    return `
+      <article class="rec">
+        <div class="row" style="gap:16px;align-items:flex-start">
+          <span class="rank">${i + 1}</span>
+          ${thumb(pr.id, 72, 84)}
+          <div class="grow stack" style="gap:4px">
+            <span class="mono">${esc(pr.brand)}</span>
+            ${productLink(pr.id, `<span class="h4" style="font-size:17px">${esc(pr.name)}</span>`)}
+            <div class="row wrap" style="gap:6px">${r.step ? `<span class="pill ${r.gap ? 'gap' : ''}">${r.gap ? `Fills your ${esc(r.step.toLowerCase())} gap` : esc(r.step)}</span>` : ''}${r.solves.map((c) => `<span class="tag">${esc(c)}</span>`).join('')}</div>
+          </div>
+          <div class="stack" style="align-items:flex-end;gap:4px">${ring(pl.avg_rating * 2)}<span class="xs muted">${pl.pct_positive}% rate it 4★+</span></div>
+        </div>
+        <div class="rec-why">
+          <div class="stack" style="gap:6px">
+            <span class="mono forest">What this solves</span>
+            <p class="small">${esc(r.what_solves)}${r.fit ? ` ${esc(r.fit)}` : ''}</p>
+            ${r.top_pros.length ? `<ul class="pc-list pros">${r.top_pros.map((t) => `<li><span>${esc(t)}</span></li>`).join('')}</ul>` : ''}
+          </div>
+          <div class="stack" style="gap:6px">
+            <span class="mono forest">What people like you are saying</span>
+            <p class="small"><b style="font-weight:500">${pl.pct_positive}%</b> of ${pl.reviews.toLocaleString()} ${who} rated it 4 stars or more.</p>
+            ${pl.quotes.map((q) => `<blockquote class="small">“${esc(q.body.trim())}” <span class="xs muted">· ${esc(q.author_name ?? 'Reviewer')}${q.attributes?.skin_type ? `, ${esc(q.attributes.skin_type.toLowerCase())} skin` : ''}</span></blockquote>`).join('')}
+          </div>
+        </div>
+        <div class="row wrap" style="gap:8px">
+          <a class="btn primary" href="#/product/${pr.id}">See all reviews + ratings</a>
+          ${pr.price_usd ? `<button class="btn dark" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? '✓ In your cart' : `Add to cart · ${money(Number(pr.price_usd))}`}</button>` : ''}
+          <button class="btn" data-act="save" data-id="${pr.id}">${(state.saved ?? []).includes(pr.id) ? '✓ Saved' : '+ Want to try'}</button>
+        </div>
+      </article>`;
+  };
+  return `
+    <section class="card stack" style="gap:18px">
+      <div class="stack" style="gap:4px">
+        <h3 class="h4">Your top 3 picks</h3>
+        <p class="xs muted">Based on your skin profile and what’s already on your shelf, ranked by how people with skin like yours rated them.</p>
+      </div>
+      ${recs.status === 'loading' ? '<div class="empty">Finding your picks…</div>' : picks.map(pick).join('<hr class="divider">')}
+    </section>`;
+}
+
 function forYou() {
   const done = state.setupStep >= 4;
   const tags = ['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29', 'Dairy-free'];
@@ -395,15 +467,7 @@ function forYou() {
         </div>
       </div>
     </section>
-    <section class="card">
-      <div class="row between" style="align-items:flex-start"><div><h3 class="h4">Picked for your routine</h3><p class="xs muted">Ranked by impact for you, not just ratings. 10 picks from people with your skin.</p></div><button class="link mono" data-act="search" data-q="">See all 48 →</button></div>
-      <h4 class="small" style="font-weight:500;margin-top:14px">Fills a gap in your routine</h4>
-      ${PICKS.gaps.map(pickRow).join('')}
-      <hr class="divider">
-      <h4 class="small" style="font-weight:500;margin-top:8px">Want to try something new?</h4>
-      ${PICKS.fresh.map(pickRow).join('')}
-      <p class="xs faint" style="margin-top:8px">Why these? We look at what your shelf is missing, what’s almost empty, and what people like you upgraded to.</p>
-    </section>
+    ${recommendationsCard()}
     ${peopleLikeYou()}`;
   return { layout: '', left: leftCol(finishProfileCard()), main, right: rightRail(), ask: true };
 }
@@ -623,7 +687,7 @@ function communityPage() {
         <div class="row xs muted" style="gap:18px">
           <button class="link" style="text-decoration:none;${state.helpful[r.name + i] ? 'color:var(--forest);font-weight:500' : ''}" data-act="helpful" data-k="${esc(r.name + i)}">▲ Helpful  ${r.helpful + (state.helpful[r.name + i] ? 1 : 0)}</button>
           <span>◌ ${r.comments} comments</span><span class="grow"></span>
-          ${r.score >= 6 ? `<button class="btn" data-act="add" data-id="${r.product}">${state.added[r.product] ? 'In your cart ✓' : '+ Add to cart'}</button>` : '<button class="btn" data-act="toast" data-msg="Hidden from your picks">Hide product</button>'}
+          ${r.score >= 6 ? `<button class="btn" data-act="save" data-id="${r.product}">${(state.saved ?? []).includes(r.product) ? 'Saved ✓' : 'Save'}</button>` : '<button class="btn" data-act="toast" data-msg="Hidden from your picks">Hide product</button>'}
         </div>
       </article>`).join('') || '<div class="empty">No reviews match these filters.</div>'}`;
   return { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
@@ -1010,6 +1074,56 @@ function profilePage() {
   return { layout: '', left: leftCol(downloadApp()), main: header + body, right: trackerRail(), ask: true };
 }
 
+/* ================= public reviews ================= */
+
+const RV_SORTS = [['newest', 'Newest'], ['helpful', 'Most helpful'], ['highest', 'Highest rated'], ['lowest', 'Lowest rated']];
+const RV_RATINGS = [['', 'Any rating'], ['5', '5 stars'], ['4', '4 stars'], ['low', '3 stars or less']];
+
+// Every review DEW has collected, newest first, searchable and filterable by product.
+function reviewsPage() {
+  const f = { q: '', product: '', skin: '', rating: '', sort: 'newest', limit: 20, ...state.rv };
+  const p = new URLSearchParams({ limit: String(f.limit), sort: f.sort });
+  if (f.q) p.set('q', f.q);
+  if (f.product) p.set('product', f.product);
+  if (f.skin) p.set('skin_type', f.skin);
+  if (f.rating) p.set('rating', f.rating);
+  const feed = useJson(`/api/reviews?${p}`);
+  const reviews = feed.data?.reviews ?? [];
+  const total = feed.data?.total ?? 0;
+  const products = Object.values(liveProducts()).filter((x) => x.review_count > 0).sort((a, b) => `${a.brand} ${a.name}`.localeCompare(`${b.brand} ${b.name}`));
+  const filtered = f.q || f.product || f.skin || f.rating;
+  const main = `
+    <div class="row between" style="align-items:flex-end">
+      <div class="stack" style="gap:4px"><h1 class="h2">Public reviews</h1><p class="xs muted">A live feed of reviews collected from brand websites. Updated every day; each one links to where it was posted.</p></div>
+      ${statsLine() ? `<span class="xs faint live-count">${statsLine()}</span>` : ''}
+    </div>
+    <section class="card stack" style="gap:12px">
+      <form class="rv-search" data-form="reviews-search" role="search">
+        <input name="q" value="${esc(f.q)}" placeholder="Search reviews, e.g. “sunscreen white cast”" autocomplete="off">
+        <button class="btn dark">Search</button>
+      </form>
+      <div class="row wrap" style="gap:8px">
+        <select class="rv-select" data-change="rv-product" aria-label="Product">
+          <option value="">All products (${products.length})</option>
+          ${products.map((x) => `<option value="${x.id}" ${x.id === f.product ? 'selected' : ''}>${esc(x.brand)} · ${esc(x.name)} (${x.review_count.toLocaleString()})</option>`).join('')}
+        </select>
+        <select class="rv-select" data-change="rv-rating" aria-label="Rating">${RV_RATINGS.map(([v, l]) => `<option value="${v}" ${v === f.rating ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <select class="rv-select" data-change="rv-sort" aria-label="Sort">${RV_SORTS.map(([v, l]) => `<option value="${v}" ${v === f.sort ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      <div class="row wrap" style="gap:6px"><span class="mono">Skin type</span>
+        <button class="chip ${!f.skin ? 'on' : ''}" data-act="rv-skin" data-v="">All</button>
+        ${SKIN_TYPES.map((t) => `<button class="chip ${f.skin === t ? 'on' : ''}" data-act="rv-skin" data-v="${t}">${t}</button>`).join('')}
+      </div>
+    </section>
+    <div class="row between"><span class="small muted">${feed.status === 'ok' ? `${total.toLocaleString()} ${filtered ? 'matching ' : ''}reviews` : ''}</span>${filtered ? '<button class="link" data-act="rv-clear">Clear filters</button>' : ''}</div>
+    ${feed.status === 'loading' ? '<div class="empty">Loading reviews…</div>'
+      : feed.status === 'error' ? '<div class="empty">Reviews are unavailable right now.</div>'
+      : reviews.length ? `<div class="stack" style="gap:12px">${reviews.map((r) => liveReview(r, true)).join('')}</div>`
+      : '<div class="empty">No reviews match. Try fewer words or another product.</div>'}
+    ${reviews.length < total ? '<button class="btn" data-act="rv-more" style="align-self:center">Show more reviews</button>' : ''}`;
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+}
+
 /* ================= welcome + accounts ================= */
 
 // Live totals from /api/stats, e.g. "56,446 reviews across 152 products".
@@ -1259,7 +1373,7 @@ function rewardModal() {
 /* ================= render ================= */
 
 // Pages anyone can see; everything else needs an account once accounts are on.
-const PUBLIC_ROUTES = ['welcome', 'signup', 'login', 'search', 'product'];
+const PUBLIC_ROUTES = ['welcome', 'signup', 'login', 'search', 'product', 'reviews'];
 
 function view() {
   const r = route();
@@ -1267,6 +1381,7 @@ function view() {
   if (a === 'welcome') return { tab: '', ...welcomePage() };
   if (a === 'signup') return { tab: '', ...signupPage() };
   if (a === 'login') return { tab: '', ...loginPage() };
+  if (a === 'reviews') return { tab: 'reviews', ...reviewsPage() };
   if (a === 'setup') return { tab: '', ...setupPage(b === 'done' ? 'done' : Math.min(4, Math.max(1, +b || 1))) };
   if (a === 'creators') return b ? { tab: 'creators', ...creatorPage(b) } : { tab: 'creators', ...creatorsPage() };
   if (a === 'community') return { tab: 'community', ...communityPage() };
@@ -1322,6 +1437,17 @@ const actions = {
   'add-many': (d) => { d.ids.split(',').filter(Boolean).forEach((id) => addToCart(id, 'pick')); },
   search: (d) => { set({ lastSearch: d.q }); go('search'); },
   'log-out': () => signOut(),
+  save: (d) => {
+    const saved = state.saved ?? [];
+    const has = saved.includes(d.id);
+    set({ saved: has ? saved.filter((x) => x !== d.id) : [d.id, ...saved] });
+    toast(has ? 'Removed from Want to try' : `Saved ${P(d.id).name} to Want to try`);
+  },
+  'saved-all': () => set({ savedAll: !state.savedAll }),
+  'shelf-add': (d) => addToShelf(d.id),
+  'rv-skin': (d) => set({ rv: { ...state.rv, skin: d.v, limit: 20 } }),
+  'rv-more': () => set({ rv: { ...state.rv, limit: (state.rv?.limit ?? 20) + 20 } }),
+  'rv-clear': () => set({ rv: { sort: state.rv?.sort ?? 'newest' } }),
   'reset-password': async () => {
     const email = document.querySelector('[data-form="login"] input[name="email"]')?.value;
     if (!email) { set({ authError: 'Enter your email above, then tap “Forgot your password?” again.', authNotice: '' }); return; }
@@ -1403,11 +1529,36 @@ const actions = {
   reset: () => { try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ } state = defaultState(); go('for-you'); render(); toast('Demo data reset'); },
 };
 
-function askDewSend(q) {
+// Signed in: Claude answers through /api/ask. Otherwise (or if it fails), canned demo replies.
+async function askDewSend(q) {
   if (!q || !q.trim()) return;
-  const hit = ASK_DEW_REPLIES.find(([re]) => re.test(q));
-  const reply = hit ? hit[1] : 'Good question. People with your skin who tracked this for 4+ weeks mostly kept their routine simple: one new product at a time, two weeks apart.';
-  set({ askOpen: true, chat: [...state.chat, { me: true, text: q.trim() }, { me: false, text: reply }] });
+  const question = q.trim();
+  const history = [...state.chat, { me: true, text: question }];
+  if (!currentUser()) {
+    const hit = ASK_DEW_REPLIES.find(([re]) => re.test(question));
+    const reply = hit ? hit[1] : 'Good question. People with your skin who tracked this for 4+ weeks mostly kept their routine simple: one new product at a time, two weeks apart.';
+    set({ askOpen: true, chat: [...history, { me: false, text: reply }] });
+    return;
+  }
+  set({ askOpen: true, chat: [...history, { me: false, text: '…', pending: true }] });
+  const a = state.answers;
+  const profile = {
+    skinType: a.skinType?.[0], concerns: a.concerns, goals: a.goals, location: a.location?.[0],
+    shelf: SHELF.map((x) => `${P(x.id).brand} ${P(x.id).name} (${P(x.id).step})`).concat((state.shelfAdds ?? []).map((id) => `${P(id).brand} ${P(id).name}`)),
+  };
+  let reply;
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${await accessToken()}` },
+      body: JSON.stringify({ messages: history.filter((m) => !m.pending).map((m) => ({ role: m.me ? 'user' : 'assistant', content: m.text })), profile }),
+    });
+    const data = await res.json();
+    reply = data.reply ?? data.error ?? 'Dew couldn’t answer just now. Try again.';
+  } catch {
+    reply = 'Dew couldn’t answer just now. Check your connection and try again.';
+  }
+  set({ chat: [...history, { me: false, text: reply }] });
 }
 
 document.addEventListener('click', (e) => {
@@ -1428,6 +1579,7 @@ document.addEventListener('submit', (e) => {
   const q = fd.get('q') || '';
   if (form.dataset.form === 'search') { set({ lastSearch: q }); go('search'); }
   if (form.dataset.form === 'ask') askDewSend(q);
+  if (form.dataset.form === 'reviews-search') set({ rv: { ...state.rv, q: q.trim(), limit: 20 } });
   if (form.dataset.form === 'signup' || form.dataset.form === 'login') submitAuth(form.dataset.form, fd);
 });
 
@@ -1467,6 +1619,11 @@ async function onAuthChange(event, user) {
     render();
   }
 }
+
+document.addEventListener('change', (e) => {
+  const key = { 'rv-product': 'product', 'rv-rating': 'rating', 'rv-sort': 'sort' }[e.target.dataset.change];
+  if (key) set({ rv: { ...state.rv, [key]: e.target.value, limit: 20 } });
+});
 
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }

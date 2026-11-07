@@ -30,6 +30,10 @@ export async function initAuth(onChange) {
 }
 
 export const currentUser = () => user;
+export async function accessToken() {
+  const { data } = await client.auth.getSession();
+  return data.session?.access_token ?? null;
+}
 export const firstName = () => user?.user_metadata?.first_name ?? '';
 
 export async function signUp({ email, password, firstName: name }) {
