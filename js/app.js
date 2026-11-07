@@ -2,7 +2,8 @@ import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
 } from './data.js?v=6';
-import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=1';
+import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
+import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState } from './auth.js?v=1';
 
 /* ================= state ================= */
 
@@ -56,7 +57,14 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  saveAppState(state);
 }
+
+// A brand-new account starts with an empty skin profile, no points and no orders.
+const newAccountState = () => ({
+  ...defaultState(), setupStep: 0, answers: {}, points: 0, streak: 0, quickDone: false,
+  chat: [{ me: false, text: 'Hi! Ask me anything about your routine, ingredients or what people with your skin use.' }],
+});
 function set(patch) { state = { ...state, ...patch }; save(); render(); }
 
 /* ================= helpers ================= */
@@ -120,6 +128,7 @@ function toast(msg) {
 }
 
 function addToCart(id, kind = 'pick', note = '') {
+  if (signedOut()) { state = { ...state, authNotice: 'Create a free account to save products to your cart and shelf.' }; go('signup'); return; }
   const cart = [...state.cart];
   const existing = cart.find((c) => c.id === id && c.kind === kind);
   if (existing) existing.qty += 1;
@@ -135,7 +144,20 @@ function earn(pts, why) {
 
 /* ================= top nav ================= */
 
+const signedOut = () => auth.enabled && !currentUser();
+
 function nav(active) {
+  if (signedOut()) {
+    return `
+    <a href="#/welcome" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
+    <form class="search" data-form="search" role="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
+      <input name="q" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off">
+    </form>
+    <span class="nav-spacer"></span>
+    <a class="tab" href="#/login">Log in</a>
+    <a class="btn primary" href="#/signup">Create account</a>`;
+  }
   const tabs = [['for-you', 'For you'], ['creators', 'Creators'], ['community', 'Community'], ['picked', 'Picked for you']];
   const n = cartCount();
   return `
@@ -927,11 +949,11 @@ function profilePage() {
     <section class="card row" style="gap:20px;align-items:flex-start">
       <img class="avatar" style="width:88px;height:88px" src="assets/img/progress/w5.jpg" alt="">
       <div class="grow stack">
-        <div class="row"><h1 class="h2">Mia Tan</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
+        <div class="row"><h1 class="h2">${esc(currentUser() ? firstName() || 'You' : 'Mia Tan')}</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
         <div class="row wrap" style="gap:6px">${['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29', 'Fragrance-free', '$15–30'].map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
       </div>
-      <div class="stack"><a class="btn dark" href="#/setup/1">Update skin profile</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button></div>
+      <div class="stack"><a class="btn dark" href="#/setup/1">Update skin profile</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
     </section>
     <div class="notice">Moved, changed your diet or started a new medication? Update your skin profile and we’ll re-rank your picks.</div>
     <span class="seg" style="align-self:flex-start">${[['rankings', 'My rankings'], ['progress', 'My progress']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="profile-tab" data-v="${k}">${l}</button>`).join('')}</span>`;
@@ -988,6 +1010,122 @@ function profilePage() {
   return { layout: '', left: leftCol(downloadApp()), main: header + body, right: trackerRail(), ask: true };
 }
 
+/* ================= welcome + accounts ================= */
+
+// Live totals from /api/stats, e.g. "56,446 reviews across 152 products".
+function statsLine() {
+  const s = useJson('/api/stats').data;
+  return s ? `${s.label.reviews} reviews across ${s.label.products_with_reviews} products` : '';
+}
+
+function welcomePage() {
+  const s = useJson('/api/stats').data;
+  const feed = useJson(reviewsUrl({ limit: 3 })).data?.reviews ?? [];
+  const steps = [
+    ['1', 'Build your skin profile', 'Skin type, concerns, climate and goals. About three minutes.'],
+    ['2', 'Get matched with people like you', 'We find reviewers whose skin, climate and age match yours, and rank products by what worked for them.'],
+    ['3', 'Sample, track, repeat', 'Try minis with points before buying full size, then check in weekly to see what’s actually working.'],
+  ];
+  const features = [
+    ['Picked for you', 'One product per routine step, chosen from thousands of people who match you.', 'treat'],
+    ['Reviews from your skin type', 'Real reviews from brand sites, filtered to people with skin like yours.', 'hydrate'],
+    ['Sample before you buy', 'Earn points for check-ins and trade them for a free sample box.', 'flame'],
+    ['Track what works', 'Weekly check-ins and progress photos rank your shelf by results.', 'protect'],
+  ];
+  const main = `
+    <div class="welcome stack">
+      <section class="welcome-hero">
+        <div class="stack" style="gap:18px;max-width:560px">
+          <span class="mono forest">Your personal skincare companion</span>
+          <h1 class="display">Skincare picked by people like you.</h1>
+          <p class="lead">DEW matches you with people who share your skin, climate and goals, then picks, samples and tracks a routine that works for you.</p>
+          <div class="row wrap" style="gap:10px"><a class="btn dark lg" href="#/signup">Create free account</a><a class="btn lg" href="#/login">Log in</a></div>
+          <a class="xs" href="#/search" data-act="search" data-q="">Or browse products and reviews without an account →</a>
+        </div>
+        <div class="welcome-art" aria-hidden="true"><img src="assets/img/hero.jpg" alt=""></div>
+      </section>
+      ${s ? `<section class="welcome-stats">
+        <div><span class="stat">${s.label.reviews}</span><span class="xs muted">reviews collected</span></div>
+        <div><span class="stat">${s.label.products_with_reviews}</span><span class="xs muted">products with reviews</span></div>
+        <div><span class="stat">${s.label.brands}</span><span class="xs muted">brands</span></div>
+        <div><span class="stat">5</span><span class="xs muted">skin types to filter by</span></div>
+      </section>` : ''}
+      <section class="stack" style="gap:14px">
+        <h2 class="h2">How DEW works</h2>
+        <div class="grid-3">${steps.map(([n, t, d]) => `<div class="card stack"><span class="step-n">${n}</span><h3 class="h4">${t}</h3><p class="small muted">${d}</p></div>`).join('')}</div>
+      </section>
+      <section class="stack" style="gap:14px">
+        <h2 class="h2">What you get</h2>
+        <div class="grid-2">${features.map(([t, d, icon]) => `<div class="card row" style="gap:16px;align-items:flex-start">${svg(icon, 32)}<div class="stack" style="gap:4px"><h3 class="h4">${t}</h3><p class="small muted">${d}</p></div></div>`).join('')}</div>
+      </section>
+      ${feed.length ? `<section class="stack" style="gap:14px">
+        <div class="row between"><h2 class="h2">Fresh from reviewers</h2><a class="xs" href="#/search" data-act="search" data-q="">Browse all products →</a></div>
+        <div class="grid-3">${feed.map((r) => liveReview(r, true)).join('')}</div>
+      </section>` : ''}
+      <section class="welcome-cta">
+        <h2 class="h2" style="color:#fff">Ready to find what works for your skin?</h2>
+        <p style="color:#cbdbea">Free to join. Your profile takes about three minutes.</p>
+        <a class="btn lime lg" href="#/signup">Create free account</a>
+      </section>
+      <footer class="xs muted row between wrap" style="padding:8px 0 24px"><span>© 2026 DEW</span><span>Reviews are collected from brand websites and belong to their authors.</span></footer>
+    </div>`;
+  return { layout: 'layout-solo', main };
+}
+
+function authCard({ title, sub, form, foot }) {
+  return {
+    layout: 'layout-solo',
+    main: `
+      <div class="auth-wrap">
+        <section class="auth-card stack">
+          <img src="assets/svg/logo.svg" alt="DEW" style="width:84px">
+          <div class="stack" style="gap:6px"><h1 class="h2">${title}</h1><p class="small muted">${sub}</p></div>
+          ${state.authError ? `<div class="auth-error" role="alert">${esc(state.authError)}</div>` : ''}
+          ${state.authNotice ? `<div class="auth-notice" role="status">${esc(state.authNotice)}</div>` : ''}
+          ${form}
+          <p class="small muted" style="text-align:center">${foot}</p>
+        </section>
+        <aside class="auth-side stack">
+          <span class="mono lime">Why DEW</span>
+          <p class="h3" style="color:#fff;font-weight:400">“Redness around my nose was gone by week 2.”</p>
+          <p class="xs" style="color:#cbdbea">Find the products that worked for people with your skin type, climate and goals.</p>
+          ${statsLine() ? `<span class="xs" style="color:#cbdbea">${statsLine()}</span>` : ''}
+        </aside>
+      </div>`,
+  };
+}
+
+const field = (name, label, type, extra = '') => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${extra} required></label>`;
+
+function signupPage() {
+  return authCard({
+    title: 'Create your account',
+    sub: 'Free forever. Next you’ll build your skin profile so we can match you with people like you.',
+    form: `<form class="stack" data-form="signup" style="gap:12px">
+      ${field('first_name', 'First name', 'text', 'autocomplete="given-name"')}
+      ${field('email', 'Email', 'email', 'autocomplete="email"')}
+      ${field('password', 'Password', 'password', 'autocomplete="new-password" minlength="8"')}
+      <span class="xs muted">At least 8 characters.</span>
+      <button class="btn dark block lg" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Creating account…' : 'Create account'}</button>
+    </form>`,
+    foot: 'Already have an account? <a href="#/login">Log in</a>',
+  });
+}
+
+function loginPage() {
+  return authCard({
+    title: 'Welcome back',
+    sub: 'Log in to see your picks, shelf and progress.',
+    form: `<form class="stack" data-form="login" style="gap:12px">
+      ${field('email', 'Email', 'email', 'autocomplete="email"')}
+      ${field('password', 'Password', 'password', 'autocomplete="current-password"')}
+      <button class="btn dark block lg" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Logging in…' : 'Log in'}</button>
+      <button type="button" class="link" data-act="reset-password" style="align-self:center">Forgot your password?</button>
+    </form>`,
+    foot: 'New to DEW? <a href="#/signup">Create an account</a>',
+  });
+}
+
 /* ================= product ================= */
 
 const SKIN_TYPES = ['Combination', 'Oily', 'Dry', 'Normal', 'Sensitive'];
@@ -996,6 +1134,25 @@ const SOURCE_NOTE = {
   needs_partnership: 'Star rating only. Full reviews need a data partnership with this site’s review provider.',
   paused: 'Paused.',
 };
+
+// AI summary of what reviewers liked and didn't (from /api/summary).
+function summaryCard(id) {
+  const s = useJson(`/api/summary?product=${encodeURIComponent(id)}`).data;
+  if (!s) return '';
+  const list = (items, kind) => items.length
+    ? `<ul class="pc-list ${kind}">${items.map((p) => `<li><span>${esc(p.point)}</span><span class="pc-mentions">${esc(p.mentions)}</span></li>`).join('')}</ul>`
+    : '<p class="xs muted">No common complaints.</p>';
+  return `
+    <section class="card stack ai-summary">
+      <div class="row between"><h3 class="h4">What reviewers say</h3><span class="mono">AI summary</span></div>
+      <p>${esc(s.summary)}</p>
+      <div class="grid-2">
+        <div class="stack" style="gap:8px"><span class="mono forest">Pros</span>${list(s.pros, 'pros')}</div>
+        <div class="stack" style="gap:8px"><span class="mono" style="color:#b23a24">Cons</span>${list(s.cons, 'cons')}</div>
+      </div>
+      <p class="xs faint">Summarized by Claude from ${s.review_count.toLocaleString()} reviews on ${fmtDate(s.generated_at)}. It can miss nuance, so read the reviews below too.</p>
+    </section>`;
+}
 
 function productPage(id) {
   const p = P(id);
@@ -1047,6 +1204,7 @@ function productPage(id) {
       </div>
       ${p.price ? `<button class="btn dark" data-act="add" data-id="${id}">${state.added[id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
     </section>
+    ${summaryCard(id)}
     <section class="card"><h3 class="h4">Where it’s reviewed</h3>${sourcesCard}</section>
     <section class="card stack">
       <div class="row between"><h3 class="h4">Reviews</h3><span class="xs muted">${revs.status === 'ok' ? `${total.toLocaleString()} ${skin ? `from ${esc(skin.toLowerCase())} skin` : 'total'}` : ''}</span></div>
@@ -1057,8 +1215,9 @@ function productPage(id) {
       ${noSkinData ? `<p class="xs muted">These reviewers didn’t share their skin type, so you’re seeing all reviews.</p>` : ''}
       ${reviewList}
       ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
+      ${statsLine() ? `<p class="xs faint live-count">DEW has collected ${statsLine()} so far.</p>` : ''}
     </section>`;
-  return { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
 }
 
 /* ================= search ================= */
@@ -1070,11 +1229,11 @@ function searchPage() {
   const list = q === 'new' ? LAUNCHES.map((l) => [l.id, P(l.id)]) : hits;
   const main = `
     <h1 class="h2">${q && q !== 'new' ? `Results for “${esc(state.lastSearch)}”` : q === 'new' ? 'New launches' : 'All products'}</h1>
-    <p class="xs muted">${list.length} products. Tap + to add to your cart.</p>
+    <p class="xs muted">${list.length} products. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in DEW so far` : ''}</p>
     <section class="card">${list.map(([id, p], i) => `
       <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${p.step} step  ${p.size}</div>${liveRating(id)}</div><span class="small">${money(p.price)}</span>
         <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>'}</section>`;
-  return { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
 }
 
 /* ================= reward modal ================= */
@@ -1099,9 +1258,15 @@ function rewardModal() {
 
 /* ================= render ================= */
 
+// Pages anyone can see; everything else needs an account once accounts are on.
+const PUBLIC_ROUTES = ['welcome', 'signup', 'login', 'search', 'product'];
+
 function view() {
   const r = route();
   const [a, b] = r.split('/');
+  if (a === 'welcome') return { tab: '', ...welcomePage() };
+  if (a === 'signup') return { tab: '', ...signupPage() };
+  if (a === 'login') return { tab: '', ...loginPage() };
   if (a === 'setup') return { tab: '', ...setupPage(b === 'done' ? 'done' : Math.min(4, Math.max(1, +b || 1))) };
   if (a === 'creators') return b ? { tab: 'creators', ...creatorPage(b) } : { tab: 'creators', ...creatorsPage() };
   if (a === 'community') return { tab: 'community', ...communityPage() };
@@ -1118,6 +1283,10 @@ function view() {
 
 let lastRoute = null;
 function render() {
+  if (!auth.ready) return;
+  const [a] = route().split('/');
+  if (signedOut() && !PUBLIC_ROUTES.includes(a)) { location.replace('#/welcome'); return; }
+  if (auth.enabled && currentUser() && ['welcome', 'signup', 'login'].includes(a)) { location.replace('#/for-you'); return; }
   const v = view();
   const r = route();
   const app = document.getElementById('app');
@@ -1152,6 +1321,12 @@ const actions = {
   add: (d) => addToCart(d.id, 'pick'),
   'add-many': (d) => { d.ids.split(',').filter(Boolean).forEach((id) => addToCart(id, 'pick')); },
   search: (d) => { set({ lastSearch: d.q }); go('search'); },
+  'log-out': () => signOut(),
+  'reset-password': async () => {
+    const email = document.querySelector('[data-form="login"] input[name="email"]')?.value;
+    if (!email) { set({ authError: 'Enter your email above, then tap “Forgot your password?” again.', authNotice: '' }); return; }
+    try { await resetPassword(email); set({ authError: '', authNotice: `If there’s an account for ${email}, we’ve sent a reset link.` }); } catch (err) { set({ authError: err.message }); }
+  },
   'review-skin': (d) => set({ reviewSkin: d.v || null, reviewLimit: 10 }),
   'reviews-more': () => set({ reviewLimit: (state.reviewLimit ?? 10) + 10 }),
   'ask-open': () => set({ askOpen: true }),
@@ -1249,10 +1424,49 @@ document.addEventListener('submit', (e) => {
   const form = e.target.closest('[data-form]');
   if (!form) return;
   e.preventDefault();
-  const q = new FormData(form).get('q') || '';
+  const fd = new FormData(form);
+  const q = fd.get('q') || '';
   if (form.dataset.form === 'search') { set({ lastSearch: q }); go('search'); }
   if (form.dataset.form === 'ask') askDewSend(q);
+  if (form.dataset.form === 'signup' || form.dataset.form === 'login') submitAuth(form.dataset.form, fd);
 });
+
+const AUTH_ERRORS = {
+  'Invalid login credentials': 'That email and password don’t match an account.',
+  'Email not confirmed': 'Confirm your email first: open the link we sent you, then log in.',
+  'User already registered': 'There’s already an account with that email. Try logging in.',
+};
+
+async function submitAuth(kind, fd) {
+  set({ authBusy: true, authError: '', authNotice: '' });
+  try {
+    if (kind === 'signup') {
+      const { needsConfirmation } = await signUp({ email: fd.get('email'), password: fd.get('password'), firstName: fd.get('first_name') });
+      if (needsConfirmation) set({ authBusy: false, authNotice: `Check ${fd.get('email')} for a link to confirm your account. It opens your skin profile.` });
+    } else {
+      await signIn({ email: fd.get('email'), password: fd.get('password') });
+    }
+  } catch (err) {
+    set({ authBusy: false, authError: AUTH_ERRORS[err.message] ?? err.message });
+  }
+}
+
+// Signing in loads that account's saved state; a brand-new account starts onboarding.
+async function onAuthChange(event, user) {
+  if (user) {
+    const saved = await loadAppState();
+    state = saved ? { ...defaultState(), ...saved } : newAccountState();
+    state.authBusy = false; state.authError = ''; state.authNotice = '';
+    save();
+    go(saved ? 'for-you' : 'setup/1');
+    render();
+  } else {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
+    state = defaultState();
+    go('welcome');
+    render();
+  }
+}
 
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }
@@ -1265,8 +1479,16 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('hashchange', () => {
   // Each product page starts filtered to your skin type, showing the first 10 reviews.
   if (route().startsWith('product/')) state = { ...state, reviewSkin: undefined, reviewLimit: 10 };
+  // Keep a notice that sent you to sign-up or log-in (e.g. "create an account to save products").
+  state = { ...state, authError: '', authNotice: ['signup', 'login'].includes(route()) ? state.authNotice : '' };
   render();
   document.querySelectorAll('.col').forEach((c) => { c.scrollTop = 0; });
 });
 onData(render);
-render();
+initAuth(onAuthChange).then(async (user) => {
+  if (user) {
+    const saved = await loadAppState();
+    if (saved) state = { ...defaultState(), ...saved };
+  }
+  render();
+});
