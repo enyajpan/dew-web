@@ -4,10 +4,21 @@
 //   node scripts/import-catalog.js --dry-run  -> print what would be imported
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { fetchJson } from '../scraper/http.js';
+import { fetchJson, politeFetch } from '../scraper/http.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const dryRun = process.argv.includes('--dry-run');
+
+// A listing's page is live if it loads without redirecting somewhere else.
+async function isLive(url) {
+  try {
+    const res = await politeFetch(url);
+    await res.body?.cancel();
+    return new URL(res.url).pathname.replace(/\/$/, '') === new URL(url).pathname;
+  } catch {
+    return false;
+  }
+}
 
 // Not single skincare products, or not skincare at all.
 const EXCLUDE = /gift ?card|e-?gift|bundle|\bsets?\b|\bkit\b|\bduo\b|\btrio\b|\bminis?\b|travel|trial|sample|refill|insert|jumbo|value|collection|routine|merch|swag|tote|bag|pouch|keychain|case|mirror|phone|book|accessor|\bhat\b|hoodie|shirt|sticker|candle|perfume|fragrance|supplement|foundation|concealer|blush|bronzer|mascara|liner|brow|highlight|lipstick|lip ?gloss|lip ?tint|lip makeup|lip jelly|tint|eyeshadow|shadow|shimmer|palette|brush|sponge|puff|tool|claw|clip|headband|scrunchie|shipping|donation|\btest\b|-uk$|-eu$|-au$|-ca$|-global$|contour|shineon|lip oil jelly|soap saver|^gua sha$/i;
@@ -57,16 +68,22 @@ for (const { domain, retailer, brand } of stores) {
   });
 
   // Stores often list one product several times (regional or size-variant pages, e.g.
-  // "(25ml)", "4ea"). Keep one listing per product, preferring the one without a size.
+  // "(25ml)", "4ea"), and some of those copies redirect to the home page. Keep one
+  // listing per product: the first live page, trying unsized listings first.
   const sized = (t) => /\(\s*\d+\s*(ml|ea|g)\s*\)|\b\d+\s?ea\b/i.test(t);
-  const byName = new Map();
+  const groups = new Map();
   for (const p of skincare) {
     const key = p.title.toLowerCase().replace(/\(.*?\)|\b\d+\s?(ml|ea|g)\b|[^a-z0-9]/g, '');
-    const prev = byName.get(key);
-    if (!prev || (sized(prev.title) && !sized(p.title))) byName.set(key, p);
+    groups.set(key, [...(groups.get(key) ?? []), p]);
   }
-  const alreadyTracked = (p) => tracked.has(`${retailer}:${p.handle}`);
-  const picked = [...byName.values()].filter((p) => !alreadyTracked(p));
+  const picked = [];
+  for (const listings of groups.values()) {
+    if (listings.some((p) => tracked.has(`${retailer}:${p.handle}`))) continue;
+    listings.sort((a, b) => sized(a.title) - sized(b.title));
+    for (const p of listings) {
+      if (await isLive(`https://${domain}/products/${p.handle}`)) { picked.push(p); break; }
+    }
+  }
 
   const products = picked.map((p) => ({
     id: `${retailer}-${p.handle}`.slice(0, 80),
