@@ -2,7 +2,7 @@
 
 DEW is a skincare web app that matches you with people who share your skin, climate and goals, then picks, samples and tracks a routine for you.
 
-Live site: https://enyajpan.github.io/dew-web/
+Live site: https://dew-web-three.vercel.app (Vercel; every push to `main` deploys)
 
 ## What works
 
@@ -22,15 +22,30 @@ Points, cart, ratings and check-ins are saved in your browser (localStorage). Us
 
 The top nav is fixed. On desktop the left column (check-in and shelf), the middle column and the right column each scroll on their own. Below 820px wide the page falls back to a single scrolling column.
 
+## Backend
+
+- **Database:** Supabase (Postgres). Schema in `supabase/migrations/`: products, review sources, rating snapshots, reviews and scrape runs. Public reads, server-only writes.
+- **API** (Vercel functions in `api/`):
+  - `GET /api/products` and `GET /api/products?id=t28_sos`: products with the latest published star rating per retailer.
+  - `GET /api/reviews?product=t28_sos&skin_type=Combination&limit=20&offset=0`: scraped reviews, newest first.
+- **Review scraper** (`scraper/`): runs daily through Vercel Cron (`/api/cron/scrape`, 09:00 UTC). It identifies itself as `DewReviewBot`, follows robots.txt, waits 3 seconds between requests to a site, and:
+  - saves full reviews from keyless review widgets (Okendo) and schema.org data on product pages;
+  - saves the published star rating and review count from any product page;
+  - marks sites that refuse bots as `blocked`, and sites whose review text needs a vendor partnership (PowerReviews, Bazaarvoice, Yotpo) as `needs_partnership`.
+
+To track a new product page, add it to `scraper/sources.json` and run `npm run seed`.
+
 ## Run locally
 
-It's a static site with no build step:
+Needs Node 22+ and a `.env` with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET`.
 
 ```
-python3 -m http.server 8000
+npm install
+npm run dev          # site + API at http://localhost:3000
+npm run scrape:dry   # scrape sources.json into scraper/out/ without touching the database
+npm run scrape       # scrape due sources into Supabase
+npm run seed         # load products and review sources into Supabase
 ```
-
-Then open http://localhost:8000.
 
 ## Notes
 
