@@ -1,0 +1,10 @@
+[
+  { "domain": "eadem.co", "retailer": "eadem", "brand": "Eadem" },
+  { "domain": "tower28beauty.com", "retailer": "tower28", "brand": "Tower 28" },
+  { "domain": "anua.com", "retailer": "anua", "brand": "Anua" },
+  { "domain": "beautyofjoseon.com", "retailer": "beautyofjoseon", "brand": "Beauty of Joseon" },
+  { "domain": "kravebeauty.com", "retailer": "kravebeauty", "brand": "KraveBeauty" },
+  { "domain": "www.rhodeskin.com", "retailer": "rhode", "brand": "Rhode" },
+  { "domain": "www.versedskin.com", "retailer": "versed", "brand": "Versed" },
+  { "domain": "www.thenimetyou.com", "retailer": "thenimetyou", "brand": "Then I Met You" }
+]

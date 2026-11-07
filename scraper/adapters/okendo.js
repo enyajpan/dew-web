@@ -43,13 +43,18 @@ function mapReview(r) {
   };
 }
 
-export async function scrapeOkendo({ subscriberId, productId }, { maxReviews = 200 } = {}) {
+// Newest first. Stops at maxReviews, or at the first review not newer than `since`
+// (the newest one already saved), so daily runs only fetch what's new.
+export async function scrapeOkendo({ subscriberId, productId }, { maxReviews = 1000, since = null } = {}) {
   const reviews = [];
-  let next = `/stores/${subscriberId}/products/${productId}/reviews?limit=25&orderBy=date%20desc`;
+  const cutoff = since ? new Date(since).getTime() : -Infinity;
+  let next = `/stores/${subscriberId}/products/${productId}/reviews?limit=100&orderBy=date%20desc`;
   while (next && reviews.length < maxReviews) {
     const page = await fetchJson(API + next);
-    reviews.push(...(page.reviews ?? []).map(mapReview));
-    next = page.nextUrl ?? null;
+    const batch = (page.reviews ?? []).map(mapReview);
+    const fresh = batch.filter((r) => new Date(r.reviewed_at).getTime() > cutoff);
+    reviews.push(...fresh);
+    next = fresh.length < batch.length ? null : page.nextUrl ?? null;
   }
   return reviews.slice(0, maxReviews);
 }

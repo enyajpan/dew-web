@@ -33,7 +33,11 @@ The top nav is fixed. On desktop the left column (check-in and shelf), the middl
   - saves the published star rating and review count from any product page;
   - marks sites that refuse bots as `blocked`, and sites whose review text needs a vendor partnership (PowerReviews, Bazaarvoice, Yotpo) as `needs_partnership`.
 
-To track a new product page, add it to `scraper/sources.json` and run `npm run seed`.
+Where the products come from:
+- `scraper/stores.json` lists brand stores whose review widgets are open (Okendo): Eadem, Tower 28, Anua, Beauty of Joseon, KraveBeauty, Rhode, Versed and Then I Met You. `node scripts/import-catalog.js` imports every skincare product they sell (no makeup, sets, minis or merch).
+- `scraper/sources.json` holds hand-picked pages, including the prototype catalog in `js/data.js`. `node scripts/find-sources.js --write` suggests pages for catalog products, then `npm run seed` loads them.
+
+Each product keeps its newest 1,000 reviews. The daily cron only fetches reviews newer than the last ones saved; `npm run scrape -- --full` re-reads everything.
 
 ## Run locally
 
@@ -43,7 +47,7 @@ Needs Node 22+ and a `.env` with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_
 npm install
 npm run local        # site + API at http://localhost:3000
 npm run scrape:dry   # scrape sources.json into scraper/out/ without touching the database
-npm run scrape       # scrape due sources into Supabase
+npm run scrape       # scrape due sources into Supabase (add -- --full to backfill)
 npm run seed         # load products and review sources into Supabase
 ```
 

@@ -1,8 +1,9 @@
 // One scrape run over the sources that are due. Shared by the CLI and the Vercel cron.
 import { scrapeSource } from './scrape.js';
-import { dueSources, startRun, finishRun, saveResult } from './store.js';
+import { dueSources, startRun, finishRun, saveResult, latestReviewAt } from './store.js';
 
-export async function runBatch(db, { limit = 10, trigger = 'cli', deadline = Infinity, log = () => {} } = {}) {
+// full: re-read each product's newest maxReviews instead of only what's new since the last run.
+export async function runBatch(db, { limit = 10, trigger = 'cli', deadline = Infinity, maxReviews = 1000, full = false, log = () => {} } = {}) {
   const runId = await startRun(db, trigger);
   const sources = await dueSources(db, limit);
   const errors = [];
@@ -12,7 +13,8 @@ export async function runBatch(db, { limit = 10, trigger = 'cli', deadline = Inf
   for (const source of sources) {
     if (Date.now() > deadline) break;
     attempted++;
-    const result = await scrapeSource(source);
+    const since = full ? null : await latestReviewAt(db, source.id);
+    const result = await scrapeSource(source, { maxReviews, since });
     try {
       const n = await saveResult(db, source, result);
       upserted += n;

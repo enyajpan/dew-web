@@ -26,6 +26,13 @@ export async function dueSources(db, limit) {
   );
 }
 
+export async function latestReviewAt(db, sourceId) {
+  const rows = check(
+    await db.from('reviews').select('reviewed_at').eq('source_id', sourceId).order('reviewed_at', { ascending: false }).limit(1),
+  );
+  return rows[0]?.reviewed_at ?? null;
+}
+
 export async function startRun(db, trigger) {
   return check(await db.from('scrape_runs').insert({ trigger }).select('id').single()).id;
 }

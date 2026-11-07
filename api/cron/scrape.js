@@ -10,6 +10,6 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const deadline = Date.now() + 240_000;
-  const summary = await runBatch(adminClient(), { limit: 25, trigger: 'cron', deadline });
+  const summary = await runBatch(adminClient(), { limit: 60, trigger: 'cron', deadline });
   return res.status(200).json(summary);
 }

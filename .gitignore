@@ -6,3 +6,4 @@ supabase/.temp/
 scraper/out/
 .vercel
 .env*
+*.log

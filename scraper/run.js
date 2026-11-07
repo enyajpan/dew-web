@@ -8,6 +8,8 @@ const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const limit = Number(args.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? 25);
 const only = args.find((a) => a.startsWith('--only='))?.split('=')[1];
+const maxReviews = Number(args.find((a) => a.startsWith('--max-reviews='))?.split('=')[1] ?? 1000);
+const full = args.includes('--full');
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -29,7 +31,7 @@ async function dry() {
 async function live() {
   const { adminClient } = await import('./store.js');
   const { runBatch } = await import('./batch.js');
-  const summary = await runBatch(adminClient(), { limit, trigger: 'cli', log: console.log });
+  const summary = await runBatch(adminClient(), { limit, maxReviews, full, trigger: 'cli', log: console.log });
   console.log(`\nRun ${summary.runId}: ${summary.attempted} sources, ${summary.upserted} reviews saved, ${summary.errors.length} errors`);
 }
 

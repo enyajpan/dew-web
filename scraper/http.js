@@ -4,6 +4,8 @@ import robotsParser from 'robots-parser';
 export const USER_AGENT = 'DewReviewBot/0.1 (+https://github.com/enyajpan/dew-web)';
 const BOT_NAME = 'DewReviewBot';
 const HOST_DELAY_MS = 3000;
+// Review APIs are built for many widget calls per page view; one a second is still gentle.
+const HOST_DELAY_OVERRIDES = { 'api.okendo.io': 1000 };
 const TIMEOUT_MS = 20000;
 
 const robotsCache = new Map(); // origin -> parser (or null when robots.txt is unreachable)
@@ -16,7 +18,7 @@ export class BlockedError extends Error {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function waitForHost(host) {
-  const wait = (lastHit.get(host) ?? 0) + HOST_DELAY_MS - Date.now();
+  const wait = (lastHit.get(host) ?? 0) + (HOST_DELAY_OVERRIDES[host] ?? HOST_DELAY_MS) - Date.now();
   if (wait > 0) await sleep(wait);
   lastHit.set(host, Date.now());
 }
