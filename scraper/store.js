@@ -36,7 +36,7 @@ export async function finishRun(db, id, stats) {
 
 export async function saveResult(db, source, result) {
   const now = new Date().toISOString();
-  const status = result.status === 'error' ? source.status : result.status;
+  const status = { ok: 'active', error: source.status }[result.status] ?? result.status;
   check(
     await db
       .from('review_sources')
