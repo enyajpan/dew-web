@@ -1002,9 +1002,15 @@ function productPage(id) {
   const products = useJson(productsUrl);
   const live = liveProducts()[id];
   const mine = state.answers.skinType?.[0];
-  const skin = state.reviewSkin === undefined ? mine : state.reviewSkin; // null = all skin types
+  let skin = state.reviewSkin === undefined ? mine : state.reviewSkin; // null = all skin types
   const limit = state.reviewLimit ?? 10;
-  const revs = useJson(reviewsUrl({ product: id, skinType: skin, limit }));
+  let revs = useJson(reviewsUrl({ product: id, skinType: skin, limit }));
+  // Some sites don't ask reviewers for skin type. If the default filter finds nothing, show everything.
+  let noSkinData = false;
+  if (state.reviewSkin === undefined && skin && revs.status === 'ok' && !revs.data.total) {
+    const all = useJson(reviewsUrl({ product: id, limit }));
+    if (all.status !== 'ok' || all.data.total) { revs = all; skin = null; noSkinData = true; }
+  }
   const reviews = revs.data?.reviews ?? [];
   const total = revs.data?.total ?? 0;
   const ratingsByRetailer = Object.fromEntries((live?.ratings ?? []).map((r) => [r.retailer, r]));
@@ -1048,6 +1054,7 @@ function productPage(id) {
         <button class="chip ${!skin ? 'on' : ''}" data-act="review-skin" data-v="">All skin types</button>
         ${SKIN_TYPES.map((t) => `<button class="chip ${skin === t ? 'on' : ''}" data-act="review-skin" data-v="${t}">${t}${t === mine ? ' (you)' : ''}</button>`).join('')}
       </div>
+      ${noSkinData ? `<p class="xs muted">These reviewers didn’t share their skin type, so you’re seeing all reviews.</p>` : ''}
       ${reviewList}
       ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
     </section>`;
