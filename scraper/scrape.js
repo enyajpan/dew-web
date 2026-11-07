@@ -1,7 +1,7 @@
 // Scrape one review source (a product page) with whichever adapter fits it.
-import { fetchText, BlockedError } from './http.js';
+import { politeFetch, BlockedError } from './http.js';
 import { parseJsonLd } from './adapters/jsonld.js';
-import { detectOkendo, scrapeOkendo } from './adapters/okendo.js';
+import { detectOkendo, scrapeOkendo, okendoSummary } from './adapters/okendo.js';
 
 // Review vendors whose review text needs a vendor API key or a data partnership.
 const PARTNER_VENDORS = {
@@ -24,7 +24,13 @@ function partnerVendor(html) {
 export async function scrapeSource(source, opts = {}) {
   let html;
   try {
-    html = await fetchText(source.url);
+    const res = await politeFetch(source.url);
+    // A product page that redirects elsewhere (e.g. to the home page) is gone; don't
+    // read reviews for whatever products that page happens to feature.
+    if (new URL(res.url).pathname.replace(/\/$/, '') !== new URL(source.url).pathname.replace(/\/$/, '')) {
+      return { status: 'error', error: `Redirected to ${res.url}`, reviews: [] };
+    }
+    html = await res.text();
   } catch (e) {
     if (e instanceof BlockedError) return { status: 'blocked', error: e.message, reviews: [] };
     return { status: 'error', error: e.message, reviews: [] };
@@ -36,7 +42,7 @@ export async function scrapeSource(source, opts = {}) {
   if (okendo) {
     try {
       const reviews = await scrapeOkendo(okendo, opts);
-      return { status: 'ok', adapter: 'okendo', snapshot, reviews };
+      return { status: 'ok', adapter: 'okendo', snapshot: snapshot ?? okendoSummary(html), reviews };
     } catch (e) {
       return { status: e instanceof BlockedError ? 'blocked' : 'error', adapter: 'okendo', snapshot, error: e.message, reviews: [] };
     }

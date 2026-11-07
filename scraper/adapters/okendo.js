@@ -7,15 +7,19 @@ const API = 'https://api.okendo.io/v1';
 export function detectOkendo(html) {
   const subscriberId = html.match(/"subscriberId"\s*:\s*"([0-9a-f-]{36})"/)?.[1];
   if (!subscriberId) return null;
-  const productId =
-    html.match(/data-oke-reviews-product-id=["'](shopify-\d+)["']/)?.[1] ??
-    html.match(/"productId"\s*:\s*"?(shopify-\d+)/)?.[1] ??
-    (() => {
-      // Shopify's own analytics blob: meta.product.id
-      const id = html.match(/"product"\s*:\s*\{\s*"id"\s*:\s*(\d+)/)?.[1];
-      return id ? `shopify-${id}` : null;
-    })();
-  return productId ? { subscriberId, productId } : null;
+  // Use the page's own product (Shopify's analytics blob), never the first widget on
+  // the page, which can belong to a featured or "you may also like" product.
+  const id = html.match(/"product"\s*:\s*\{\s*"id"\s*:\s*(\d+)/)?.[1];
+  return id ? { subscriberId, productId: `shopify-${id}` } : null;
+}
+
+// Okendo prints a star summary for every product widget on a page, without saying
+// which product each belongs to, so we only trust it when there's exactly one.
+export function okendoSummary(html) {
+  const all = [...html.matchAll(/data-oke-metafield-data[^>]*>\s*(\{"averageRating":"[\d.]+","reviewCount":\d+\})/g)];
+  if (all.length !== 1) return null;
+  const { averageRating, reviewCount } = JSON.parse(all[0][1]);
+  return { rating_avg: Number(averageRating), review_count: reviewCount };
 }
 
 function mapReview(r) {
