@@ -4,7 +4,13 @@ DEW is a skincare web app that matches you with people who share your skin, clim
 
 Live site: https://dew-web-three.vercel.app (Vercel; every push to `main` deploys)
 
-**Review data** (as of November 7, 2026): **56,446 reviews across 152 products** from 8 brands. The database tracks 190 products in total; the rest have a star rating only, or no reviews yet. The daily scrape adds new reviews, so the live numbers grow over time.
+**Review data**
+
+![reviews](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-web-three.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.reviews&label=reviews&color=113916)
+![products with reviews](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-web-three.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.products_with_reviews&label=products%20with%20reviews&color=a1a261)
+![brands](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-web-three.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.brands&label=brands&color=cbe942)
+
+These counts are live: the badges read [`/api/stats`](https://dew-web-three.vercel.app/api/stats) and refresh about once an hour as the daily scrape adds reviews. Products without reviews have a star rating only, or nothing published yet.
 
 ## What works
 
@@ -175,6 +181,7 @@ Browser  →  dew-web-three.vercel.app/api/...  →  Supabase API  →  Postgres
 - **API** (Vercel functions in `api/`):
   - `GET /api/products` and `GET /api/products?id=t28_sos`: products with the latest published star rating per retailer.
   - `GET /api/reviews?product=t28_sos&skin_type=Combination&limit=20&offset=0`: scraped reviews, newest first.
+  - `GET /api/stats`: live counts of reviews, products and brands (drives the README badges).
 - **Review scraper** (`scraper/`): collects reviews and star ratings from brand sites. See [How the review scraper works](#how-the-review-scraper-works).
 
 ## How the review scraper works
@@ -251,6 +258,9 @@ npm run seed         # load products and review sources into Supabase
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 8, 2026: live stats**
+- Added `/api/stats` (backed by a `review_stats` view in Supabase) and live badges at the top of this README showing review, product and brand counts.
 
 **November 7, 2026: backend**
 - Moved hosting from GitHub Pages to Vercel (GitHub Pages is turned off). The repo is connected, so every push to `main` deploys.
