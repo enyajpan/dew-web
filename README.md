@@ -41,7 +41,7 @@ Needs Node 22+ and a `.env` with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_
 
 ```
 npm install
-npm run dev          # site + API at http://localhost:3000
+npm run local        # site + API at http://localhost:3000
 npm run scrape:dry   # scrape sources.json into scraper/out/ without touching the database
 npm run scrape       # scrape due sources into Supabase
 npm run seed         # load products and review sources into Supabase

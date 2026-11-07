@@ -9,7 +9,7 @@
     "scrape": "node scraper/run.js",
     "scrape:dry": "node scraper/run.js --dry-run",
     "seed": "node scripts/seed.js",
-    "dev": "npx vercel dev"
+    "local": "npx vercel dev"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

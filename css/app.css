@@ -320,3 +320,11 @@ h1, h2, h3, p { margin: 0; }
   .grid-3 { grid-template-columns: 1fr; }
   .hero .h1 { white-space: normal; font-size: 32px; }
 }
+
+/* Live reviews */
+.plink { color: inherit; text-decoration: none; }
+.plink:hover { text-decoration: underline; }
+.live-rating { font: 500 11px var(--mono); color: var(--forest); white-space: nowrap; }
+.review-stars { color: var(--forest); letter-spacing: 2px; font-size: 14px; }
+.review-body { white-space: pre-line; }
+.live-review a.src { color: inherit; text-decoration: none; }

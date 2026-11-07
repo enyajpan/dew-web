@@ -2,6 +2,7 @@ import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
 } from './data.js?v=6';
+import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=1';
 
 /* ================= state ================= */
 
@@ -60,7 +61,13 @@ function set(patch) { state = { ...state, ...patch }; save(); render(); }
 
 /* ================= helpers ================= */
 
-const P = (id) => PRODUCTS[id];
+// Live catalog from Supabase, keyed by id. Empty until /api/products answers.
+const liveProducts = () => Object.fromEntries((useJson(productsUrl).data ?? []).map((p) => [p.id, p]));
+const P = (id) => {
+  if (PRODUCTS[id]) return PRODUCTS[id];
+  const p = liveProducts()[id];
+  return { brand: p?.brand ?? '', name: p?.name ?? id, img: p?.image_path ?? 'assets/svg/hydrate.svg', price: Number(p?.price_usd ?? 0), step: p?.step ?? '', size: p?.size ?? '' };
+};
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 const money2 = (n) => `$${n.toFixed(2)}`;
@@ -75,6 +82,33 @@ const shelfItem = (id) => SHELF.find((s) => s.id === id);
 const cartCount = () => state.cart.reduce((a, c) => a + c.qty, 0);
 const strength = () => state.setupStep * 25;
 const route = () => (location.hash.replace(/^#\/?/, '') || 'for-you').split('?')[0];
+
+/* ================= live reviews ================= */
+
+const RETAILERS = { eadem: 'Eadem', tower28: 'Tower 28', shiseido: 'Shiseido', farmacy: 'Farmacy', biodance: 'Biodance', laneige: 'Laneige', sephora: 'Sephora', ulta: 'Ulta', oliveyoung: 'Olive Young' };
+const retailerName = (r) => RETAILERS[r] ?? r.replace(/^\w/, (c) => c.toUpperCase());
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+const productLink = (id, text) => `<a class="plink" href="#/product/${id}">${text}</a>`;
+
+// The published rating with the most reviews behind it, e.g. "★ 4.8  1,904 reviews on Tower 28".
+function liveRating(id) {
+  const best = (liveProducts()[id]?.ratings ?? []).filter((r) => r.rating_avg != null).sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0))[0];
+  return best ? `<span class="live-rating">★ ${(+best.rating_avg).toFixed(1)}${best.review_count ? `  ${best.review_count.toLocaleString()} reviews` : ''} on ${retailerName(best.retailer)}</span>` : '';
+}
+
+function liveReview(r, withProduct) {
+  const a = r.attributes ?? {};
+  const n = Math.round(+r.rating || 0);
+  const pid = r.product_id;
+  return `
+    <div class="card stack live-review" style="padding:18px">
+      ${withProduct ? `<div class="row">${thumb(pid, 34, 40)}<div class="grow"><div class="mono">${esc(r.products?.brand ?? P(pid).brand)}</div>${productLink(pid, `<span class="small">${esc(r.products?.name ?? P(pid).name)}</span>`)}</div></div>` : ''}
+      <div class="row" style="gap:10px"><span class="review-stars" aria-label="${n} of 5 stars">${starsTxt(n)}</span>${r.title ? `<span class="h4" style="font-size:15px;font-weight:500">${esc(r.title)}</span>` : ''}</div>
+      ${r.body ? `<p class="review-body">${esc(r.body)}</p>` : ''}
+      <div class="row wrap" style="gap:6px">${a.skin_type ? `<span class="tag">${esc(a.skin_type)} skin</span>` : ''}${a.skin_tone ? `<span class="tag">${esc(a.skin_tone)}</span>` : ''}${a.incentivized ? '<span class="tag">Gifted</span>' : ''}</div>
+      <div class="row" style="gap:8px"><span class="small">${esc(r.author_name ?? 'Anonymous')}</span>${r.verified ? '<span class="xs" style="color:var(--forest)">✓ Verified buyer</span>' : ''}<span class="xs faint grow">${fmtDate(r.reviewed_at)}</span><a class="src" href="${esc(r.review_sources?.url ?? '#')}" target="_blank" rel="noopener">${esc(retailerName(r.review_sources?.retailer ?? ''))}</a></div>
+    </div>`;
+}
 const go = (r) => { location.hash = `#/${r}`; };
 
 let toastTimer;
@@ -176,6 +210,7 @@ function myShelf() {
           <div class="row"><span class="k">Rate it</span><span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= Math.round(state.ratings[open.id] / 2) ? 'on' : ''}" data-act="rate-shelf" data-id="${open.id}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span></div>
           <div class="row">
             <a class="btn sm" href="#/check-in">Review</a>
+            <a class="btn sm" href="#/product/${open.id}">Reviews</a>
             <button class="btn sm" data-act="refill" data-id="${open.id}">Log refill</button>
             <button class="btn sm" data-act="ask" data-q="${esc(`What pairs well with ${P(open.id).name}?`)}">Ask Dew</button>
           </div>
@@ -273,8 +308,9 @@ function pickRow(p, i) {
       ${thumb(p.id, 56, 56)}
       <div class="grow stack" style="gap:4px">
         <span class="mono">${esc(pr.brand)}</span>
-        <span style="font-size:15px">${esc(pr.name)}</span>
+        ${productLink(p.id, `<span style="font-size:15px">${esc(pr.name)}</span>`)}
         <span class="small muted">${esc(p.why)}</span>
+        ${liveRating(p.id)}
         <span class="row xs muted" style="gap:14px"><span class="buybar"><span style="width:${p.buy}%"></span></span><span class="mono" style="color:var(--ink)">${p.buy}% say buy</span><span>${p.results}</span><span>${p.matched} matched</span></span>
       </div>
       ${ring(p.score)}
@@ -296,6 +332,25 @@ function verdictReview(r) {
       <p>“${esc(r.text)}”</p>
       <div class="row"><img class="avatar" style="width:24px;height:24px" src="${r.avatar}" alt=""><span class="small">${esc(r.name)}</span><span class="src">${r.source}</span><span class="xs faint grow">${r.meta}</span>${match(r.similar)}</div>
     </div>`;
+}
+
+// Newest public reviews from people with your skin type; sample reviews if the API is unavailable.
+function peopleLikeYou() {
+  const skin = state.answers.skinType?.[0];
+  const live = useJson(reviewsUrl({ skinType: skin, limit: 3 }));
+  const reviews = live.data?.reviews ?? [];
+  const body = live.status === 'loading'
+    ? '<div class="empty">Loading reviews…</div>'
+    : reviews.length
+      ? reviews.map((r) => liveReview(r, true)).join('')
+      : PUBLIC_REVIEWS.map(verdictReview).join('');
+  return `
+    <section class="card stack">
+      <h3 class="h4">What people like you are saying</h3>
+      <p class="xs muted">${reviews.length ? `The newest reviews from people with ${skin ? `${esc(skin.toLowerCase())} skin` : 'skin like yours'}, collected from brand sites.` : 'Public reviews from people with your skin, from Sephora, Reddit and YesStyle.'} Your friends are on the Community tab.</p>
+      ${body}
+      <a class="btn" href="#/community" style="align-self:flex-start">Show more reviews</a>
+    </section>`;
 }
 
 function forYou() {
@@ -327,12 +382,7 @@ function forYou() {
       ${PICKS.fresh.map(pickRow).join('')}
       <p class="xs faint" style="margin-top:8px">Why these? We look at what your shelf is missing, what’s almost empty, and what people like you upgraded to.</p>
     </section>
-    <section class="card stack">
-      <h3 class="h4">What people like you are saying</h3>
-      <p class="xs muted">Public reviews from people with your skin, from Sephora, Reddit and YesStyle. Your friends are on the Community tab.</p>
-      ${PUBLIC_REVIEWS.map(verdictReview).join('')}
-      <a class="btn" href="#/community" style="align-self:flex-start">Show more reviews</a>
-    </section>`;
+    ${peopleLikeYou()}`;
   return { layout: '', left: leftCol(finishProfileCard()), main, right: rightRail(), ask: true };
 }
 
@@ -938,17 +988,84 @@ function profilePage() {
   return { layout: '', left: leftCol(downloadApp()), main: header + body, right: trackerRail(), ask: true };
 }
 
+/* ================= product ================= */
+
+const SKIN_TYPES = ['Combination', 'Oily', 'Dry', 'Normal', 'Sensitive'];
+const SOURCE_NOTE = {
+  blocked: 'This site doesn’t allow automated access, so we can’t show its reviews yet.',
+  needs_partnership: 'Star rating only. Full reviews need a data partnership with this site’s review provider.',
+  paused: 'Paused.',
+};
+
+function productPage(id) {
+  const p = P(id);
+  const products = useJson(productsUrl);
+  const live = liveProducts()[id];
+  const mine = state.answers.skinType?.[0];
+  const skin = state.reviewSkin === undefined ? mine : state.reviewSkin; // null = all skin types
+  const limit = state.reviewLimit ?? 10;
+  const revs = useJson(reviewsUrl({ product: id, skinType: skin, limit }));
+  const reviews = revs.data?.reviews ?? [];
+  const total = revs.data?.total ?? 0;
+  const ratingsByRetailer = Object.fromEntries((live?.ratings ?? []).map((r) => [r.retailer, r]));
+
+  const sourcesCard = products.status === 'error'
+    ? '<p class="xs muted">Live ratings are unavailable right now.</p>'
+    : (live?.sources ?? []).map((s) => {
+      const r = ratingsByRetailer[s.retailer];
+      return `
+        <div class="pick">
+          <div class="grow"><div style="font-size:15px">${esc(retailerName(s.retailer))}</div>${SOURCE_NOTE[s.status] ? `<div class="xs muted">${SOURCE_NOTE[s.status]}</div>` : ''}</div>
+          ${r?.rating_avg != null ? `<span class="live-rating" style="font-size:14px">★ ${(+r.rating_avg).toFixed(1)}${r.review_count ? `  ${r.review_count.toLocaleString()} reviews` : ''}</span>` : '<span class="xs faint">No rating</span>'}
+          <a class="btn sm" href="${esc(s.url)}" target="_blank" rel="noopener">View ↗</a>
+        </div>`;
+    }).join('') || `<p class="xs muted">${products.status === 'loading' ? 'Loading…' : 'We don’t track any review pages for this product yet.'}</p>`;
+
+  const reviewList = revs.status === 'loading'
+    ? '<div class="empty">Loading reviews…</div>'
+    : revs.status === 'error'
+      ? '<div class="empty">Reviews are unavailable right now.</div>'
+      : reviews.length
+        ? reviews.map((r) => liveReview(r)).join('')
+        : `<div class="empty">No reviews${skin ? ` from people with ${esc(skin.toLowerCase())} skin` : ''} yet.${skin ? ' <button class="link" data-act="review-skin" data-v="">See all reviews</button>' : ''}</div>`;
+
+  const main = `
+    <a class="xs" href="javascript:history.back()">← Back</a>
+    <section class="card row" style="gap:20px;align-items:center">
+      ${thumb(id, 96, 112)}
+      <div class="grow stack" style="gap:6px">
+        <span class="mono">${esc(p.brand)}</span>
+        <h1 class="h2" style="font-size:30px">${esc(p.name)}</h1>
+        <span class="xs muted">${[p.step && `${p.step} step`, p.size, p.price ? money(p.price) : ''].filter(Boolean).join('  ')}</span>
+        ${liveRating(id)}
+      </div>
+      ${p.price ? `<button class="btn dark" data-act="add" data-id="${id}">${state.added[id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
+    </section>
+    <section class="card"><h3 class="h4">Where it’s reviewed</h3>${sourcesCard}</section>
+    <section class="card stack">
+      <div class="row between"><h3 class="h4">Reviews</h3><span class="xs muted">${revs.status === 'ok' ? `${total.toLocaleString()} ${skin ? `from ${esc(skin.toLowerCase())} skin` : 'total'}` : ''}</span></div>
+      <div class="row wrap" style="gap:6px">
+        <button class="chip ${!skin ? 'on' : ''}" data-act="review-skin" data-v="">All skin types</button>
+        ${SKIN_TYPES.map((t) => `<button class="chip ${skin === t ? 'on' : ''}" data-act="review-skin" data-v="${t}">${t}${t === mine ? ' (you)' : ''}</button>`).join('')}
+      </div>
+      ${reviewList}
+      ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
+    </section>`;
+  return { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+}
+
 /* ================= search ================= */
 
 function searchPage() {
   const q = (state.lastSearch || '').trim().toLowerCase();
-  const hits = Object.entries(PRODUCTS).filter(([, p]) => !q || q === 'new' || `${p.brand} ${p.name} ${p.step}`.toLowerCase().includes(q));
+  const catalog = { ...Object.fromEntries(Object.keys(liveProducts()).map((id) => [id, P(id)])), ...PRODUCTS };
+  const hits = Object.entries(catalog).filter(([, p]) => !q || q === 'new' || `${p.brand} ${p.name} ${p.step}`.toLowerCase().includes(q));
   const list = q === 'new' ? LAUNCHES.map((l) => [l.id, P(l.id)]) : hits;
   const main = `
     <h1 class="h2">${q && q !== 'new' ? `Results for “${esc(state.lastSearch)}”` : q === 'new' ? 'New launches' : 'All products'}</h1>
     <p class="xs muted">${list.length} products. Tap + to add to your cart.</p>
     <section class="card">${list.map(([id, p], i) => `
-      <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${esc(p.name)}</div><div class="xs muted">${p.step} step  ${p.size}</div></div><span class="small">${money(p.price)}</span>
+      <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${p.step} step  ${p.size}</div>${liveRating(id)}</div><span class="small">${money(p.price)}</span>
         <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>'}</section>`;
   return { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
 }
@@ -988,6 +1105,7 @@ function view() {
   if (a === 'check-in') return { tab: '', ...checkinPage() };
   if (a === 'profile') return { tab: '', ...profilePage() };
   if (a === 'search') return { tab: '', ...searchPage() };
+  if (a === 'product' && b) return { tab: '', ...productPage(b) };
   return { tab: 'for-you', ...forYou() };
 }
 
@@ -1027,6 +1145,8 @@ const actions = {
   add: (d) => addToCart(d.id, 'pick'),
   'add-many': (d) => { d.ids.split(',').filter(Boolean).forEach((id) => addToCart(id, 'pick')); },
   search: (d) => { set({ lastSearch: d.q }); go('search'); },
+  'review-skin': (d) => set({ reviewSkin: d.v || null, reviewLimit: 10 }),
+  'reviews-more': () => set({ reviewLimit: (state.reviewLimit ?? 10) + 10 }),
   'ask-open': () => set({ askOpen: true }),
   'ask-close': () => set({ askOpen: false }),
   ask: (d) => askDewSend(d.q),
@@ -1135,5 +1255,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (state.askOpen) set({ askOpen: false }); else if (state.shelfOpen) set({ shelfOpen: null }); }
 });
 
-window.addEventListener('hashchange', () => { render(); document.querySelectorAll('.col').forEach((c) => { c.scrollTop = 0; }); });
+window.addEventListener('hashchange', () => {
+  // Each product page starts filtered to your skin type, showing the first 10 reviews.
+  if (route().startsWith('product/')) state = { ...state, reviewSkin: undefined, reviewLimit: 10 };
+  render();
+  document.querySelectorAll('.col').forEach((c) => { c.scrollTop = 0; });
+});
+onData(render);
 render();
