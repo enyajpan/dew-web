@@ -3,7 +3,7 @@ import {
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
 } from './data.js?v=6';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
-import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=2';
+import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
 /* ================= state ================= */
 
@@ -127,6 +127,14 @@ function toast(msg) {
   toastTimer = setTimeout(() => { el.innerHTML = ''; }, 2600);
 }
 
+// Every product as "Brand · Name", for the search boxes' suggestions.
+function catalogEntries() {
+  const ids = new Set([...Object.keys(PRODUCTS), ...Object.keys(liveProducts())]);
+  return [...ids].map((id) => [id, `${P(id).brand} · ${P(id).name}`]);
+}
+const productFromQuery = (q) => catalogEntries().find(([, label]) => label.toLowerCase() === q.trim().toLowerCase())?.[0];
+const suggestionList = () => `<datalist id="product-suggestions">${catalogEntries().map(([, l]) => `<option value="${esc(l)}"></option>`).join('')}</datalist>`;
+
 function addToShelf(id) {
   if (signedOut()) { state = { ...state, authNotice: 'Create a free account to build your shelf.' }; go('signup'); return; }
   if (shelfIds().includes(id)) { toast(`${P(id).name} is already on your shelf`); return; }
@@ -159,7 +167,7 @@ function nav(active) {
     <a href="#/welcome" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
     <form class="search" data-form="search" role="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
-      <input name="q" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off">
+      <input name="q" list="product-suggestions" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off">
     </form>
     <span class="nav-spacer"></span>
     <a class="tab ${active === 'reviews' ? 'active' : ''}" href="#/reviews">Public reviews</a>
@@ -172,7 +180,7 @@ function nav(active) {
     <a href="#/for-you" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
     <form class="search" data-form="search" role="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
-      <input name="q" placeholder="Search products, ingredients, people…" value="${esc(state.lastSearch || '')}" autocomplete="off">
+      <input name="q" list="product-suggestions" placeholder="Search products, ingredients, people…" value="${esc(state.lastSearch || '')}" autocomplete="off">
     </form>
     <span class="nav-spacer"></span>
     <nav class="tabs">${tabs.map(([r, l]) => `<a class="tab ${active === r ? 'active' : ''}" href="#/${r}">${l}</a>`).join('')}</nav>
@@ -522,9 +530,10 @@ function setupPage(n) {
       </section>`).join('') : `
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
-        <div class="row"><input class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Search a product to add…"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button><button class="btn" data-act="toast" data-msg="Imported 11 products from your Sephora orders">Import orders</button></div>
-        <p class="xs muted">${SHELF.length} products added. Tap a product to rank it.</p>
-        ${shelfRows(SHELF, { selectable: false })}
+        <form class="row" data-form="shelf-add"><input name="q" list="product-suggestions" class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a product name, e.g. “Heartleaf”" autocomplete="off"><button class="btn dark">Add</button></form>
+        <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button><button class="btn" data-act="toast" data-msg="Imported 11 products from your Sephora orders">Import orders</button></div>
+        <p class="xs muted">${shelfIds().length} products on your shelf.</p>
+        ${shelfRows(shelfIds().map((id) => ({ id })), { selectable: false })}
         <div class="notice">We use your shelf to find what your routine is missing, what’s running low and what to replace.</div>
       </section>`;
   const back = n > 1 ? `<a class="btn" href="#/setup/${n - 1}">← Back</a>` : '<a class="btn" href="#/for-you">Skip for now</a>';
@@ -1346,6 +1355,7 @@ function searchPage() {
     <p class="xs muted">${list.length} products. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in DEW so far` : ''}</p>
     <section class="card">${list.map(([id, p], i) => `
       <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${p.step} step  ${p.size}</div>${liveRating(id)}</div><span class="small">${money(p.price)}</span>
+        ${signedOut() ? '' : `<button class="btn sm" data-act="shelf-add" data-id="${id}">${shelfIds().includes(id) ? 'On shelf ✓' : '+ Shelf'}</button>`}
         <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>'}</section>`;
   return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
 }
@@ -1414,7 +1424,7 @@ function render() {
   if (v.right) cols.push(`<aside class="col rail" aria-label="Side panel">${v.right}</aside>`);
   app.innerHTML = cols.join('');
   [...app.querySelectorAll('.col')].forEach((c, i) => { if (scrolls[i]) c.scrollTop = scrolls[i]; });
-  document.getElementById('overlay').innerHTML = `${v.ask ? askDew() : ''}${rewardModal()}`;
+  document.getElementById('overlay').innerHTML = `${v.ask ? askDew() : ''}${rewardModal()}${suggestionList()}`;
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;
@@ -1577,7 +1587,15 @@ document.addEventListener('submit', (e) => {
   e.preventDefault();
   const fd = new FormData(form);
   const q = fd.get('q') || '';
-  if (form.dataset.form === 'search') { set({ lastSearch: q }); go('search'); }
+  if (form.dataset.form === 'search') {
+    const id = productFromQuery(q);
+    if (id) go(`product/${id}`); else { set({ lastSearch: q }); go('search'); }
+  }
+  if (form.dataset.form === 'shelf-add') {
+    const id = productFromQuery(q) ?? catalogEntries().find(([, l]) => l.toLowerCase().includes(q.trim().toLowerCase()))?.[0];
+    if (id && q.trim()) addToShelf(id); else toast('No product matches that name yet. Try picking one from the suggestions.');
+    form.reset();
+  }
   if (form.dataset.form === 'ask') askDewSend(q);
   if (form.dataset.form === 'reviews-search') set({ rv: { ...state.rv, q: q.trim(), limit: 20 } });
   if (form.dataset.form === 'signup' || form.dataset.form === 'login') submitAuth(form.dataset.form, fd);

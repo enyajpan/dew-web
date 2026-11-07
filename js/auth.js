@@ -8,6 +8,11 @@ let saveTimer = null;
 export const auth = { ready: false, enabled: false };
 
 export async function initAuth(onChange) {
+  // Local testing: http://localhost:3000/?demo runs the full app without accounts.
+  if (location.hostname === 'localhost' && new URLSearchParams(location.search).has('demo')) {
+    auth.ready = true;
+    return null;
+  }
   try {
     const cfg = await (await fetch('/api/config')).json();
     if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) throw new Error('no config');

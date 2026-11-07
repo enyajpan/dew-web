@@ -25,7 +25,8 @@ Mention skin types when reviewers with a particular type report something differ
 
 function reviewLine(r) {
   const who = [r.attributes?.skin_type && `${r.attributes.skin_type} skin`, r.verified && 'verified buyer'].filter(Boolean).join(', ');
-  const text = `${r.title ? `${r.title}. ` : ''}${r.body ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 700);
+  // toWellFormed() repairs an emoji cut in half by slice(), which would make the request invalid JSON.
+  const text = `${r.title ? `${r.title}. ` : ''}${r.body ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 700).toWellFormed();
   return `- ${r.rating}/5${who ? ` (${who})` : ''}: ${text}`;
 }
 

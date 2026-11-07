@@ -23,6 +23,12 @@ These counts are live: the badges read [`/api/stats`](https://dew-web-three.verc
 - **Sample box flow:** 1,500 pts unlocks a free sample box, then a 2-week trial and a day-14 verdict that moves loved minis to full size with the sample value taken off.
 - **Weekly check-in and profile:** skin health, product ratings, buy or don't buy, progress tracker, rankings, challenges and milestones.
 - **Ask Dew:** a chat assistant that sits as a button in the bottom-right corner and expands.
+- **Accounts:** a welcome page for visitors, plus sign-up and log-in (Supabase Auth). New accounts go straight into the skin profile; each account's points, shelf, cart and check-ins are saved to its profile. Without an account you can still search products, read reviews and browse Public reviews.
+- **Your top 3 picks:** on For you, three products chosen from real review data: how highly people with your skin type rate them, which routine step they fill, and whether reviewers say they help your concerns. Each shows "What this solves", "What people like you are saying" (with quotes from people with your skin type), and links to all reviews.
+- **AI review summaries:** each product page has "What reviewers say", a Claude-written overview with pros and cons from up to 150 reviews.
+- **Public reviews:** a live feed of every collected review, searchable, filterable by product, skin type and rating, and sortable.
+- **Ask Dew:** a real chatbot (Claude) for signed-in users that uses your skin profile, your shelf and DEW's review summaries.
+- **Shelf + Want to try:** search suggests products as you type and adds them to your shelf; "Save" puts products in the Want to try list on the right.
 - **Live reviews:** every product has a page (`#/product/<id>`) with its star rating on each site that reviews it and real reviews you can filter by skin type. "What people like you are saying" shows the newest reviews from people with your skin type, and picks and search show live star ratings.
 
 Points, cart, ratings and check-ins are saved in your browser (localStorage). Use **Reset demo data** at the bottom of the profile tracker to start over, and **Demo: jump to 1,500 pts** to see the sample box unlock.
@@ -39,6 +45,7 @@ flowchart LR
   NAV --> CO["Community"]
   NAV --> PK["Picked for you"]
   NAV --> SE["Search"]
+  NAV --> RV["Public reviews<br/>live feed"]
   NAV --> CA["Cart"]
   NAV --> PF["My profile<br/>rankings + progress"]
 
@@ -46,6 +53,9 @@ flowchart LR
   SHELF --> CI["Weekly check-in"]
   FY --> PR
   SE --> PR
+  RV --> PR
+  WL["Welcome page<br/>(signed out)"] -->|sign up| ON
+  WL -->|log in| FY
   CR --> CRP["Creator shelf"]
 
   FY -->|finish profile| ON["Skin profile<br/>4 steps"] --> SD["Profile complete"] --> PK
@@ -60,9 +70,11 @@ flowchart LR
 flowchart LR
   WEB["Brand sites<br/>Okendo reviews +<br/>schema.org ratings"] --> SCR["Review scraper<br/>daily Vercel cron"]
   SCR -->|writes| DB[("Supabase Postgres<br/>products · reviews ·<br/>review_sources ·<br/>rating_snapshots ·<br/>scrape_runs")]
-  DB -->|reads| API["Vercel API<br/>/api/products<br/>/api/reviews"]
-  API --> APP["App screens<br/>For you · Product page ·<br/>Search · picks"]
-  APP <--> LS[("Browser localStorage<br/>points · cart · shelf ratings ·<br/>check-ins")]
+  DB --> SUM["AI summaries<br/>Claude, daily cron"] -->|writes| DB
+  DB -->|reads| API["Vercel API<br/>products · reviews · stats ·<br/>summary · recommendations · ask"]
+  API --> APP["App screens"]
+  CL["Claude API"] <--> API
+  APP <-->|accounts + saved state| AUTH[("Supabase Auth<br/>+ profiles")]
 ```
 
 - **Global:** the top nav and Ask Dew are on every page. On desktop the left column (check-in and My Shelf), the middle column and the right column each scroll on their own; below 820px wide everything stacks into one column.
@@ -71,7 +83,8 @@ flowchart LR
 - **Picked for you** builds a 4-step routine to buy full size, or to sample first with points.
 - **Buy** covers cart and checkout, plus the sample box flow: checkout, a 2-week trial, and a day-14 verdict.
 - **Track** is the weekly check-in and your profile, with your rankings, progress, challenges and milestones.
-- **Data:** product ratings and reviews come from Supabase through the Vercel API (see [Backend](#backend)). Everything personal is demo state saved in your browser for now.
+- **Signed out**, visitors see the welcome page, search, product pages and Public reviews; everything else asks them to sign up or log in.
+- **Data:** product ratings, reviews, AI summaries and recommendations come from Supabase through the Vercel API (see [Backend](#backend)). Each account's personal state (skin profile, shelf, points, cart, check-ins) is saved to its Supabase profile.
 
 ## Branding
 
@@ -164,23 +177,29 @@ Browser  →  dew-web-three.vercel.app/api/...  →  Supabase API  →  Postgres
 
 - **Reading:** the app calls `/api/products` and `/api/reviews`. Those Vercel functions query Supabase with `@supabase/supabase-js` (which goes through Supabase's API, not a direct database connection) using the read-only anon key. The browser never talks to Supabase directly.
 - **Writing:** the daily scrape (`/api/cron/scrape`) writes through the same API with the service role key. Big backfills run from a laptop with `npm run scrape -- --full`, using the keys in a local `.env`.
-- **Keys:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` are Vercel environment variables (and in `.env` locally, which is not committed). None of them reach the browser.
+- **Accounts:** the browser signs in with Supabase Auth directly (using the public anon key from `/api/config`) and reads and writes only its own `profiles` row; row level security blocks everyone else's.
+- **AI:** `/api/ask` (Ask Dew) and the summary job call the Claude API (Claude Opus 5.5) from the server with `ANTHROPIC_API_KEY`.
+- **Keys:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` and `ANTHROPIC_API_KEY` are Vercel environment variables (and in `.env` locally, which is not committed). None of them reach the browser.
 
 ### Where data lives
 
 | Where | What |
 |---|---|
-| **Supabase** (Postgres, project `dew`) | All product and review data: `products`, `review_sources` (each scraped page and its status), `reviews`, `rating_snapshots` (each site's published rating over time) and `scrape_runs` (a log of every scrape) |
+| **Supabase** (Postgres, project `dew`) | All product and review data: `products`, `review_sources` (each scraped page and its status), `reviews`, `rating_snapshots` (each site's published rating over time), `review_summaries` (AI pros/cons) and `scrape_runs` (a log of every scrape). Accounts in Supabase Auth, with each person's saved app state in `profiles`. |
 | **Vercel** | Hosting, the API functions and the daily cron. Stores no data. |
 | **GitHub** | Code only. |
-| **Your browser** | Demo state for the prototype: points, cart, shelf ratings and check-ins (localStorage). |
+| **Your browser** | Your sign-in session, plus a copy of your app state (localStorage). Signed out on localhost with `?demo`, the prototype runs entirely in the browser. |
 
 ### Pieces
 
 - **Database:** Supabase (Postgres). Schema in `supabase/migrations/`: products, review sources, rating snapshots, reviews and scrape runs. Public reads, server-only writes.
 - **API** (Vercel functions in `api/`):
   - `GET /api/products` and `GET /api/products?id=t28_sos`: products with the latest published star rating per retailer.
-  - `GET /api/reviews?product=t28_sos&skin_type=Combination&limit=20&offset=0`: scraped reviews, newest first.
+  - `GET /api/reviews?product=t28_sos&skin_type=Combination&q=redness&rating=low&sort=helpful&limit=20&offset=0`: scraped reviews. Every filter is optional.
+  - `GET /api/summary?product=t28_sos`: the AI pros/cons summary.
+  - `GET /api/recommendations?skin_type=Combination&concerns=Breakouts,Redness&owned=Cleanse,Tone&exclude=…`: the top 3 picks with what each solves and what people like you say.
+  - `POST /api/ask`: Ask Dew (signed-in users only).
+  - `GET /api/config`: the public Supabase settings the browser needs to sign in.
   - `GET /api/stats`: live counts of reviews, products and brands (drives the README badges).
 - **Review scraper** (`scraper/`): collects reviews and star ratings from brand sites. See [How the review scraper works](#how-the-review-scraper-works).
 
@@ -245,7 +264,7 @@ For each page, `scraper/scrape.js` loads the HTML and picks an approach:
 
 ## Run locally
 
-Needs Node 22+ and a `.env` with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET`.
+Needs Node 22+ and a `.env` with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` and `ANTHROPIC_API_KEY`.
 
 ```
 npm install
@@ -253,11 +272,22 @@ npm run local        # site + API at http://localhost:3000
 npm run scrape:dry   # scrape sources.json into scraper/out/ without touching the database
 npm run scrape       # scrape due sources into Supabase (add -- --full to backfill)
 npm run seed         # load products and review sources into Supabase
+node scripts/summarize.js   # write AI summaries for products that need one (--limit=3 to try a few)
 ```
+
+Open http://localhost:3000/?demo to use the full app without signing in (localhost only).
 
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 7, 2026: accounts, AI and the Hi-fi v6 comments**
+- Welcome page, sign-up and log-in with Supabase Auth. Each account's state is saved to its own profile; signed-out visitors can still search, read product pages and browse Public reviews.
+- AI review summaries: Claude (Opus 5.5) writes an overview plus pros and cons for each product from up to 150 of its reviews, always including critical ones. Stored in `review_summaries`, refreshed daily for products with 20% more reviews.
+- Your top 3 picks on For you, from real data: ratings by people with your skin type, routine gaps and your concerns, with "What this solves" and "What people like you are saying" (Hi-fi v6 comment #100).
+- Public reviews tab: a live, searchable feed of all collected reviews, filterable by product, skin type and rating, linked to where each was posted (#101, #123), with the live review count.
+- Ask Dew answers with Claude, using your profile, shelf and review summaries (#106).
+- Product search suggests products as you type and adds them to your shelf; shelf photos blend away white backgrounds (#102). Running low moved under My Shelf (#104, #105); "Save" and a Want to try list (#107, #108).
 
 **November 7, 2026: backend**
 - Moved hosting from GitHub Pages to Vercel (GitHub Pages is turned off). The repo is connected, so every push to `main` deploys.

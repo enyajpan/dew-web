@@ -4,9 +4,9 @@
 // reviewers say it helps with their concerns. Each pick explains what it solves.
 import { db, send } from './_db.js';
 
-const ROUTINE_ORDER = ['Cleanse', 'Tone', 'Treat', 'Eyes', 'Moisturize', 'Protect'];
-// The everyday steps. Missing one is a real gap; extras (eyes, masks, lips) are nice-to-haves.
+// The everyday steps, in routine order. Missing one is a real gap; extras (eyes, masks, lips) are nice-to-haves.
 const CORE_STEPS = ['Cleanse', 'Tone', 'Treat', 'Moisturize', 'Protect'];
+const ROUTINE_ORDER = CORE_STEPS;
 const CONCERNS = {
   Breakouts: /breakout|acne|pimple|clog|blemish/i,
   Redness: /red|calm|sooth|irritat/i,
