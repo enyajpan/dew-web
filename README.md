@@ -21,67 +21,40 @@ Points, cart, ratings and check-ins are saved in your browser (localStorage). Us
 
 ## Information architecture
 
+### Screens
+
 ```mermaid
-flowchart TB
-  subgraph Global["On every page"]
-    NAV["Top nav: search · For you · Creators · Community · Picked for you · points · cart · profile"]
-    SHELF["Left column: quick check-in + My Shelf"]
-    ASK["Ask Dew chat (bottom right)"]
-  end
+flowchart LR
+  NAV["Top nav"]
+  NAV --> FY["For you<br/>(home)"]
+  NAV --> CR["Creators"]
+  NAV --> CO["Community"]
+  NAV --> PK["Picked for you"]
+  NAV --> SE["Search"]
+  NAV --> CA["Cart"]
+  NAV --> PF["My profile<br/>rankings + progress"]
 
-  subgraph Discover["Discover"]
-    FY["For you (home)<br/>#/for-you"]
-    CR["Creators like you<br/>#/creators"]
-    CRP["Creator shelf<br/>#/creators/id"]
-    CO["Community feed<br/>#/community"]
-    SE["Search<br/>#/search"]
-    PR["Product page<br/>#/product/id"]
-  end
-
-  subgraph Onboard["Skin profile"]
-    S1["1 Lifestyle"] --> S2["2 My skin"] --> S3["3 Preferences + goals"] --> S4["4 Current shelf"] --> SD["Profile complete<br/>#/setup/done"]
-  end
-
-  subgraph Routine["Picked for you"]
-    PK["Full-size routine<br/>#/picked"]
-    SB["Sample it first"]
-  end
-
-  subgraph Buy["Buy"]
-    CA["Cart + checkout<br/>#/cart"] --> OP["Order placed"]
-    SC["Sample box checkout"] --> SP["Sample box on its way"] --> SV["Day-14 verdict"]
-  end
-
-  subgraph Track["Track"]
-    CI["Weekly check-in<br/>#/check-in"]
-    PF["My profile: rankings + progress<br/>#/profile"]
-  end
-
-  subgraph Data["Data"]
-    LS[("Browser localStorage<br/>points, cart, shelf ratings, check-ins")]
-    API["Vercel API<br/>/api/products · /api/reviews"]
-    DB[("Supabase Postgres<br/>products · review_sources · reviews<br/>rating_snapshots · scrape_runs")]
-    SCR["Review scraper<br/>daily Vercel cron"]
-    WEB["Brand sites<br/>Okendo reviews, schema.org ratings"]
-  end
-
-  NAV --> FY & CR & CO & PK & SE & CA & PF
-  FY -->|finish profile| S1
-  SD --> FY
+  SHELF["My Shelf<br/>(left column)"] --> PR["Product page<br/>ratings + reviews"]
+  SHELF --> CI["Weekly check-in"]
   FY --> PR
   SE --> PR
-  SHELF --> PR
-  CR --> CRP
-  PK --> CA
-  PK --> SB --> SC
-  SV -->|loved minis go full size| CA
-  SHELF --> CI
+  CR --> CRP["Creator shelf"]
 
-  FY & PR & SE -.->|live ratings + reviews| API
-  API -.-> DB
-  SCR -.->|writes| DB
-  WEB -.-> SCR
-  Track & Buy & Onboard -.->|demo state| LS
+  FY -->|finish profile| ON["Skin profile<br/>4 steps"] --> SD["Profile complete"] --> PK
+  PK -->|buy full size| CA --> OP["Order placed"]
+  PK -->|sample it first| SC["Sample box<br/>checkout"] --> SP["2-week trial"] --> SV["Day-14 verdict"]
+  SV -->|loved minis| CA
+```
+
+### Data
+
+```mermaid
+flowchart LR
+  WEB["Brand sites<br/>Okendo reviews +<br/>schema.org ratings"] --> SCR["Review scraper<br/>daily Vercel cron"]
+  SCR -->|writes| DB[("Supabase Postgres<br/>products · reviews ·<br/>review_sources ·<br/>rating_snapshots ·<br/>scrape_runs")]
+  DB -->|reads| API["Vercel API<br/>/api/products<br/>/api/reviews"]
+  API --> APP["App screens<br/>For you · Product page ·<br/>Search · picks"]
+  APP <--> LS[("Browser localStorage<br/>points · cart · shelf ratings ·<br/>check-ins")]
 ```
 
 - **Global:** the top nav and Ask Dew are on every page. On desktop the left column (check-in and My Shelf), the middle column and the right column each scroll on their own; below 820px wide everything stacks into one column.
