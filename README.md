@@ -288,6 +288,7 @@ Newest first. Every major change gets an entry here.
 - Public reviews tab: a live, searchable feed of all collected reviews, filterable by product, skin type and rating, linked to where each was posted (#101, #123), with the live review count.
 - Ask Dew answers with Claude, using your profile, shelf and review summaries (#106).
 - Product search suggests products as you type and adds them to your shelf; shelf photos blend away white backgrounds (#102). Running low moved under My Shelf (#104, #105); "Save" and a Want to try list (#107, #108).
+- Figma: new **Hi-fi v7** page with all 24 v6 comments, including the redesigned Creators grid, creator page (top recommendations, one shelf, All reviews view), profile pages, Public reviews and product page screens. See its “What changed” frame.
 
 **November 7, 2026: backend**
 - Moved hosting from GitHub Pages to Vercel (GitHub Pages is turned off). The repo is connected, so every push to `main` deploys.
