@@ -283,7 +283,7 @@ Newest first. Every major change gets an entry here.
 
 **November 7, 2026: accounts, AI and the Hi-fi v6 comments**
 - Welcome page, sign-up and log-in with Supabase Auth. Each account's state is saved to its own profile; signed-out visitors can still search, read product pages and browse Public reviews.
-- AI review summaries: Claude (Opus 5.5) writes an overview plus pros and cons for each product from up to 150 of its reviews, always including critical ones. Stored in `review_summaries`, refreshed daily for products with 20% more reviews.
+- AI review summaries: Claude (Opus 5.5) writes an overview plus pros and cons for each product from up to 150 of its reviews, always including critical ones. Stored in `review_summaries`. 80 products have one; new summaries are paused for now (the daily summary cron is off). Run `node scripts/summarize.js` to resume, and re-add `/api/cron/summarize` to `vercel.json` to make it daily again.
 - Your top 3 picks on For you, from real data: ratings by people with your skin type, routine gaps and your concerns, with "What this solves" and "What people like you are saying" (Hi-fi v6 comment #100).
 - Public reviews tab: a live, searchable feed of all collected reviews, filterable by product, skin type and rating, linked to where each was posted (#101, #123), with the live review count.
 - Ask Dew answers with Claude, using your profile, shelf and review summaries (#106).
