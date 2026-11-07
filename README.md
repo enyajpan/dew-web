@@ -4,6 +4,8 @@ DEW is a skincare web app that matches you with people who share your skin, clim
 
 Live site: https://dew-web-three.vercel.app (Vercel; every push to `main` deploys)
 
+**Review data** (as of November 7, 2026): **56,446 reviews across 152 products** from 8 brands. The database tracks 190 products in total; the rest have a star rating only, or no reviews yet. The daily scrape adds new reviews, so the live numbers grow over time.
+
 ## What works
 
 - **For you:** 10 picks split into "Fills a gap in your routine" and "Want to try something new?", public reviews from people like you, new launches and refill reminders.
