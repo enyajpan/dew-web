@@ -19,9 +19,159 @@ Live site: https://dew-web-three.vercel.app (Vercel; every push to `main` deploy
 
 Points, cart, ratings and check-ins are saved in your browser (localStorage). Use **Reset demo data** at the bottom of the profile tracker to start over, and **Demo: jump to 1,500 pts** to see the sample box unlock.
 
-## Layout
+## Information architecture
 
-The top nav is fixed. On desktop the left column (check-in and shelf), the middle column and the right column each scroll on their own. Below 820px wide the page falls back to a single scrolling column.
+```mermaid
+flowchart TB
+  subgraph Global["On every page"]
+    NAV["Top nav: search · For you · Creators · Community · Picked for you · points · cart · profile"]
+    SHELF["Left column: quick check-in + My Shelf"]
+    ASK["Ask Dew chat (bottom right)"]
+  end
+
+  subgraph Discover["Discover"]
+    FY["For you (home)<br/>#/for-you"]
+    CR["Creators like you<br/>#/creators"]
+    CRP["Creator shelf<br/>#/creators/id"]
+    CO["Community feed<br/>#/community"]
+    SE["Search<br/>#/search"]
+    PR["Product page<br/>#/product/id"]
+  end
+
+  subgraph Onboard["Skin profile"]
+    S1["1 Lifestyle"] --> S2["2 My skin"] --> S3["3 Preferences + goals"] --> S4["4 Current shelf"] --> SD["Profile complete<br/>#/setup/done"]
+  end
+
+  subgraph Routine["Picked for you"]
+    PK["Full-size routine<br/>#/picked"]
+    SB["Sample it first"]
+  end
+
+  subgraph Buy["Buy"]
+    CA["Cart + checkout<br/>#/cart"] --> OP["Order placed"]
+    SC["Sample box checkout"] --> SP["Sample box on its way"] --> SV["Day-14 verdict"]
+  end
+
+  subgraph Track["Track"]
+    CI["Weekly check-in<br/>#/check-in"]
+    PF["My profile: rankings + progress<br/>#/profile"]
+  end
+
+  subgraph Data["Data"]
+    LS[("Browser localStorage<br/>points, cart, shelf ratings, check-ins")]
+    API["Vercel API<br/>/api/products · /api/reviews"]
+    DB[("Supabase Postgres<br/>products · review_sources · reviews<br/>rating_snapshots · scrape_runs")]
+    SCR["Review scraper<br/>daily Vercel cron"]
+    WEB["Brand sites<br/>Okendo reviews, schema.org ratings"]
+  end
+
+  NAV --> FY & CR & CO & PK & SE & CA & PF
+  FY -->|finish profile| S1
+  SD --> FY
+  FY --> PR
+  SE --> PR
+  SHELF --> PR
+  CR --> CRP
+  PK --> CA
+  PK --> SB --> SC
+  SV -->|loved minis go full size| CA
+  SHELF --> CI
+
+  FY & PR & SE -.->|live ratings + reviews| API
+  API -.-> DB
+  SCR -.->|writes| DB
+  WEB -.-> SCR
+  Track & Buy & Onboard -.->|demo state| LS
+```
+
+- **Global:** the top nav and Ask Dew are on every page. On desktop the left column (check-in and My Shelf), the middle column and the right column each scroll on their own; below 820px wide everything stacks into one column.
+- **Discover** is where people find products: personalized picks, creators with similar skin, the friends feed, search, and a page per product with live ratings and reviews.
+- **Skin profile** is four onboarding steps. Finishing them unlocks Picked for you.
+- **Picked for you** builds a 4-step routine to buy full size, or to sample first with points.
+- **Buy** covers cart and checkout, plus the sample box flow: checkout, a 2-week trial, and a day-14 verdict.
+- **Track** is the weekly check-in and your profile, with your rankings, progress, challenges and milestones.
+- **Data:** product ratings and reviews come from Supabase through the Vercel API (see [Backend](#backend)). Everything personal is demo state saved in your browser for now.
+
+## Branding
+
+From the Brand guidelines page in the Figma file. The app's CSS tokens are in `css/app.css` under `:root`.
+
+### Logo
+
+The DEW wordmark with its raindrop is the only logo. Use the logo asset (`assets/svg/logo.svg`), never retype it.
+
+- **Clear space:** the height of the raindrop on every side.
+- **Minimum width:** 72 px on screen.
+- **Backgrounds:** cream/light, forest/dark, primary blue or leaf green.
+- **Don't** recolor it outside the palette, stretch it, add effects, or separate the drop from the word.
+
+### Color
+
+Six brand colors, plus a five-step rating scale. Text, borders and white cards stay neutral so type stays readable.
+
+| Role | Name | Hex | CSS token |
+|---|---|---|---|
+| Primary | Light blue | `#EBF6FB` | `--surface-soft` |
+| Secondary | Forest | `#113916` | `--forest` |
+| Secondary | Lime | `#CBE942` | `--lime` |
+| Secondary | Olive | `#A1A261` | `--olive` |
+| Secondary | Pale blue | `#CBDBEA` | `--fill-muted` |
+| Secondary | Off-white | `#F7F6F3` | `--canvas` |
+| Neutral | Ink (text) | `#141C11` | `--ink` |
+| Neutral | Secondary text | `#59604F` | `--ink-2` |
+| Neutral | Muted text | `#9A9E92` | `--ink-3` |
+| Neutral | Line | `#E2E4DC` | `--line` |
+| Neutral | Surface (cards) | `#FFFFFF` | `--surface` |
+
+How the UI uses them: off-white is the page background, light blue is soft surfaces (the shelf, Ask Dew, primary buttons), forest is dark buttons and the hero, lime is highlights and points, and olive is the shelf planks.
+
+**Rating and match scale.** Score rings (0–10) and "__% similar" badges both use this scale. Lime is best and coral is worst.
+
+| Score | Match | Label | Hex | CSS token |
+|---|---|---|---|---|
+| 9.0–10 | 90%+ | Excellent | `#CBE942` | `--r1` |
+| 8.0–8.9 | 80–89% | Great | `#EBEB88` | `--r2` |
+| 7.0–7.9 | 70–79% | Good | `#F9D28B` | `--r3` |
+| 6.0–6.9 | 60–69% | Mixed | `#FACAC1` | `--r4` |
+| Below 6.0 | Below 60% | Poor | `#FF7A63` | `--r5` |
+
+On light backgrounds, scores show as a ring in the scale color around the number.
+
+### Typography
+
+**Geist** (`--sans`) and **Geist Mono** (`--mono`), loaded from Google Fonts. They stand in for ABC Monument Grotesk and Monument Grotesk Mono; both are free and from the same family, so they pair cleanly.
+
+| Style | Font | Size | Used for |
+|---|---|---|---|
+| Display | Geist Regular | 56 | Hero headlines |
+| Heading / Large | Geist Regular | 28 | Page titles |
+| Heading / Small | Geist Medium | 15 | Card titles |
+| Body | Geist Regular | 13 | Paragraphs |
+| Label | Geist Medium | 12 | Product names, form labels |
+| Caption | Geist Regular | 11 | Supporting text |
+| Overline | Geist Mono Medium | 10 | Uppercase labels and brand names |
+| Mono / Button | Geist Mono Medium | 12 | Buttons (uppercase) |
+| Mono / Data | Geist Mono Regular | 12 | Scores, points, prices |
+
+### Iconography
+
+Characters mark routine steps and rewards (`assets/svg/`):
+
+- **Hydrate:** serums and toners
+- **Cleanse:** cleansers
+- **Treat:** actives and patches
+- **Protect:** SPF and lip care
+- **Flame:** points earned
+- **Star:** rewards
+
+Product graphics stand in for products without photos and label shelf categories.
+
+### UI components
+
+- **Buttons:** Primary (light blue) for the main action on a screen, Dark (forest) for commits like Add to shelf, Secondary (white with a border) for everything else.
+- **Chips, tags and badges:** chips filter, tags describe a reviewer (e.g. Oily, Humid), and badges show where a review came from (e.g. SEPHORA).
+- **Scores:** a score is normalized to /10 from the source rating. Match % compares the reviewer's skin profile to yours.
+- **Shelf:** products sit on a plank per routine tier. Hover (or tap) a product to see weeks used, your rank on your shelf, its score and quick actions.
 
 ## Backend
 
