@@ -254,7 +254,7 @@ Newest first. Every major change gets an entry here.
 - Moved hosting from GitHub Pages to Vercel (GitHub Pages is turned off). The repo is connected, so every push to `main` deploys.
 - Added a Supabase database for products and reviews, and API routes on Vercel that read from it.
 - Built the review scraper with a daily Vercel cron. It follows robots.txt, rate-limits itself, and doesn't work around sites that block bots or need a vendor key.
-- Imported the full skincare catalogs of 8 brand stores (155 products) on top of the prototype's 42, and backfilled up to 1,000 reviews per product.
+- Imported the full skincare catalogs of 8 brand stores (155 products) on top of the prototype's 42, and backfilled up to 1,000 reviews per product: 52,585 reviews across 123 products, using 49 MB of the database. 38 duplicate store listings that redirect to the home page were skipped and paused.
 - Wired the app to the live data: a product page with ratings and reviews filtered by skin type, live reviews on For you, and star ratings on picks and search. If the API is unreachable, the app falls back to the sample data.
 - Safeguards: a product page that redirects elsewhere is treated as an error, reviews are read only for the page's own product, and reviews with no real text are hidden.
 
