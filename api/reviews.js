@@ -13,6 +13,7 @@ export default async function handler(req, res) {
       'id, product_id, rating, title, body, author_name, verified, recommended, helpful_count, attributes, reviewed_at, review_sources(retailer, url), products(brand, name, image_path)',
       { count: 'exact' },
     )
+    .filter('body', 'match', '[A-Za-z]{3,}') // skip reviews with no real text, like "...."
     .order('reviewed_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (product) q = q.eq('product_id', product);
