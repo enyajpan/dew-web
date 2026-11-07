@@ -2,15 +2,15 @@
 
 DEW is a skincare web app that matches you with people who share your skin, climate and goals, then picks, samples and tracks a routine for you.
 
-Live site: https://dew-web-three.vercel.app (Vercel; every push to `main` deploys)
+Live site: https://dew-skincare.vercel.app (Vercel; every push to `main` deploys)
 
 **Review data**
 
-![reviews](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-web-three.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.reviews&label=reviews&color=113916)
-![products with reviews](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-web-three.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.products_with_reviews&label=products%20with%20reviews&color=a1a261)
-![brands](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-web-three.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.brands&label=brands&color=cbe942)
+![reviews](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-skincare.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.reviews&label=reviews&color=113916)
+![products with reviews](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-skincare.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.products_with_reviews&label=products%20with%20reviews&color=a1a261)
+![brands](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdew-skincare.vercel.app%2Fapi%2Fstats&cacheSeconds=3600&query=%24.label.brands&label=brands&color=cbe942)
 
-These counts are live: the badges read [`/api/stats`](https://dew-web-three.vercel.app/api/stats) and refresh about once an hour as the daily scrape adds reviews. Products without reviews have a star rating only, or nothing published yet.
+These counts are live: the badges read [`/api/stats`](https://dew-skincare.vercel.app/api/stats) and refresh about once an hour as the daily scrape adds reviews. Products without reviews have a star rating only, or nothing published yet.
 
 ## What works
 
@@ -172,7 +172,7 @@ Product graphics stand in for products without photos and label shelf categories
 ### How data flows
 
 ```
-Browser  →  dew-web-three.vercel.app/api/...  →  Supabase API  →  Postgres
+Browser  →  dew-skincare.vercel.app/api/...  →  Supabase API  →  Postgres
 ```
 
 - **Reading:** the app calls `/api/products` and `/api/reviews`. Those Vercel functions query Supabase with `@supabase/supabase-js` (which goes through Supabase's API, not a direct database connection) using the read-only anon key. The browser never talks to Supabase directly.
