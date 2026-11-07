@@ -1,0 +1,10 @@
+[
+  { "product_id": "eadem_cloud_cushion", "retailer": "eadem", "url": "https://eadem.co/products/cloud-cushion" },
+  { "product_id": "shiseido_stick", "retailer": "shiseido", "url": "https://www.shiseido.com/us/en/ultimate-sun-protector-clear-stick-spf-60-0730852222991.html" },
+  { "product_id": "t28_sos", "retailer": "tower28", "url": "https://tower28beauty.com/products/sos-daily-facial-rescue-spray" },
+  { "product_id": "farmacy_gc", "retailer": "farmacy", "url": "https://farmacybeauty.com/products/green-clean-cleansing-balm" },
+  { "product_id": "farmacy_halo", "retailer": "farmacy", "url": "https://farmacybeauty.com/products/honey-halo-ceramide-moisturizer" },
+  { "product_id": "biodance_mask", "retailer": "biodance", "url": "https://biodance.com/products/biodance-bio-collagen-real-deep-mask" },
+  { "product_id": "laneige_lsm", "retailer": "laneige", "url": "https://us.laneige.com/products/lip-sleeping-mask" },
+  { "product_id": "laneige_lsm", "retailer": "sephora", "url": "https://www.sephora.com/product/lip-sleeping-mask-P420652" }
+]
