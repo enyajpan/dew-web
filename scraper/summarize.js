@@ -24,7 +24,7 @@ Write for a shopper deciding whether to try the product. Be specific (texture, r
 Mention skin types when reviewers with a particular type report something different. Don't invent claims, quote reviewers by name, or give medical advice.`;
 
 function reviewLine(r) {
-  const who = [r.attributes?.skin_type && `${r.attributes.skin_type} skin`, r.verified && 'verified buyer'].filter(Boolean).join(', ');
+  const who = [r.skin_types?.length && `${r.skin_types.join(' + ')} skin`, r.verified && 'verified buyer'].filter(Boolean).join(', ');
   // toWellFormed() repairs an emoji cut in half by slice(), which would make the request invalid JSON.
   const text = `${r.title ? `${r.title}. ` : ''}${r.body ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 700).toWellFormed();
   return `- ${r.rating}/5${who ? ` (${who})` : ''}: ${text}`;
@@ -32,7 +32,7 @@ function reviewLine(r) {
 
 // Newest reviews with real text, making sure critical ones are represented.
 async function sampleReviews(db, productId) {
-  const base = () => db.from('reviews').select('rating, title, body, verified, attributes').eq('product_id', productId)
+  const base = () => db.from('reviews').select('rating, title, body, verified, attributes, skin_types').eq('product_id', productId)
     .filter('body', 'match', '[A-Za-z]{3,}').order('reviewed_at', { ascending: false });
   const [low, recent] = await Promise.all([base().lte('rating', 3).limit(50), base().limit(MAX_REVIEWS)]);
   if (low.error || recent.error) throw new Error((low.error ?? recent.error).message);

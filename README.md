@@ -251,7 +251,16 @@ For each page, `scraper/scrape.js` loads the HTML and picks an approach:
 - The page's **status** is updated (`active`, `blocked` or `needs_partnership`) along with the time and any error.
 - Every run is logged in **`scrape_runs`**: start and finish times, pages attempted, reviews saved and errors.
 
-### 7. What it can't reach
+### 7. Tagging skin types
+
+So people can filter to reviewers with their own skin, every review gets a `skin_types` list (Combination, Oily, Dry, Normal, Sensitive). A database trigger fills it whenever a review is saved, combining two sources:
+
+- **Reviewer's pick:** some sites (Okendo stores) ask reviewers for their skin type. Their answer is kept as is.
+- **Review text:** keyword matching on first-person phrases where reviewers describe *their own* skin: "I have dry, sensitive skin", "my skin is very oily", "as someone with combo skin", "oily-skinned", "skin type: normal". General advice like "great for oily skin" doesn't count. "Oily t-zone", or oily and dry together, counts as Combination.
+
+A reviewer's pick wins over a different type found in the text; Sensitive can be added on top of any type. `skin_type_source` records where the tags came from (`reviewer`, `review text` or both), and review cards mark text-detected types "from review". The rules live in the `detect_skin_types` database function; after changing them, run `sh scripts/backfill-skin-types.sh` to re-tag every review.
+
+### 8. What it can't reach
 
 - **Sephora, Olive Young and Bubble** block automated access.
 - **Ulta, Shiseido, and stores using PowerReviews, Bazaarvoice, Yotpo, Judge.me or Stamped** only publish a star rating openly. Their review text needs a data partnership with the review provider (for example Bazaarvoice syndication for Sephora) or a licensed data feed.
@@ -280,6 +289,9 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 8, 2026: skin types from review text**
+- Every review is tagged with skin types: the reviewer's own pick on the brand site, plus types they describe in their review ("I have dry, sensitive skin"). Filters on Public reviews, product pages and the top 3 picks now include these, so far more reviews match your skin type.
 
 **November 7, 2026: accounts, AI and the Hi-fi v6 comments**
 - Welcome page, sign-up and log-in with Supabase Auth. Each account's state is saved to its own profile; signed-out visitors can still search, read product pages and browse Public reviews.

@@ -1,6 +1,6 @@
 // GET /api/reviews
 //   ?product=t28_sos       one product (leave out for all products)
-//   &skin_type=Combination  reviewers of one skin type
+//   &skin_type=Combination  reviewers with that skin type (picked on the site or described in the review)
 //   &q=sunscreen            words in the review title or text
 //   &rating=5 | rating=low  exact star rating, or 1–3 stars
 //   &sort=newest | highest | lowest | helpful
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   let query = db
     .from('reviews')
     .select(
-      'id, product_id, rating, title, body, author_name, verified, recommended, helpful_count, attributes, reviewed_at, review_sources(retailer, url), products(brand, name, image_path)',
+      'id, product_id, rating, title, body, author_name, verified, recommended, helpful_count, attributes, skin_types, skin_type_source, reviewed_at, review_sources(retailer, url), products(brand, name, image_path)',
       { count: 'exact' },
     )
     .filter('body', 'match', '[A-Za-z]{3,}') // skip reviews with no real text, like "...."
@@ -33,7 +33,8 @@ export default async function handler(req, res) {
     .order('reviewed_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (product) query = query.eq('product_id', product);
-  if (skinType) query = query.eq('attributes->>skin_type', skinType);
+  // skin_types combines the reviewer's own pick with skin types they describe in the text
+  if (skinType) query = query.contains('skin_types', [skinType]);
   if (rating === 'low') query = query.lte('rating', 3);
   else if (rating) query = query.eq('rating', Number(rating));
   if (q) query = query.or(`body.ilike.%${q}%,title.ilike.%${q}%`);

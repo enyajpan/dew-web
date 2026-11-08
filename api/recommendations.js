@@ -55,15 +55,22 @@ export default async function handler(req, res) {
     const all = rows.reduce((a, r) => ({ n: a.n + r.reviews, pos: a.pos + (r.pct_positive * r.reviews) / 100, sum: a.sum + r.avg_rating * r.reviews }), { n: 0, pos: 0, sum: 0 });
     const mine = skinType ? rows.find((r) => r.skin_type === skinType) : null;
     const useMine = mine && mine.reviews >= 5;
-    const pct = useMine ? mine.pct_positive : Math.round((100 * all.pos) / Math.max(all.n, 1));
-    const avg = useMine ? mine.avg_rating : all.sum / Math.max(all.n, 1);
+    const allPct = (100 * all.pos) / Math.max(all.n, 1);
+    const allAvg = all.sum / Math.max(all.n, 1);
+    // Blend the skin-type score with the product's overall score so a handful of
+    // matching reviews can't outrank products with hundreds (worth 20 reviews of weight).
+    const w = useMine ? mine.reviews / (mine.reviews + 20) : 0;
+    const pct = Math.round(useMine ? w * mine.pct_positive + (1 - w) * allPct : allPct);
+    const avg = useMine ? w * mine.avg_rating + (1 - w) * allAvg : allAvg;
+    const shownPct = useMine ? mine.pct_positive : Math.round(allPct);
+    const shownAvg = useMine ? mine.avg_rating : allAvg;
     const text = `${s.summary} ${s.pros.map((x) => x.point).join(' ')}`;
     const solves = concerns.filter((c) => CONCERNS[c].test(text));
     const core = CORE_STEPS.includes(p.step);
     const gap = core && !owned.includes(p.step);
     const score = (pct / 100) * 0.5 + (avg / 5) * 0.15 + solves.length * 0.12 + (gap ? 0.2 : 0) + (core ? 0 : -0.15)
       + (useMine ? 0.05 : 0) + (Math.min(all.n, 500) / 500) * 0.05;
-    return { s, p, pct, avg, n: useMine ? mine.reviews : all.n, useMine, solves, gap, score };
+    return { s, p, pct, avg, shownPct, shownAvg, n: useMine ? mine.reviews : all.n, useMine, solves, gap, score };
   }).sort((a, b) => b.score - a.score);
 
   // One pick per routine step, so the three cover different gaps.
@@ -75,10 +82,10 @@ export default async function handler(req, res) {
   }
 
   const out = await Promise.all(picks.map(async (c) => {
-    let quotes = db.from('reviews').select('rating, title, body, author_name, attributes, reviewed_at, review_sources(retailer, url)')
+    let quotes = db.from('reviews').select('rating, title, body, author_name, attributes, skin_types, reviewed_at, review_sources(retailer, url)')
       .eq('product_id', c.p.id).gte('rating', 4).filter('body', 'match', '[A-Za-z]{3,}')
       .order('helpful_count', { ascending: false, nullsFirst: false }).order('reviewed_at', { ascending: false }).limit(40);
-    if (c.useMine) quotes = quotes.eq('attributes->>skin_type', skinType);
+    if (c.useMine) quotes = quotes.contains('skin_types', [skinType]);
     const { data } = await quotes;
     // Prefer reviews that talk about the person's own concerns.
     const relevance = (r) => concerns.filter((k) => CONCERNS[k].test(r.body)).length;
@@ -95,8 +102,8 @@ export default async function handler(req, res) {
       people_like_you: {
         skin_type: c.useMine ? skinType : null,
         reviews: c.n,
-        pct_positive: c.pct,
-        avg_rating: Math.round(c.avg * 10) / 10,
+        pct_positive: c.shownPct,
+        avg_rating: Math.round(c.shownAvg * 10) / 10,
         quotes: picked,
       },
       summary: c.s.summary,

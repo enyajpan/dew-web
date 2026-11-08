@@ -104,6 +104,16 @@ function liveRating(id) {
   return best ? `<span class="live-rating">★ ${(+best.rating_avg).toFixed(1)}${best.review_count ? `  ${best.review_count.toLocaleString()} reviews` : ''} on ${retailerName(best.retailer)}</span>` : '';
 }
 
+// Skin type tags. Types found only in the review text are marked so people can tell them apart.
+function skinTags(r) {
+  const types = r.skin_types ?? (r.attributes?.skin_type ? [r.attributes.skin_type] : []);
+  const picked = r.attributes?.skin_type;
+  return types.map((t) => {
+    const fromText = r.skin_type_source === 'review text' || (picked && !picked.toLowerCase().includes(t.toLowerCase().slice(0, 4)));
+    return `<span class="tag" ${fromText ? 'title="Mentioned in the review text"' : ''}>${esc(t)} skin${fromText ? ' <span class="faint">· from review</span>' : ''}</span>`;
+  }).join('');
+}
+
 function liveReview(r, withProduct) {
   const a = r.attributes ?? {};
   const n = Math.round(+r.rating || 0);
@@ -113,7 +123,7 @@ function liveReview(r, withProduct) {
       ${withProduct ? `<div class="row">${thumb(pid, 34, 40)}<div class="grow"><div class="mono">${esc(r.products?.brand ?? P(pid).brand)}</div>${productLink(pid, `<span class="small">${esc(r.products?.name ?? P(pid).name)}</span>`)}</div></div>` : ''}
       <div class="row" style="gap:10px"><span class="review-stars" aria-label="${n} of 5 stars">${starsTxt(n)}</span>${r.title ? `<span class="h4" style="font-size:15px;font-weight:500">${esc(r.title)}</span>` : ''}</div>
       ${r.body ? `<p class="review-body">${esc(r.body)}</p>` : ''}
-      <div class="row wrap" style="gap:6px">${a.skin_type ? `<span class="tag">${esc(a.skin_type)} skin</span>` : ''}${a.skin_tone ? `<span class="tag">${esc(a.skin_tone)}</span>` : ''}${a.incentivized ? '<span class="tag">Gifted</span>' : ''}</div>
+      <div class="row wrap" style="gap:6px">${skinTags(r)}${a.skin_tone ? `<span class="tag">${esc(a.skin_tone)}</span>` : ''}${a.incentivized ? '<span class="tag">Gifted</span>' : ''}</div>
       <div class="row" style="gap:8px"><span class="small">${esc(r.author_name ?? 'Anonymous')}</span>${r.verified ? '<span class="xs" style="color:var(--forest)">✓ Verified buyer</span>' : ''}<span class="xs faint grow">${fmtDate(r.reviewed_at)}</span><a class="src" href="${esc(r.review_sources?.url ?? '#')}" target="_blank" rel="noopener">${esc(retailerName(r.review_sources?.retailer ?? ''))}</a></div>
     </div>`;
 }
@@ -435,7 +445,7 @@ function recommendationsCard() {
           <div class="stack" style="gap:6px">
             <span class="mono forest">What people like you are saying</span>
             <p class="small"><b style="font-weight:500">${pl.pct_positive}%</b> of ${pl.reviews.toLocaleString()} ${who} rated it 4 stars or more.</p>
-            ${pl.quotes.map((q) => `<blockquote class="small">“${esc(q.body.trim())}” <span class="xs muted">· ${esc(q.author_name ?? 'Reviewer')}${q.attributes?.skin_type ? `, ${esc(q.attributes.skin_type.toLowerCase())} skin` : ''}</span></blockquote>`).join('')}
+            ${pl.quotes.map((q) => `<blockquote class="small">“${esc(q.body.trim())}” <span class="xs muted">· ${esc(q.author_name ?? 'Reviewer')}${q.skin_types?.length ? `, ${esc(q.skin_types.join(' + ').toLowerCase())} skin` : ''}</span></blockquote>`).join('')}
           </div>
         </div>
         <div class="row wrap" style="gap:8px">
