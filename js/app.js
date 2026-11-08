@@ -71,12 +71,24 @@ function set(patch) { state = { ...state, ...patch }; save(); render(); }
 /* ================= helpers ================= */
 
 // Live catalog from Supabase, keyed by id. Empty until /api/products answers.
-const liveProducts = () => Object.fromEntries((useJson(productsUrl).data ?? []).map((p) => [p.id, p]));
-// Shopify photos are up to 4000px; ask the CDN for a shelf-sized copy.
-const smallImg = (u) => (u && /cdn\.shopify\.com/.test(u) ? `${u}${u.includes('?') ? '&' : '?'}width=400` : u);
+// Plus catalog-only products (16k+, no reviews yet) that search or a lookup has brought in.
+const found = new Map();
+const remember = (list) => { (list ?? []).forEach((p) => found.set(p.id, p)); return list ?? []; };
+const liveProducts = () => ({ ...Object.fromEntries(found), ...Object.fromEntries((useJson(productsUrl).data ?? []).map((p) => [p.id, p])) });
+// One product's live data, fetching catalog products (ids starting "cat-") on demand.
+function liveProduct(id) {
+  const p = liveProducts()[id];
+  if (p || !String(id).startsWith('cat-')) return p;
+  const one = useJson(`/api/products?id=${encodeURIComponent(id)}`).data;
+  if (one) found.set(id, one);
+  return one;
+}
+const searchProducts = (q) => remember(useJson(`/api/products?q=${encodeURIComponent(q.trim().toLowerCase())}`).data);
+// Store photos are up to 4000px; ask the image CDN for a shelf-sized copy.
+const smallImg = (u) => (u && /cdn\.shopify\.com/.test(u) ? `${u}${u.includes('?') ? '&' : '?'}width=400` : u && /media\.ultainc\.com/.test(u) ? `${u}?w=400` : u);
 const P = (id) => {
   if (PRODUCTS[id]) return PRODUCTS[id];
-  const p = liveProducts()[id];
+  const p = liveProduct(id);
   return { brand: p?.brand ?? '', name: p?.name ?? id, img: smallImg(p?.image_path) ?? 'assets/svg/hydrate.svg', price: Number(p?.price_usd ?? 0), step: p?.step ?? '', size: p?.size ?? '' };
 };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -105,7 +117,9 @@ const productLink = (id, text) => `<a class="plink" href="#/product/${id}">${tex
 
 // The published rating with the most reviews behind it, e.g. "★ 4.8  1,904 reviews on Tower 28".
 function liveRating(id) {
-  const best = (liveProducts()[id]?.ratings ?? []).filter((r) => r.rating_avg != null).sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0))[0];
+  const lp = liveProduct(id);
+  if (lp?.catalog_only) return lp.listed_rating ? `<span class="live-rating">★ ${(+lp.listed_rating).toFixed(1)}${lp.listed_review_count ? `  ${lp.listed_review_count.toLocaleString()} reviews` : ''} on ${esc(lp.sold_at.split('; ')[0])}</span>` : '';
+  const best = (lp?.ratings ?? []).filter((r) => r.rating_avg != null).sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0))[0];
   return best ? `<span class="live-rating">★ ${(+best.rating_avg).toFixed(1)}${best.review_count ? `  ${best.review_count.toLocaleString()} reviews` : ''} on ${retailerName(best.retailer)}</span>` : '';
 }
 
@@ -1329,7 +1343,7 @@ function summaryCard(id) {
 function productPage(id) {
   const p = P(id);
   const products = useJson(productsUrl);
-  const live = liveProducts()[id];
+  const live = liveProduct(id);
   const mine = state.answers.skinType?.[0];
   let skin = state.reviewSkin === undefined ? mine : state.reviewSkin; // null = all skin types
   const limit = state.reviewLimit ?? 10;
@@ -1354,7 +1368,9 @@ function productPage(id) {
           ${r?.rating_avg != null ? `<span class="live-rating" style="font-size:14px">★ ${(+r.rating_avg).toFixed(1)}${r.review_count ? `  ${r.review_count.toLocaleString()} reviews` : ''}</span>` : '<span class="xs faint">No rating</span>'}
           <a class="btn sm" href="${esc(s.url)}" target="_blank" rel="noopener">View ↗</a>
         </div>`;
-    }).join('') || `<p class="xs muted">${products.status === 'loading' ? 'Loading…' : 'We don’t track any review pages for this product yet.'}</p>`;
+    }).join('') || (live?.catalog_only
+      ? `<div class="pick"><div class="grow"><div style="font-size:15px">Sold at ${esc(live.sold_at)}</div><div class="xs muted">From DEW’s product catalog. We don’t collect reviews for this product yet.</div></div>${live.product_url ? `<a class="btn sm" href="${esc(live.product_url)}" target="_blank" rel="noopener">View ↗</a>` : ''}</div>`
+      : `<p class="xs muted">${products.status === 'loading' ? 'Loading…' : 'We don’t track any review pages for this product yet.'}</p>`);
 
   const reviewList = revs.status === 'loading'
     ? '<div class="empty">Loading reviews…</div>'
@@ -1377,7 +1393,7 @@ function productPage(id) {
       ${p.price ? `<button class="btn dark" data-act="add" data-id="${id}">${state.added[id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
     </section>
     ${summaryCard(id)}
-    <section class="card"><h3 class="h4">Where it’s reviewed</h3>${sourcesCard}</section>
+    <section class="card"><h3 class="h4">${live?.catalog_only ? 'Where it’s sold' : 'Where it’s reviewed'}</h3>${sourcesCard}</section>
     <section class="card stack">
       <div class="row between"><h3 class="h4">Reviews</h3><span class="xs muted">${revs.status === 'ok' ? `${total.toLocaleString()} ${skin ? `from ${esc(skin.toLowerCase())} skin` : 'total'}` : ''}</span></div>
       <div class="row wrap" style="gap:6px">
@@ -1385,7 +1401,7 @@ function productPage(id) {
         ${SKIN_TYPES.map((t) => `<button class="chip ${skin === t ? 'on' : ''}" data-act="review-skin" data-v="${t}">${t}${t === mine ? ' (you)' : ''}</button>`).join('')}
       </div>
       ${noSkinData ? `<p class="xs muted">These reviewers didn’t share their skin type, so you’re seeing all reviews.</p>` : ''}
-      ${reviewList}
+      ${live?.catalog_only && !total ? '<div class="empty">No reviews collected for this product yet.</div>' : reviewList}
       ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
       ${statsLine() ? `<p class="xs faint live-count">DEW has collected ${statsLine()} so far.</p>` : ''}
     </section>`;
@@ -1397,13 +1413,15 @@ function productPage(id) {
 function searchPage() {
   const q = (state.lastSearch || '').trim().toLowerCase();
   const catalog = { ...Object.fromEntries(Object.keys(liveProducts()).map((id) => [id, P(id)])), ...PRODUCTS };
+  const remote = q && q !== 'new' ? searchProducts(q) : [];
   const hits = Object.entries(catalog).filter(([, p]) => !q || q === 'new' || `${p.brand} ${p.name} ${p.step}`.toLowerCase().includes(q));
+  for (const r of remote) if (!hits.some(([id]) => id === r.id)) hits.push([r.id, P(r.id)]);
   const list = q === 'new' ? LAUNCHES.map((l) => [l.id, P(l.id)]) : hits;
   const main = `
     <h1 class="h2">${q && q !== 'new' ? `Results for “${esc(state.lastSearch)}”` : q === 'new' ? 'New launches' : 'All products'}</h1>
     <p class="xs muted">${list.length} products. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in DEW so far` : ''}</p>
     <section class="card">${list.map(([id, p], i) => `
-      <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${p.step} step  ${p.size}</div>${liveRating(id)}</div><span class="small">${money(p.price)}</span>
+      <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${[p.step && `${p.step} step`, p.size].filter(Boolean).join('  ')}</div>${liveRating(id)}</div><span class="small">${p.price ? money(p.price) : ''}</span>
         ${signedOut() ? '' : `<button class="btn sm" data-act="shelf-add" data-id="${id}">${shelfIds().includes(id) ? 'On shelf ✓' : '+ Shelf'}</button>`}
         <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>'}</section>`;
   return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
@@ -1697,7 +1715,28 @@ document.addEventListener('change', (e) => {
 
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }
+  if (e.target.getAttribute('list') === 'product-suggestions') suggestFromCatalog(e.target.value);
 });
+
+// As you type in a search or shelf box, suggest matches from the whole catalog (not just
+// products with reviews). Updates the suggestion list in place so the box keeps focus.
+let suggestTimer;
+function suggestFromCatalog(value) {
+  clearTimeout(suggestTimer);
+  const q = value.trim().toLowerCase();
+  if (q.length < 2 || catalogEntries().some(([, l]) => l.toLowerCase() === q)) return;
+  suggestTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+      if (!r.ok) return;
+      remember(await r.json());
+      const words = q.split(/\s+/);
+      const matches = catalogEntries().filter(([, l]) => words.every((w) => l.toLowerCase().includes(w))).slice(0, 40);
+      const list = document.getElementById('product-suggestions');
+      if (list) list.innerHTML = matches.map(([, l]) => `<option value="${esc(l)}"></option>`).join('');
+    } catch (err) { /* keep the current suggestions */ }
+  }, 200);
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (state.askOpen) set({ askOpen: false }); else if (state.shelfOpen) set({ shelfOpen: null }); }

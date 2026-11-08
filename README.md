@@ -28,7 +28,7 @@ These counts are live: the badges read [`/api/stats`](https://dew-skincare.verce
 - **AI review summaries:** each product page has "What reviewers say", a Claude-written overview with pros and cons from up to 150 reviews.
 - **Public reviews:** a live feed of every collected review, searchable, filterable by product, skin type and rating, and sortable.
 - **Ask Dew:** a real chatbot (Claude) for signed-in users that uses your skin profile, your shelf and DEW's review summaries.
-- **Shelf + Want to try:** search suggests products as you type and adds them to your shelf; "Save" puts products in the Want to try list on the right.
+- **Shelf + Want to try:** search suggests products from the whole 16,839-product catalog as you type and adds them to your shelf; "Save" puts products in the Want to try list on the right.
 - **Live reviews:** every product has a page (`#/product/<id>`) with its star rating on each site that reviews it and real reviews you can filter by skin type. "What people like you are saying" shows the newest reviews from people with your skin type, and picks and search show live star ratings.
 
 Points, cart, ratings and check-ins are saved in your browser (localStorage). Use **Reset demo data** at the bottom of the profile tracker to start over, and **Demo: jump to 1,500 pts** to see the sample box unlock.
@@ -194,7 +194,8 @@ Browser  →  dew-skincare.vercel.app/api/...  →  Supabase API  →  Postgres
 
 - **Database:** Supabase (Postgres). Schema in `supabase/migrations/`: products, review sources, rating snapshots, reviews and scrape runs. Public reads, server-only writes.
 - **API** (Vercel functions in `api/`):
-  - `GET /api/products` and `GET /api/products?id=t28_sos`: products with the latest published star rating per retailer.
+  - `GET /api/products` and `GET /api/products?id=t28_sos`: products we collect reviews for, with the latest published star rating per retailer. `?id=` also works for catalog-only products.
+  - `GET /api/products?q=cerave cleanser`: up to 40 matches from the whole catalog, products with reviews first.
   - `GET /api/reviews?product=t28_sos&skin_type=Combination&q=redness&rating=low&sort=helpful&limit=20&offset=0`: scraped reviews. Every filter is optional.
   - `GET /api/summary?product=t28_sos`: the AI pros/cons summary.
   - `GET /api/recommendations?skin_type=Combination&concerns=Breakouts,Redness&owned=Cleanse,Tone&exclude=…`: the top 3 picks with what each solves and what people like you say.
@@ -274,6 +275,8 @@ A reviewer's pick wins over a different type found in the text; Sensitive can be
 
 ## Skincare catalog list
 
+The products in it are also loaded into DEW as catalog-only products (searchable and addable to a shelf, no reviews) by `node scripts/import-catalog-csv.js`.
+
 `data/skincare-catalog.csv` lists **18,504 skincare products from 2,112 brands** (November 8, 2026), so you can see which brands and products DEW doesn’t cover yet. It holds products only (no reviews), so it can include stores whose reviews can’t be collected.
 
 - **Columns:** brand, product_name, category (Cleanser, Toner + essence, Serum + treatment, Moisturizer, Sunscreen, Mask, Exfoliant, Eye care, Lip care, Face oil, Body care), sold_at, price_usd, rating, review_count, in_dew_catalog (yes/no), url, image_url.
@@ -307,6 +310,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 8, 2026: 16,649 catalog products imported**
+- Every product in `data/skincare-catalog.csv` that DEW didn’t have is now in `products` as a catalog-only row (`catalog_only = true`), with its category, where it’s sold, its store page and the store’s star rating. 1,747 Dermstore rows without a separate brand were left out. Loaded by `node scripts/import-catalog-csv.js` (safe to re-run after rebuilding the CSV).
+- Search, the shelf box and the nav search suggest from all 16,839 products as you type (`/api/products?q=`), and any of them can go on a shelf. Their product pages show where they’re sold and the store’s rating; reviews are only collected for the original 190.
+- `/api/products` with no query still returns only the 190 reviewed products, so pages stay fast.
 
 **November 8, 2026: onboarding, For you and a full skincare catalog list**
 - Skin profile reordered: age and skin first, then environment, then day-to-day lifestyle. The Lifestyle chips are gone and diet moved into day-to-day.

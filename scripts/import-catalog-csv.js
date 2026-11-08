@@ -1,0 +1,60 @@
+// Loads data/skincare-catalog.csv into Supabase `products` as catalog_only rows, so every
+// listed product can be searched and added to a shelf. Products DEW already has are skipped.
+//   node scripts/import-catalog-csv.js            import (or refresh) everything
+//   node scripts/import-catalog-csv.js --dry-run  count only
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
+
+for (const l of readFileSync('.env', 'utf8').split('\n')) { const m = l.match(/^(\w+)=(.*)$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; }
+const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+const dryRun = process.argv.includes('--dry-run');
+
+const STEP = {
+  Cleanser: 'Cleanse', 'Toner + essence': 'Tone', 'Serum + treatment': 'Treat', Exfoliant: 'Treat', Mask: 'Treat', 'Face oil': 'Treat',
+  'Eye care': 'Eyes', Moisturizer: 'Moisturize', Sunscreen: 'Protect', 'Lip care': 'Lips', 'Body care': 'Body',
+};
+const norm = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const slug = (s) => norm(s).replace(/ /g, '-').slice(0, 60);
+// "nivea" -> "Nivea"; leave brands that already use capitals ("e.l.f.", "COSRX") alone.
+const brandCase = (b) => (b === b.toLowerCase() && b.length > 3 ? b.replace(/(^|[\s-])\p{L}/gu, (c) => c.toUpperCase()) : b);
+
+function parseCsv(text) {
+  const [head, ...lines] = text.trim().split('\n');
+  const cols = head.split(',');
+  return lines.map((line) => {
+    const cells = [...line.matchAll(/("(?:[^"]|"")*"|[^,]*)(?:,|$)/g)].map((m) => m[1].replace(/^"|"$/g, '').replace(/""/g, '"'));
+    return Object.fromEntries(cols.map((c, i) => [c, cells[i] ?? '']));
+  });
+}
+
+const rows = parseCsv(readFileSync('data/skincare-catalog.csv', 'utf8'));
+const { data: existing, error } = await db.from('products').select('id, brand, name, catalog_only').limit(50000);
+if (error) throw error;
+const have = new Set(existing.filter((p) => !p.catalog_only).map((p) => `${norm(p.brand)}|${norm(p.name)}`));
+
+const seen = new Set();
+const out = [];
+let noBrand = 0;
+for (const r of rows) {
+  if (!r.brand.trim()) { noBrand++; continue; } // Dermstore rows whose brand couldn't be told apart from the name
+  const brand = brandCase(r.brand.trim());
+  const key = `${norm(brand)}|${norm(r.product_name)}`;
+  if (have.has(key) || seen.has(key)) continue;
+  seen.add(key);
+  out.push({
+    id: `cat-${slug(`${brand} ${r.product_name}`)}-${createHash('sha1').update(key).digest('hex').slice(0, 6)}`,
+    brand, name: r.product_name, step: STEP[r.category] ?? null, category: r.category,
+    price_usd: Number(r.price_usd) || null, image_path: r.image_url || null,
+    catalog_only: true, sold_at: r.sold_at, product_url: r.url || null,
+    listed_rating: Number(r.rating) || null, listed_review_count: Number(r.review_count) || null,
+  });
+}
+console.log(`${rows.length} rows: ${out.length} to import, ${rows.length - out.length - noBrand} already in DEW or duplicates, ${noBrand} without a brand`);
+if (dryRun) process.exit(0);
+for (let i = 0; i < out.length; i += 1000) {
+  const { error: e } = await db.from('products').upsert(out.slice(i, i + 1000));
+  if (e) throw e;
+  process.stdout.write('.');
+}
+console.log(' done');

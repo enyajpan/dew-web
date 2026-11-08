@@ -1,11 +1,19 @@
-// GET /api/products            -> all products with their latest published ratings and review sources
-// GET /api/products?id=biore   -> one product
+// GET /api/products            -> products we collect reviews for, with their latest published ratings and review sources
+// GET /api/products?id=biore   -> one product (including catalog-only products)
+// GET /api/products?q=cerave cleanser -> up to 40 matches across the whole catalog (16k+ products)
 import { db, send } from './_db.js';
 
 export default async function handler(req, res) {
   const { id } = req.query;
-  let q = db.from('products').select('*').order('brand');
+  // Keep only characters that are safe inside a PostgREST filter.
+  const words = String(req.query.q ?? '').toLowerCase().replace(/[^\p{L}\p{N} '\-+.]/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 6);
+  let q = db.from('products').select('*');
   if (id) q = q.eq('id', id);
+  else if (words.length) {
+    for (const w of words) q = q.ilike('search', `%${w}%`);
+    // Products with reviews first, then the most-reviewed on their store.
+    q = q.order('catalog_only').order('listed_review_count', { ascending: false, nullsFirst: false }).limit(40);
+  } else q = q.eq('catalog_only', false).order('brand');
   const { data: products, error } = await q;
   if (error) return send(res, 500, { error: error.message });
 
@@ -21,7 +29,7 @@ export default async function handler(req, res) {
   const ratingsBy = Object.groupBy(ratings.data, (r) => r.product_id);
   const sourcesBy = Object.groupBy(sources.data, (s) => s.product_id);
   const countBy = Object.fromEntries(counts.data.map((c) => [c.product_id, c.reviews]));
-  const out = products.map((p) => ({ ...p, review_count: countBy[p.id] ?? 0, ratings: ratingsBy[p.id] ?? [], sources: sourcesBy[p.id] ?? [] }));
+  const out = products.map(({ search, ...p }) => ({ ...p, review_count: countBy[p.id] ?? 0, ratings: ratingsBy[p.id] ?? [], sources: sourcesBy[p.id] ?? [] }));
   if (id && !out.length) return send(res, 404, { error: 'Product not found' });
   return send(res, 200, id ? out[0] : out, 300);
 }
