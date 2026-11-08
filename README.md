@@ -14,9 +14,9 @@ These counts are live: the badges read [`/api/stats`](https://dew-skincare.verce
 
 ## What works
 
-- **For you:** 10 picks split into "Fills a gap in your routine" and "Want to try something new?", public reviews from people like you, new launches and refill reminders.
-- **My shelf:** tap a product to see weeks used, your rank and score, rate it, log a refill or ask Dew.
-- **Skin profile:** four onboarding steps (lifestyle, skin, goals, current shelf) with profile strength and points.
+- **For you:** your top 3 picks, a Picked for you banner and refill reminders. Running low only offers Refill, which adds the product to your cart and then reads "Added to cart". Only the middle column shows a scrollbar.
+- **My shelf:** tap a product to see weeks used, your rank and score, rate it (lime stars when picked, white outlines when not), log a refill or ask Dew. New accounts start with an empty shelf.
+- **Skin profile:** four onboarding steps with profile strength and points: (1) age and skin, (2) environment and day-to-day lifestyle, (3) goals, (4) current shelf. You type where you live, and DEW looks up that place’s humidity, UV and how dry the air is (30-day averages); those chips only appear once a place is found. The shelf step starts empty and shows each product’s photo as you add it.
 - **Creators and Community:** creator shelves with rankings by category and purpose; a friends-only feed with a collapsible filter and sort panel.
 - **Picked for you:** a full-size 4-step routine you can swap and add to the cart, or **Sample it first** with three minis paid for with points.
 - **Cart and checkout:** refills, swaps and routine picks in one order, with points redemption (500 pts = $5 off).
@@ -200,6 +200,7 @@ Browser  →  dew-skincare.vercel.app/api/...  →  Supabase API  →  Postgres
   - `GET /api/recommendations?skin_type=Combination&concerns=Breakouts,Redness&owned=Cleanse,Tone&exclude=…`: the top 3 picks with what each solves and what people like you say.
   - `POST /api/ask`: Ask Dew (signed-in users only).
   - `GET /api/config`: the public Supabase settings the browser needs to sign in.
+  - `GET /api/climate?q=Austin, TX`: the place, its humidity, UV and dryness over the last 30 days, from Open-Meteo’s free geocoding and weather APIs.
   - `GET /api/stats`: live counts of reviews, products and brands (drives the README badges).
 - **Review scraper** (`scraper/`): collects reviews and star ratings from brand sites. See [How the review scraper works](#how-the-review-scraper-works).
 
@@ -271,6 +272,23 @@ A reviewer's pick wins over a different type found in the text; Sensitive can be
 - **A single page:** add `{ "product_id", "retailer", "url" }` to `scraper/sources.json`, then run `npm run seed` and `npm run scrape`.
 - **Testing without the database:** `npm run scrape:dry` scrapes `sources.json` into `scraper/out/`.
 
+## Skincare catalog list
+
+`data/skincare-catalog.csv` lists **18,504 skincare products from 2,112 brands** (November 8, 2026), so you can see which brands and products DEW doesn’t cover yet. It holds products only (no reviews), so it can include stores whose reviews can’t be collected.
+
+- **Columns:** brand, product_name, category (Cleanser, Toner + essence, Serum + treatment, Moisturizer, Sunscreen, Mask, Exfoliant, Eye care, Lip care, Face oil, Body care), sold_at, price_usd, rating, review_count, in_dew_catalog (yes/no), url, image_url.
+- **Sources:**
+  - **Ulta:** each brand’s skin care page, using the brand list from Ulta’s own sitemap. Gives brand, name, price, rating, review count and photo.
+  - **Shopify stores:** the public product list (`/products.json`) of multi-brand shops (Credo, Soko Glam, Peach & Lily, The Detox Market, Wishtrend) and about 60 brand sites that answered (of 130 tried). Sites that aren’t on Shopify or refuse bots are skipped.
+  - **Dermstore:** product sitemap. The brand is matched against brands found in the other sources; about 1,700 Dermstore rows have no brand match, so their brand is part of the name.
+  - **Open Beauty Facts:** the open product database (ODbL licence), filtered to skincare categories.
+- **Filter:** keyword rules on the name and product type keep skincare and drop makeup, hair, fragrance, tools, merch and gift cards.
+- **Duplicates:** one row per brand + name. `sold_at` lists every source that carries it.
+- **Not included:** Sephora, Olive Young and Amazon refuse automated access. Other big retailers (Target, Walmart, CVS) have no skincare-only listing to crawl, so they’d mean crawling millions of unrelated products.
+- **Rough edges:** names come as each store writes them, so sizes, sets and bundles appear as their own rows, and Open Beauty Facts brands are sometimes lowercase.
+- **Per source (Nov 8):** Ulta 6,809 · Dermstore 3,408 · Open Beauty Facts 2,859 · Credo 903 · The Detox Market 796 · Soko Glam 471 · brand sites the rest. 108 rows are already in DEW (`in_dew_catalog = yes`).
+- **Refresh:** `node scripts/build-catalog.js` (about an hour at 3 seconds per request per site). `--only ulta,shopify` runs some sources, and `--merge` adds them to the existing CSV instead of replacing it.
+
 ## Run locally
 
 Needs Node 22+ and a `.env` with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` and `ANTHROPIC_API_KEY`.
@@ -289,6 +307,13 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 8, 2026: onboarding, For you and a full skincare catalog list**
+- Skin profile reordered: age and skin first, then environment, then day-to-day lifestyle. The Lifestyle chips are gone and diet moved into day-to-day.
+- Location is typed, not picked. Humidity, UV and air dryness come from the typed place (Open-Meteo, 30-day averages) and only show once it’s found. They also feed the For you tags and Ask Dew.
+- New accounts start with an empty shelf. Adding a product on the shelf step puts its photo on the shelf; the fake "Import orders" button is gone.
+- For you: removed the "What people like you are saying" section, renamed "Your Top 3 Picks" and "Want To Try" in the My Shelf heading style, Running low only says Refill (then "Added to cart"), scrollbars hidden on the side columns, lime/outlined stars in the shelf’s Rate it.
+- `data/skincare-catalog.csv`: every skincare product found at Ulta, Credo, Soko Glam, Peach & Lily, The Detox Market, Dermstore, 100+ brand sites and Open Beauty Facts, for cross-checking what DEW is missing: 18,504 products from 2,112 brands. Built by `node scripts/build-catalog.js` (see [Skincare catalog list](#skincare-catalog-list)).
 
 **November 8, 2026: skin types from review text**
 - Every review is tagged with skin types: the reviewer's own pick on the brand site, plus types they describe in their review ("I have dry, sensitive skin"). Filters on Public reviews, product pages and the top 3 picks now include these, so far more reviews match your skin type.
