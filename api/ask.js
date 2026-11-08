@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     p.skinType && `Skin type: ${p.skinType}`,
     p.concerns?.length && `Concerns: ${p.concerns.join(', ')}`,
     p.goals?.length && `Goals: ${p.goals.join(', ')}`,
-    p.location && `Lives in: ${p.location}`,
+    p.location && `Lives in: ${p.location}${p.climate ? ` (${p.climate})` : ''}`,
     p.shelf?.length && `Current shelf: ${p.shelf.join('; ')}`,
   ].filter(Boolean).join('\n') || 'Profile not filled in yet.';
   const reviews = await productContext(messages.at(-1).content);

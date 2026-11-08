@@ -13,7 +13,7 @@ const REWARD_PTS = 1500;
 const defaultState = () => ({
   setupStep: 2, // onboarding steps finished (0-4)
   answers: {
-    location: ['Miami, FL'], lifestyle: ['Outdoors often', 'Works out 4+ a week'], diet: ['Dairy-free'],
+    location: ['Miami, Florida'], climate: { place: 'Miami, Florida', humidity: { value: 74, label: 'Humid' }, uv: { value: 7.4, label: 'High UV' }, dryness: { label: 'Moist air' } }, diet: ['Dairy-free'],
     outdoors: ['1–2 hrs'], sleep: ['6–8 hrs'], stress: ['Medium'],
     skinType: ['Combination'], concerns: ['Breakouts', 'Redness', 'Dark spots'], age: ['25–29'], gender: ['Woman'], ethnicity: ['Southeast Asian'],
     goals: ['Clear breakouts', 'Calm redness', 'Fade dark spots'], size: ['Standard  4–5 steps'], budget: ['$15–30'], musts: ['Fragrance-free', 'Cruelty-free'], shops: ['Sephora', 'Olive Young'],
@@ -63,6 +63,7 @@ function save() {
 // A brand-new account starts with an empty skin profile, no points and no orders.
 const newAccountState = () => ({
   ...defaultState(), setupStep: 0, answers: {}, points: 0, streak: 0, quickDone: false,
+  shelfDemo: false, shelfAdds: [], ratings: {}, saved: [], cart: [], orders: [], added: {},
   chat: [{ me: false, text: 'Hi! Ask me anything about your routine, ingredients or what people with your skin use.' }],
 });
 function set(patch) { state = { ...state, ...patch }; save(); render(); }
@@ -71,10 +72,12 @@ function set(patch) { state = { ...state, ...patch }; save(); render(); }
 
 // Live catalog from Supabase, keyed by id. Empty until /api/products answers.
 const liveProducts = () => Object.fromEntries((useJson(productsUrl).data ?? []).map((p) => [p.id, p]));
+// Shopify photos are up to 4000px; ask the CDN for a shelf-sized copy.
+const smallImg = (u) => (u && /cdn\.shopify\.com/.test(u) ? `${u}${u.includes('?') ? '&' : '?'}width=400` : u);
 const P = (id) => {
   if (PRODUCTS[id]) return PRODUCTS[id];
   const p = liveProducts()[id];
-  return { brand: p?.brand ?? '', name: p?.name ?? id, img: p?.image_path ?? 'assets/svg/hydrate.svg', price: Number(p?.price_usd ?? 0), step: p?.step ?? '', size: p?.size ?? '' };
+  return { brand: p?.brand ?? '', name: p?.name ?? id, img: smallImg(p?.image_path) ?? 'assets/svg/hydrate.svg', price: Number(p?.price_usd ?? 0), step: p?.step ?? '', size: p?.size ?? '' };
 };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
@@ -86,7 +89,9 @@ const match = (p) => `<span class="pill match ${pctBand(p)}">${p}% similar</span
 const thumb = (id, w = 48, h = 56) => `<span class="thumb" style="width:${w}px;height:${h}px"><img src="${P(id).img}" alt="${esc(P(id).name)}"></span>`;
 const svg = (name, w) => `<img src="assets/svg/${name}.svg" alt="" style="width:${w}px">`;
 const starsTxt = (n) => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
-const shelfItem = (id) => SHELF.find((s) => s.id === id);
+// The sample shelf is only for the demo; a new account's shelf starts empty.
+const baseShelf = () => (state.shelfDemo === false ? [] : SHELF);
+const shelfItem = (id) => baseShelf().find((s) => s.id === id);
 const cartCount = () => state.cart.reduce((a, c) => a + c.qty, 0);
 const strength = () => state.setupStep * 25;
 const route = () => (location.hash.replace(/^#\/?/, '') || 'for-you').split('?')[0];
@@ -233,25 +238,29 @@ function shelfRows(items, { selectable = true, open } = {}) {
 }
 
 function myShelf() {
-  const added = (state.shelfAdds ?? []).filter((id) => !SHELF.some((s) => s.id === id)).map((id) => ({ id, weeks: 0, since: 'today', use: 'Just added', added: true }));
-  const items = [...SHELF, ...added, ...(state.orders.flatMap((o) => o.items.filter((i) => !SHELF.some((s) => s.id === i.id)).map((i) => ({ id: i.id, arriving: true, score: null }))))].slice(0, 12);
+  const base = baseShelf();
+  const added = (state.shelfAdds ?? []).filter((id) => !base.some((s) => s.id === id)).map((id) => ({ id, weeks: 0, since: 'today', use: 'Just added', added: true }));
+  const onShelf = new Set([...base.map((s) => s.id), ...added.map((s) => s.id)]);
+  const arriving = [...new Set(state.orders.flatMap((o) => o.items.map((i) => i.id)))].filter((id) => !onShelf.has(id)).map((id) => ({ id, arriving: true, score: null }));
+  const items = [...base, ...added, ...arriving].slice(0, 12);
   const open = state.shelfOpen ? (shelfItem(state.shelfOpen) ?? added.find((x) => x.id === state.shelfOpen)) : null;
-  const rank = open ? [...SHELF].sort((a, b) => state.ratings[b.id] - state.ratings[a.id]).findIndex((s) => s.id === open.id) + 1 : 0;
+  const ranked = [...base, ...added].sort((a, b) => (state.ratings[b.id] ?? 0) - (state.ratings[a.id] ?? 0));
+  const rank = open ? ranked.findIndex((s) => s.id === open.id) + 1 : 0;
   return `
     <section class="card stack" aria-label="My shelf" style="position:relative">
       <div class="row between">
-        <div><h2 class="h2" style="font-size:28px">My Shelf</h2><div class="xs muted">${SHELF.length + added.length} products  ranked by you</div></div>
+        <div><h2 class="h2" style="font-size:28px">My Shelf</h2><div class="xs muted">${base.length + added.length} products  ranked by you</div></div>
         <a class="btn" href="#/search">+ Add</a>
       </div>
-      ${shelfRows(items, { open: state.shelfOpen })}
-      <p class="xs muted" style="margin-top:6px">Tap any product to rate it, review it or log a refill.</p>
+      ${items.length ? `${shelfRows(items, { open: state.shelfOpen })}
+      <p class="xs muted" style="margin-top:6px">Tap any product to rate it, review it or log a refill.</p>` : '<div class="empty" style="padding:20px 8px">Your shelf is empty. Tap “+ Add” to add the products you use.</div>'}
       ${open ? `
         <div class="shelf-pop stack" style="position:relative;width:auto">
           <div class="row between"><span class="mono">${esc(P(open.id).brand)}</span><button class="link" style="color:#fff" data-act="shelf-close">Close</button></div>
           <div class="h4" style="font-size:17px;font-weight:400">${esc(P(open.id).name)}</div>
           <div class="row" style="gap:22px">
             <div><div class="k">Using for</div><div class="v">${open.added ? 'Just added' : `${open.weeks} weeks`}</div></div>
-            <div><div class="k">Your rank</div><div class="v">#${rank} of ${SHELF.length}</div></div>
+            <div><div class="k">Your rank</div><div class="v">#${rank} of ${ranked.length}</div></div>
             <div><div class="k">Score</div><div class="v">${state.ratings[open.id] != null ? state.ratings[open.id].toFixed(1) : '–'}</div></div>
           </div>
           <div class="bar"><span style="width:${open.daysLeft ? Math.min(100, open.daysLeft * 4) : 82}%"></span></div>
@@ -297,16 +306,18 @@ function downloadApp() {
 }
 
 function runningLow() {
+  const low = REFILLS.filter((r) => shelfIds().includes(r.id));
+  if (!low.length) return '';
   return `
     <section class="card stack running-low" aria-label="Running low">
       <span class="mono">Running low</span>
-      ${REFILLS.map((r) => `
+      ${low.map((r) => `
         <div class="row" style="gap:10px">
           ${thumb(r.id, 30, 36)}
           <div class="grow"><div class="small" style="font-weight:500">${esc(P(r.id).name)}</div><div class="xs muted">${r.note}</div></div>
-          ${r.action === 'refill'
-            ? `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill</button>`
-            : `<button class="btn sm" data-act="swap" data-id="${r.replaceWith}" data-from="${r.id}">Replace</button>`}
+          ${state.cart.some((c) => c.id === r.id && c.kind === 'refill')
+            ? '<button class="btn sm" disabled>Added to cart</button>'
+            : `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill</button>`}
         </div>`).join('')}
     </section>`;
 }
@@ -320,7 +331,7 @@ function rightRail() {
   const shown = state.savedAll ? saved : saved.slice(0, 5);
   return `
     <section class="card stack" style="margin-bottom:56px">
-      <div class="row between"><h3 class="h4">Want to try</h3><span class="mono">${saved.length} saved</span></div>
+      <div class="row between"><h2 class="h2" style="font-size:28px">Want To Try</h2><span class="mono" style="color:#113916">${saved.length} saved</span></div>
       <p class="xs muted">Save products from your picks, reviews and Community. Buy them, or sample them with points.</p>
       ${saved.length ? shown.map((id) => `
         <div class="row" style="align-items:flex-start;gap:10px">
@@ -407,7 +418,7 @@ function peopleLikeYou() {
 
 // Top 3 products for this person from real review data (see /api/recommendations).
 // Falls back to the prototype's picks if the API is unavailable.
-const shelfIds = () => [...SHELF.map((x) => x.id), ...(state.shelfAdds ?? [])];
+const shelfIds = () => [...baseShelf().map((x) => x.id), ...(state.shelfAdds ?? [])];
 
 function recommendationsCard() {
   const a = state.answers;
@@ -458,7 +469,7 @@ function recommendationsCard() {
   return `
     <section class="card stack" style="gap:18px">
       <div class="stack" style="gap:4px">
-        <h3 class="h4">Your top 3 picks</h3>
+        <h2 class="h2" style="font-size:28px">Your Top 3 Picks</h2>
         <p class="xs muted">Based on your skin profile and what’s already on your shelf, ranked by how people with skin like yours rated them.</p>
       </div>
       ${recs.status === 'loading' ? '<div class="empty">Finding your picks…</div>' : picks.map(pick).join('<hr class="divider">')}
@@ -467,7 +478,8 @@ function recommendationsCard() {
 
 function forYou() {
   const done = state.setupStep >= 4;
-  const tags = ['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29', 'Dairy-free'];
+  const a = state.answers;
+  const tags = [a.skinType?.[0], a.concerns?.slice(0, 2).join(' + '), a.climate && `${a.climate.humidity.label} · ${a.climate.place.split(',')[0]}`, a.age?.[0], a.diet?.[0]].filter(Boolean).map(esc);
   const main = `
     <div class="row between"><h1 class="h2">For you</h1></div>
     <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${tags.map((t) => `<span class="tag">${t}</span>`).join('')}<a class="xs" href="#/setup/1">Edit profile</a></div>
@@ -485,21 +497,20 @@ function forYou() {
         </div>
       </div>
     </section>
-    ${recommendationsCard()}
-    ${peopleLikeYou()}`;
+    ${recommendationsCard()}`;
   return { layout: '', left: leftCol(finishProfileCard()), main, right: rightRail(), ask: true };
 }
 
 /* ================= onboarding ================= */
 
 const SETUP = [
-  { n: 1, name: 'Lifestyle', title: 'Start with how you live', sub: 'Climate, sun, sleep and diet change what works on your skin. This takes about a minute.', groups: [
-    ['Where + how you live', 'protect', [['location', 'Location', ['Miami, FL', 'Humid  74%', 'High UV'], true], ['lifestyle', 'Lifestyle', ['Outdoors often', 'Works out 4+ a week', 'Indoors with AC all day', 'Travels often', 'Sleeps under 6 hours', 'Wears makeup daily', 'Stressful job']], ['diet', 'Diet', ['Balanced', 'Dairy-free', 'Vegan', 'Vegetarian', 'Lots of sugar', 'High protein', 'Drinks 2L+ water']]]],
-    ['Your day-to-day', 'cleanse', [['outdoors', 'Time outdoors', ['Mostly indoors', '1–2 hrs', '3+ hrs'], true], ['sleep', 'Sleep', ['Under 6 hrs', '6–8 hrs', '8+ hrs'], true], ['stress', 'Stress lately', ['Low', 'Medium', 'High'], true]]],
-  ] },
-  { n: 2, name: 'My skin', title: 'Tell us about your skin', sub: 'Skin type, concerns and background are how we find people whose results predict yours.', groups: [
-    ['Skin', 'cleanse', [['skinType', 'Skin type', ['Oily', 'Dry', 'Combination', 'Normal', 'Sensitive'], true], ['concerns', 'Concerns', ['Breakouts', 'Redness', 'Dark spots', 'Texture', 'Large pores', 'Dryness', 'Fine lines', 'Sensitivity']]]],
+  { n: 1, name: 'My skin', title: 'Start with you and your skin', sub: 'Age, skin type and concerns are how we find people whose results predict yours. This takes about a minute.', groups: [
     ['About you', 'hydrate', [['age', 'Age range', ['Under 18', '18–24', '25–29', '30–34', '35–44', '45+'], true], ['gender', 'Gender', ['Woman', 'Man', 'Non-binary', 'Prefer not to say'], true], ['ethnicity', 'Ethnicity (optional)', ['East Asian', 'South Asian', 'Southeast Asian', 'Black', 'Hispanic / Latine', 'Middle Eastern', 'White', 'Mixed', 'Prefer not to say']]]],
+    ['Skin', 'cleanse', [['skinType', 'Skin type', ['Oily', 'Dry', 'Combination', 'Normal', 'Sensitive'], true], ['concerns', 'Concerns', ['Breakouts', 'Redness', 'Dark spots', 'Texture', 'Large pores', 'Dryness', 'Fine lines', 'Sensitivity']]]],
+  ] },
+  { n: 2, name: 'Environment + lifestyle', title: 'Where and how you live', sub: 'Humidity, sun, sleep and diet change what works on your skin.', groups: [
+    ['Your environment', 'protect', [['location', 'Where you live']]],
+    ['Your day-to-day', 'cleanse', [['outdoors', 'Time outdoors', ['Mostly indoors', '1–2 hrs', '3+ hrs'], true], ['sleep', 'Sleep', ['Under 6 hrs', '6–8 hrs', '8+ hrs'], true], ['stress', 'Stress lately', ['Low', 'Medium', 'High'], true], ['diet', 'Diet', ['Balanced', 'Dairy-free', 'Vegan', 'Vegetarian', 'Lots of sugar', 'High protein', 'Drinks 2L+ water']]]],
   ] },
   { n: 3, name: 'Preferences + goals', title: 'What do you want from your routine?', sub: 'Your goals rank the picks. Budget and must-haves filter out anything that doesn’t fit.', groups: [
     ['Preferences + goals', 'treat', [['goals', 'Top goals (pick up to 3)', ['Clear breakouts', 'Calm redness', 'Fade dark spots', 'Smoother texture', 'Hydration', 'Anti-aging', 'Glow'], false, 3], ['size', 'Routine size', ['Minimal  3 steps', 'Standard  4–5 steps', 'Full  6+ steps'], true], ['budget', 'Budget per product', ['Under $15', '$15–30', '$30–60', '$60+'], true], ['musts', 'Must-haves', ['Fragrance-free', 'Cruelty-free', 'Vegan', 'Reef-safe SPF', 'Fungal-acne safe', 'Pregnancy-safe']], ['shops', 'Where you shop', ['Sephora', 'Ulta', 'Amazon', 'Olive Young', 'Brand sites']]]],
@@ -524,7 +535,35 @@ function strengthCard() {
     </section>`;
 }
 
+function locationField(label) {
+  const a = state.answers;
+  const c = a.climate;
+  const look = state.climateLookup ?? {};
+  const chips = c ? `
+      <div class="row wrap" style="gap:6px"><span class="chip on">${esc(c.humidity.label)} · ${c.humidity.value}% humidity</span><span class="chip on">${esc(c.uv.label)} · UV ${c.uv.value}</span><span class="chip on">${esc(c.dryness.label)}</span></div>
+      <span class="xs muted">Averages for ${esc(c.place)} over the last 30 days.</span>` : '';
+  return `<div class="stack" style="gap:8px"><span class="field-label">${label}</span>
+      <form class="row" data-form="location"><input name="q" class="grow" value="${esc(a.location?.[0] ?? '')}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Type your city, e.g. Austin, TX" autocomplete="address-level2"><button class="btn dark">${c ? 'Update' : 'Find'}</button></form>
+      ${look.busy ? '<span class="xs muted">Checking humidity and UV…</span>' : look.error ? `<span class="xs" style="color:#b3261e">${esc(look.error)}</span>` : chips}</div>`;
+}
+
+async function lookUpClimate(q) {
+  q = q.trim();
+  if (!q) { set({ answers: { ...state.answers, location: [], climate: null }, climateLookup: {} }); return; }
+  if (state.climateLookup?.busy || q === state.answers.climate?.place) return;
+  set({ climateLookup: { busy: true } });
+  try {
+    const r = await fetch(`/api/climate?q=${encodeURIComponent(q)}`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error ?? 'Weather data is unavailable right now.');
+    set({ answers: { ...state.answers, location: [data.place], climate: data }, climateLookup: {} });
+  } catch (err) {
+    set({ answers: { ...state.answers, location: [q], climate: null }, climateLookup: { error: err.message } });
+  }
+}
+
 function chipGroup([key, label, opts, single, max]) {
+  if (key === 'location') return locationField(label);
   const sel = state.answers[key] || [];
   return `<div class="stack" style="gap:8px"><span class="field-label">${label}</span><div class="row wrap" style="gap:6px">${opts.map((o) => `<button class="chip ${sel.includes(o) ? 'on' : ''}" data-act="answer" data-key="${key}" data-v="${esc(o)}" data-single="${single ? 1 : ''}" data-max="${max || ''}">${o}</button>`).join('')}</div></div>`;
 }
@@ -541,9 +580,9 @@ function setupPage(n) {
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
         <form class="row" data-form="shelf-add"><input name="q" list="product-suggestions" class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a product name, e.g. “Heartleaf”" autocomplete="off"><button class="btn dark">Add</button></form>
-        <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button><button class="btn" data-act="toast" data-msg="Imported 11 products from your Sephora orders">Import orders</button></div>
-        <p class="xs muted">${shelfIds().length} products on your shelf.</p>
-        ${shelfRows(shelfIds().map((id) => ({ id })), { selectable: false })}
+        <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button></div>
+        <p class="xs muted">${shelfIds().length ? `${shelfIds().length} product${shelfIds().length === 1 ? '' : 's'} on your shelf.` : 'Your shelf is empty. Add the products you use now.'}</p>
+        ${shelfIds().length ? shelfRows(shelfIds().map((id) => ({ id })), { selectable: false }) : ''}
         <div class="notice">We use your shelf to find what your routine is missing, what’s running low and what to replace.</div>
       </section>`;
   const back = n > 1 ? `<a class="btn" href="#/setup/${n - 1}">← Back</a>` : '<a class="btn" href="#/for-you">Skip for now</a>';
@@ -1564,7 +1603,8 @@ async function askDewSend(q) {
   const a = state.answers;
   const profile = {
     skinType: a.skinType?.[0], concerns: a.concerns, goals: a.goals, location: a.location?.[0],
-    shelf: SHELF.map((x) => `${P(x.id).brand} ${P(x.id).name} (${P(x.id).step})`).concat((state.shelfAdds ?? []).map((id) => `${P(id).brand} ${P(id).name}`)),
+    climate: a.climate && `${a.climate.humidity.label.toLowerCase()} (${a.climate.humidity.value}% humidity), ${a.climate.uv.label.toLowerCase()}, ${a.climate.dryness.label.toLowerCase()}`,
+    shelf: shelfIds().map((id) => `${P(id).brand} ${P(id).name}${P(id).step ? ` (${P(id).step})` : ''}`),
   };
   let reply;
   try {
@@ -1606,6 +1646,7 @@ document.addEventListener('submit', (e) => {
     if (id && q.trim()) addToShelf(id); else toast('No product matches that name yet. Try picking one from the suggestions.');
     form.reset();
   }
+  if (form.dataset.form === 'location') lookUpClimate(q);
   if (form.dataset.form === 'ask') askDewSend(q);
   if (form.dataset.form === 'reviews-search') set({ rv: { ...state.rv, q: q.trim(), limit: 20 } });
   if (form.dataset.form === 'signup' || form.dataset.form === 'login') submitAuth(form.dataset.form, fd);
@@ -1649,6 +1690,7 @@ async function onAuthChange(event, user) {
 }
 
 document.addEventListener('change', (e) => {
+  if (e.target.closest('[data-form="location"]')) lookUpClimate(e.target.value);
   const key = { 'rv-product': 'product', 'rv-rating': 'rating', 'rv-sort': 'sort' }[e.target.dataset.change];
   if (key) set({ rv: { ...state.rv, [key]: e.target.value, limit: 20 } });
 });
