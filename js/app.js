@@ -168,7 +168,6 @@ function catalogEntries() {
   return [...ids].map((id) => [id, `${P(id).brand} · ${P(id).name}`]);
 }
 const productFromQuery = (q) => catalogEntries().find(([, label]) => label.toLowerCase() === q.trim().toLowerCase())?.[0];
-const suggestionList = () => `<datalist id="product-suggestions">${catalogEntries().map(([, l]) => `<option value="${esc(l)}"></option>`).join('')}</datalist>`;
 
 function addToShelf(id) {
   if (signedOut()) { state = { ...state, authNotice: 'Create a free account to build your shelf.' }; go('signup'); return; }
@@ -202,7 +201,8 @@ function nav(active) {
     <a href="#/welcome" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
     <form class="search" data-form="search" role="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
-      <input name="q" list="product-suggestions" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off">
+      <input name="q" data-suggest="search" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off" role="combobox" aria-controls="search-suggest" aria-expanded="false">
+      <div class="suggest-box search-suggest" id="search-suggest" role="listbox"></div>
     </form>
     <span class="nav-spacer"></span>
     <a class="tab ${active === 'reviews' ? 'active' : ''}" href="#/reviews">Public reviews</a>
@@ -215,7 +215,8 @@ function nav(active) {
     <a href="#/for-you" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
     <form class="search" data-form="search" role="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
-      <input name="q" list="product-suggestions" placeholder="Search products, ingredients, people…" value="${esc(state.lastSearch || '')}" autocomplete="off">
+      <input name="q" data-suggest="search" placeholder="Search products, ingredients, people…" value="${esc(state.lastSearch || '')}" autocomplete="off" role="combobox" aria-controls="search-suggest" aria-expanded="false">
+      <div class="suggest-box search-suggest" id="search-suggest" role="listbox"></div>
     </form>
     <span class="nav-spacer"></span>
     <nav class="tabs">${tabs.map(([r, l]) => `<a class="tab ${active === r ? 'active' : ''}" href="#/${r}">${l}</a>`).join('')}</nav>
@@ -613,7 +614,7 @@ function setupPage(n) {
       </section>`).join('') : `
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
-        <form class="shelf-search" data-form="shelf-add"><div class="row"><input name="q" data-shelf-search class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button class="btn dark">Add</button></div><div class="shelf-suggest" id="shelf-suggest" role="listbox"></div></form>
+        <form class="shelf-search" data-form="shelf-add"><div class="row"><input name="q" data-suggest="shelf" class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button class="btn dark">Add</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
         <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button></div>
         <p class="xs muted">${shelfIds().length ? `${shelfIds().length} product${shelfIds().length === 1 ? '' : 's'} on your shelf.` : 'Your shelf is empty. Add the products you use now.'}</p>
         ${shelfIds().length ? shelfRows(shelfIds().map((id) => ({ id })), { selectable: false }) : ''}
@@ -1515,7 +1516,7 @@ function render() {
   if (v.right) cols.push(`<aside class="col rail" aria-label="Side panel">${v.right}</aside>`);
   app.innerHTML = cols.join('');
   [...app.querySelectorAll('.col')].forEach((c, i) => { if (scrolls[i]) c.scrollTop = scrolls[i]; });
-  document.getElementById('overlay').innerHTML = `${v.ask ? askDew() : ''}${rewardModal()}${suggestionList()}`;
+  document.getElementById('overlay').innerHTML = `${v.ask ? askDew() : ''}${rewardModal()}`;
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;
@@ -1681,7 +1682,9 @@ document.addEventListener('submit', (e) => {
   const fd = new FormData(form);
   const q = fd.get('q') || '';
   if (form.dataset.form === 'search') {
-    const id = productFromQuery(q);
+    const id = pickedSuggestion() ?? productFromQuery(q);
+    closeSuggest();
+    form.querySelector('input')?.blur();
     if (id) go(`product/${id}`); else { set({ lastSearch: q, searchPages: 1 }); go('search'); }
   }
   if (form.dataset.form === 'shelf-add') shelfAddFromQuery(form, q);
@@ -1736,22 +1739,22 @@ document.addEventListener('change', (e) => {
 
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }
-  if (e.target.getAttribute('list') === 'product-suggestions') suggestFromCatalog(e.target.value);
-  if (e.target.matches('[data-shelf-search]')) shelfSuggest(e.target.value);
+  if (e.target.matches('[data-suggest]')) suggestFor(e.target);
 });
 
-/* Shelf step search: DEW's own dropdown instead of the browser's suggestion list, which
-   only shows a product when the typed text appears in it word for word ("body shop
-   satsuma" hid "Body Shop · Satsuma Hand Cream"). Every typed word just has to appear
-   somewhere in the brand or name, and the whole 18k-product catalog is searched. */
+/* Product search dropdown for the top search bar and the shelf step. DEW's own list instead of
+   the browser's suggestion list, which only shows a product when the typed text appears in it
+   word for word ("body shop satsuma" hid "Body Shop · Satsuma Hand Cream"). Every typed word
+   just has to appear somewhere in the brand or name, and the whole 18k-product catalog is searched.
+   Inputs opt in with data-suggest="shelf" (pick = add to shelf) or "search" (pick = open product). */
 const queryWords = (q) => String(q).toLowerCase().replace(/[·,]/g, ' ').split(/\s+/).filter(Boolean);
 const matchesWords = (label, words) => words.every((w) => label.toLowerCase().includes(w));
-let shelfHits = [];
-let shelfActive = -1;
-let shelfTimer;
-let shelfSeq = 0;
+let suggestHits = [];
+let suggestActive = -1;
+let suggestTimer;
+let suggestSeq = 0;
 
-async function shelfMatches(q) {
+async function catalogMatches(q) {
   const words = queryWords(q);
   if (!words.length) return [];
   const r = await fetch(`/api/products?q=${encodeURIComponent(words.join(' '))}`);
@@ -1761,77 +1764,74 @@ async function shelfMatches(q) {
   return [...new Set([...local, ...api])];
 }
 
-function drawShelfSuggest(q) {
-  const box = document.getElementById('shelf-suggest');
-  const input = document.querySelector('[data-shelf-search]');
+const suggestBox = (input) => input?.closest('form')?.querySelector('.suggest-box');
+
+function drawSuggest(input, q) {
+  const box = suggestBox(input);
   if (!box) return;
   const open = q.trim().length >= 2;
-  input?.setAttribute('aria-expanded', String(open));
+  input.setAttribute('aria-expanded', String(open));
   box.classList.toggle('open', open);
   if (!open) { box.innerHTML = ''; return; }
+  const shelf = input.dataset.suggest === 'shelf';
   const onShelf = new Set(shelfIds());
-  box.innerHTML = shelfHits.length
-    ? shelfHits.slice(0, 8).map((id, i) => `<button type="button" role="option" class="suggest-item ${i === shelfActive ? 'active' : ''}" data-act="shelf-add" data-id="${esc(id)}">${thumb(id, 36, 36)}<span class="grow"><span class="xs muted">${esc(P(id).brand)}</span><span class="suggest-name">${esc(P(id).name)}</span></span>${onShelf.has(id) ? '<span class="xs muted">On shelf ✓</span>' : ''}</button>`).join('')
-    : `<div class="xs muted suggest-empty">No products match “${esc(q.trim())}”. Try fewer words or just the brand.</div>`;
+  const item = (id, i) => {
+    const inner = `${thumb(id, 36, 36)}<span class="grow"><span class="xs muted">${esc(P(id).brand)}</span><span class="suggest-name">${esc(P(id).name)}</span></span>${shelf && onShelf.has(id) ? '<span class="xs muted">On shelf ✓</span>' : ''}`;
+    const cls = `suggest-item ${i === suggestActive ? 'active' : ''}`;
+    return shelf
+      ? `<button type="button" role="option" class="${cls}" data-act="shelf-add" data-id="${esc(id)}">${inner}</button>`
+      : `<a role="option" class="${cls}" href="#/product/${esc(id)}">${inner}</a>`;
+  };
+  const all = shelf ? '' : `<button type="submit" class="suggest-all xs">See all results for “${esc(q.trim())}” →</button>`;
+  box.innerHTML = suggestHits.length
+    ? suggestHits.slice(0, 8).map(item).join('') + all
+    : `<div class="xs muted suggest-empty">No products match “${esc(q.trim())}”. Try fewer words or just the brand.</div>${all}`;
 }
 
-function shelfSuggest(value) {
-  clearTimeout(shelfTimer);
-  shelfActive = -1;
-  if (value.trim().length < 2) { shelfHits = []; drawShelfSuggest(value); return; }
-  const seq = ++shelfSeq;
-  shelfTimer = setTimeout(async () => {
+function suggestFor(input) {
+  clearTimeout(suggestTimer);
+  suggestActive = -1;
+  const value = input.value;
+  if (value.trim().length < 2) { suggestHits = []; drawSuggest(input, value); return; }
+  const seq = ++suggestSeq;
+  suggestTimer = setTimeout(async () => {
     try {
-      const hits = await shelfMatches(value);
-      if (seq !== shelfSeq) return; // a newer keystroke is already searching
-      shelfHits = hits;
-      drawShelfSuggest(value);
+      const hits = await catalogMatches(value);
+      if (seq !== suggestSeq) return; // a newer keystroke is already searching
+      suggestHits = hits;
+      drawSuggest(input, value);
     } catch (err) { /* keep the current suggestions */ }
   }, 180);
 }
 
-// "Add" or Enter: the highlighted suggestion, else an exact name, else the best match.
+// The highlighted suggestion, if the arrow keys picked one.
+const pickedSuggestion = () => suggestHits[suggestActive];
+const closeSuggest = () => { clearTimeout(suggestTimer); suggestSeq++; suggestHits = []; suggestActive = -1; };
+
+// Shelf "Add" or Enter: the highlighted suggestion, else an exact name, else the best match.
 async function shelfAddFromQuery(form, q) {
   if (!q.trim()) return;
-  let id = shelfHits[shelfActive] ?? productFromQuery(q);
+  let id = pickedSuggestion() ?? productFromQuery(q);
   if (!id) {
-    clearTimeout(shelfTimer);
-    try { id = (await shelfMatches(q))[0]; } catch (err) { /* handled below */ }
+    clearTimeout(suggestTimer);
+    try { id = (await catalogMatches(q))[0]; } catch (err) { /* handled below */ }
   }
-  if (id) { shelfHits = []; shelfActive = -1; form.reset(); addToShelf(id); } else toast(`No product matches “${q.trim()}”. Try fewer words or just the brand.`);
+  if (id) { closeSuggest(); form.reset(); addToShelf(id); } else toast(`No product matches “${q.trim()}”. Try fewer words or just the brand.`);
 }
 
 document.addEventListener('keydown', (e) => {
-  if (!e.target.matches?.('[data-shelf-search]') || !shelfHits.length) return;
-  const n = Math.min(shelfHits.length, 8);
-  if (e.key === 'ArrowDown') { e.preventDefault(); shelfActive = (shelfActive + 1) % n; drawShelfSuggest(e.target.value); }
-  if (e.key === 'ArrowUp') { e.preventDefault(); shelfActive = (shelfActive - 1 + n) % n; drawShelfSuggest(e.target.value); }
-  if (e.key === 'Escape') { shelfHits = []; shelfActive = -1; drawShelfSuggest(''); }
+  if (!e.target.matches?.('[data-suggest]')) return;
+  if (e.key === 'Escape') { closeSuggest(); drawSuggest(e.target, ''); return; }
+  if (!suggestHits.length) return;
+  const n = Math.min(suggestHits.length, 8);
+  if (e.key === 'ArrowDown') { e.preventDefault(); suggestActive = (suggestActive + 1) % n; drawSuggest(e.target, e.target.value); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); suggestActive = (suggestActive - 1 + n) % n; drawSuggest(e.target, e.target.value); }
 });
 // Keep the box focused while a suggestion is clicked; close the list when focus leaves.
-document.addEventListener('mousedown', (e) => { if (e.target.closest('.shelf-suggest')) e.preventDefault(); });
-document.addEventListener('focusout', (e) => { if (e.target.matches?.('[data-shelf-search]')) setTimeout(() => drawShelfSuggest(''), 150); });
-document.addEventListener('focusin', (e) => { if (e.target.matches?.('[data-shelf-search]') && e.target.value.trim().length >= 2) shelfSuggest(e.target.value); });
-
-// As you type in a search or shelf box, suggest matches from the whole catalog (not just
-// products with reviews). Updates the suggestion list in place so the box keeps focus.
-let suggestTimer;
-function suggestFromCatalog(value) {
-  clearTimeout(suggestTimer);
-  const q = value.trim().toLowerCase();
-  if (q.length < 2 || catalogEntries().some(([, l]) => l.toLowerCase() === q)) return;
-  suggestTimer = setTimeout(async () => {
-    try {
-      const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
-      if (!r.ok) return;
-      remember(await r.json());
-      const words = q.split(/\s+/);
-      const matches = catalogEntries().filter(([, l]) => words.every((w) => l.toLowerCase().includes(w))).slice(0, 40);
-      const list = document.getElementById('product-suggestions');
-      if (list) list.innerHTML = matches.map(([, l]) => `<option value="${esc(l)}"></option>`).join('');
-    } catch (err) { /* keep the current suggestions */ }
-  }, 200);
-}
+document.addEventListener('mousedown', (e) => { if (e.target.closest('.suggest-box')) e.preventDefault(); });
+document.addEventListener('click', (e) => { if (e.target.closest('a.suggest-item')) { closeSuggest(); document.activeElement?.blur?.(); } });
+document.addEventListener('focusout', (e) => { if (e.target.matches?.('[data-suggest]')) setTimeout(() => drawSuggest(e.target, ''), 150); });
+document.addEventListener('focusin', (e) => { if (e.target.matches?.('[data-suggest]') && e.target.value.trim().length >= 2) suggestFor(e.target); });
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (state.askOpen) set({ askOpen: false }); else if (state.shelfOpen) set({ shelfOpen: null }); }

@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: top search bar gets the same dropdown**
+- The search bar at the top of every page now uses the shelf step's word-by-word dropdown instead of the browser's suggestion list: words in any order, across the whole catalog, with a photo, brand and name for each match.
+- Clicking a match (or arrow keys + Enter) opens that product's page. "See all results" at the bottom, or Enter with nothing highlighted, opens the full search page as before.
+- The old browser suggestion list is gone, so the page no longer rebuilds a list of every loaded product on each render.
+
 **November 9, 2026: shelf search finds every catalog product**
 - The "What's on your shelf right now?" box (step 4 of the skin profile) now has its own dropdown instead of the browser's suggestion list. The browser list only showed a product when the typed text appeared in it word for word, so "body shop satsuma" showed nothing and Add failed even though search had found 7 matches.
 - Each typed word just has to appear somewhere in the brand or name, in any order, across all 18k+ catalog products. Results show a photo, brand and name; click one, or use the arrow keys and Enter.
