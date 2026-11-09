@@ -311,6 +311,9 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 8, 2026: product photos fit their frames**
+- Product photos shrink to fit inside their thumbnail, shelf and creator-shelf frames, and anything left over is clipped instead of spilling past the container (e.g. the Holy grail card on creator pages).
+
 **November 8, 2026: typed location everywhere**
 - Updating your skin profile uses the same typed-location step as sign-up. Profiles saved before the change have their old place looked up automatically, and an old "Humid 74%"/"High UV" chip saved as a location is cleared so you can type your city.
 - The profile, Picked for you and For you tags come from your own answers (skin, concerns, the typed place’s humidity, age, diet) instead of fixed Miami sample tags.

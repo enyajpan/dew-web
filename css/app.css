@@ -409,3 +409,11 @@ h1, h2, h3, p { margin: 0; }
 .hero.hero-pick { padding: 26px 32px; }
 .hero-title { white-space: nowrap; font-size: clamp(20px, calc((100cqi - 300px) / 18.5), 30px); line-height: 1.15; font-weight: 400; letter-spacing: -.01em; color: #fff; }
 @media (max-width: 820px) { .hero.hero-pick .box-illo { display: none; } .hero-title { font-size: 26px; } }
+
+/* Product photos always fit inside their frame: shrink to fit, and clip anything left over. */
+.thumb { display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; }
+.thumb img { width: auto; height: auto; max-width: 100%; max-height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
+.shelf, .creator-card .mini { overflow: hidden; }
+.plank-row img { max-width: 56px; max-height: 88px; object-fit: contain; flex: none; }
+.chip img, .card img:not(.avatar):not(.logo) { max-width: 100%; }
+.creator-card .mini .plank-row img { flex: 0 1 40px; min-width: 0; width: auto; }
