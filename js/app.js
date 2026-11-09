@@ -544,7 +544,7 @@ function forYou() {
       <div class="hero-box">${BOX_ILLO}</div>
     </section>
     ${recommendationsCard()}`;
-  return { layout: '', left: leftCol(finishProfileCard()), main, right: rightRail(), ask: true };
+  return { layout: '', left: leftCol(finishProfileCard()), main, right: rightRail() };
 }
 
 /* ================= onboarding ================= */
@@ -814,7 +814,7 @@ function communityPage() {
           ${r.score >= 6 ? `<button class="btn" data-act="save" data-id="${r.product}">${(state.saved ?? []).includes(r.product) ? 'Saved ✓' : 'Save'}</button>` : '<button class="btn" data-act="toast" data-msg="Hidden from your picks">Hide product</button>'}
         </div>
       </article>`).join('') || '<div class="empty">No reviews match these filters.</div>'}`;
-  return { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+  return { layout: '', left: leftCol(), main, right: rightRail() };
 }
 
 /* ================= Picked for you (full size + sample it first) ================= */
@@ -1148,7 +1148,7 @@ function checkinPage() {
   const right = `
     <section class="card dark stack"><span class="mono lime">Preview: how others see it</span><span class="btn sm lime" style="align-self:flex-start;cursor:default">${c.verdict === 'buy' ? '✓ Buy' : '✕ Don’t buy'}</span><p class="small">Results by week 6  Lighter dark spots, more even tone</p><p class="xs" style="color:#c8dcc9">Mia  Combination  Humid  25–29  6 weeks tracked</p></section>
     <section class="card stack"><div class="row">${svg('flame', 22)}<span class="h4">+60 points</span></div><p class="xs muted">Your review helps 1,486 people like you skip the guesswork. ${Math.max(0, REWARD_PTS - state.points)} pts to your free sample box.</p></section>`;
-  return { layout: '', left: leftCol(), main, right, ask: true };
+  return { layout: '', left: leftCol(), main, right };
 }
 
 /* ================= profile ================= */
@@ -1236,7 +1236,7 @@ function profilePage() {
           <div class="row">${thumb(id, 28, 36)}<div><div class="mono">${esc(P(id).brand)}</div><div class="small">${esc(P(id).name)}</div></div></div>
           <span class="mono">Results seen: ${w}</span><p class="small">“${t}”</p><span class="xs muted">Public: helped 48 people like you</span></div>`).join('')}</div>`;
   }
-  return { layout: '', left: leftCol('', downloadApp()), main: header + body, right: trackerRail(), ask: true };
+  return { layout: '', left: leftCol('', downloadApp()), main: header + body, right: trackerRail() };
 }
 
 /* ================= public reviews ================= */
@@ -1286,7 +1286,7 @@ function reviewsPage() {
       : reviews.length ? `<div class="stack" style="gap:12px">${reviews.map((r) => liveReview(r, true)).join('')}</div>`
       : '<div class="empty">No reviews match. Try fewer words or another product.</div>'}
     ${reviews.length < total ? '<button class="btn" data-act="rv-more" style="align-self:center">Show more reviews</button>' : ''}`;
-  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
 }
 
 /* ================= welcome + accounts ================= */
@@ -1501,7 +1501,7 @@ function productPage(id) {
       ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
       ${statsLine() ? `<p class="xs faint live-count">DEW has collected ${statsLine()} so far.</p>` : ''}
     </section>`;
-  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
 }
 
 /* ================= search ================= */
@@ -1524,7 +1524,7 @@ function searchPage() {
         ${signedOut() ? '' : `<button class="btn sm" data-act="shelf-add" data-id="${id}">${shelfIds().includes(id) ? 'On shelf ✓' : '+ Shelf'}</button>`}
         <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || (pages.some((p) => p.status === 'loading') ? '<div class="empty">Searching…</div>' : '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>')}</section>
     ${total > remote.length ? `<button class="btn" data-act="search-more" style="align-self:flex-start">Show more (${(total - remote.length).toLocaleString()} left)</button>` : ''}`;
-  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
 }
 
 /* ================= reward modal ================= */
@@ -1592,7 +1592,8 @@ function render() {
   app.innerHTML = cols.join('');
   [...app.querySelectorAll('.col')].forEach((c, i) => { if (scrolls[i]) c.scrollTop = scrolls[i]; });
   playBoxReveal(lastRoute !== r);
-  document.getElementById('overlay').innerHTML = `${v.ask ? askDew() : ''}${rewardModal()}`;
+  // Ask Dew is pinned to the bottom right on every page, signed in or not.
+  document.getElementById('overlay').innerHTML = `${askDew()}${rewardModal()}`;
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;

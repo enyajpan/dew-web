@@ -221,7 +221,7 @@ h1, h2, h3, p { margin: 0; }
 /* ---------- ask dew ---------- */
 .askdew-pill {
   position: fixed; right: 24px; bottom: 20px; z-index: 60; display: flex; align-items: center; gap: 8px;
-  height: 40px; padding: 0 16px 0 12px; border: 0; border-radius: 14px; background: #a3d0fe; color: var(--ink);
+  height: 40px; padding: 0 16px 0 12px; border: 0; border-radius: 14px; background: var(--surface-soft); border: 1px solid var(--fill-muted); color: var(--ink);
   font-weight: 500; box-shadow: 0 6px 18px rgb(20 28 17 / 14%);
 }
 .askdew-pill img { width: 22px; }
@@ -604,9 +604,11 @@ a.suggest-item { text-decoration: none; }
 /* My profile (Hi-fi v7 · 08a) */
 .challenge-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--forest); }
 
-/* Ask Dew panel (Figma "Ask Dew v5", State=Expanded): light blue panel, white Dew bubbles */
-.askdew-panel { width: 340px; padding: 16px; border-radius: var(--radius-md); background: #a3d0fe; border-color: var(--line); }
-.askdew-panel > .xs.muted { color: #334254; }
+/* Ask Dew panel (Figma "Ask Dew v5", State=Expanded): panel, white Dew bubbles */
+/* Background is the design-system light blue (--surface-soft), not the darker #A3D0FE. */
+.askdew-panel { width: 340px; padding: 16px; border-radius: var(--radius-md); background: var(--surface-soft); border-color: var(--fill-muted); }
+.askdew-panel > .xs.muted { color: var(--ink-2); }
+.askdew-panel .chip, .askdew-panel .chat-input { border-color: var(--fill-muted); }
 .askdew-panel .msg { padding: 8px 10px; border-radius: var(--radius-sm); }
 .askdew-panel .msg.dew { background: #fff; padding: 10px 12px; }
 .askdew-panel .chip { background: #fff; font-weight: 500; color: var(--ink-2); }

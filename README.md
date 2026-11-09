@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: Ask Dew on every page, in light blue**
+
+- Ask Dew is now pinned to the bottom right of every page: cart, checkout, setup, check-in, product, sample and the signed-out welcome, log in and sign up pages, as well as the pages that already had it. Before, only pages that opted in showed it. Signed-out visitors get the built-in sample answers, as before.
+- The pill and the open panel now use the design-system light blue, `--surface-soft` (#EBF6FB), with a pale blue (`--fill-muted`, #CBDBEA) border, instead of the darker #A3D0FE. Dew's replies stay in white bubbles.
+
 **November 9, 2026: Picked for you box now animates**
 
 - The box on Picked for you was a still image of the first frame of the Figma "Box reveal (animated)" component (Hi-fi v7, 186:9796). It is now built from layers and plays the prototype: a 0.8s hold, three 0.12s shakes, the lid flaps swing open, then the four routine products and the characters pop out with a bounce.
