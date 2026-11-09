@@ -311,6 +311,21 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: live site matched to Hi-fi v7 (Figma)**
+- Top nav: white background (was off-white), smaller 84 px logo, 12 px tabs in secondary ink, search field on the canvas color, points pill with a border, smaller cart count. The first tab is now "Explore" (was "For you"), and so is the page title.
+- Layout: the side columns are now 296 px and 264 px like the Figma, so the middle column is 800 px at 1440 wide.
+- Left column: one white "Shelf panel" holds the check-in, My Shelf, Running low and the shelf hint, as in Figma. Running low is compact, with a days-left bar, "Refill $15" buttons and "Replace" for a low-rated product. Finish-your-profile card has a 4-segment progress bar, lime-ring step rows and a 19 px title.
+- Explore: hero card has no eyebrow, a 30 px title, Figma copy and "See my routine →". The "Your box" illustration is now the exact vector from Figma (cleanser, toner, moisturizer and sunscreen shapes behind the olive lid), so the icons line up. "2 steps missing →" replaces "Edit profile" until the profile is done. Top 3 picks: 17 px heading, lime gap chip, buy bar with "% say BUY", one quote, no bullet lists, no price on Add to cart.
+- Want to try rail: 15 px heading, brand / name / price rows with an "Add to cart" link, and "Add all to cart · total".
+- Ask Dew: light blue pill and panel with white Dew bubbles, as in the Ask Dew v5 component.
+- Picked for you: light blue cream hero with the "DEW 4-step box" from Figma (assets/svg/routine-box.svg, assets/img/picked-hero.jpg), budget and preference filter chips, step cards labelled "1: Cleanse", "Keep ✓" on the product you already own, a one-button summary bar with "212 tracked routines", and "Show them →".
+- Weekly check-in: square scale segments (blue-gray for worse, canvas for better), lime "Part 2" badge, smaller product chips, BUY / DON'T BUY in caps.
+- Community: white match banner, 96 px progress photos, 13 px review text, a Share action.
+- Public reviews and product page: "View on [brand] ↗" source buttons, 13 px review text, compact filters, "+ Want to try" under Add to cart, dot-separated product details.
+- Skin profile: shelf step groups products by routine step (Cleanse + tone, Treat, Moisturize, Protect + lips) and puts Scan barcode and Import orders next to the search field; the strength card shows the three characters.
+- My profile: challenge rows get character tiles; upcoming milestones are labelled "NEW:".
+- Kept on purpose: the design-system buttons (Dark, Secondary, Lime) instead of the older button frames still on v7, and the current order of the setup steps.
+
 **November 9, 2026: creator cards match Kara's layout (Hi-fi v7 comment)**
 - Every card on Creators like you now uses the layout of Kara Lim's card on Hi-fi v7: name with the "% like you" pill beside it, handle and followers, city and age range, separate Skin type and Environment rows, a "Top 3 products" box (holy grail first, highlighted, then two more with brand and score), and Follow / View full shelf.
 - Each creator in js/data.js gains `location`, `age`, `skin`, `environment` and `top3` (product id + score), taken from the v7 designs. The shelf preview and the quote moved off the card; they are still on each creator's page.

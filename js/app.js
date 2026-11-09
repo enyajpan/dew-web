@@ -146,12 +146,12 @@ function liveReview(r, withProduct) {
   const n = Math.round(+r.rating || 0);
   const pid = r.product_id;
   return `
-    <div class="card stack live-review" style="padding:18px">
-      ${withProduct ? `<div class="row">${thumb(pid, 34, 40)}<div class="grow"><div class="mono">${esc(r.products?.brand ?? P(pid).brand)}</div>${productLink(pid, `<span class="small">${esc(r.products?.name ?? P(pid).name)}</span>`)}</div></div>` : ''}
+    <div class="card stack live-review">
+      ${withProduct ? `<div class="row">${thumb(pid, 34, 40)}<div class="grow"><div class="mono faint">${esc(r.products?.brand ?? P(pid).brand)}</div>${productLink(pid, `<span class="small">${esc(r.products?.name ?? P(pid).name)}</span>`)}</div></div>` : ''}
       <div class="row" style="gap:10px"><span class="review-stars" aria-label="${n} of 5 stars">${starsTxt(n)}</span>${r.title ? `<span class="h4" style="font-size:15px;font-weight:500">${esc(r.title)}</span>` : ''}</div>
       ${r.body ? `<p class="review-body">${esc(r.body)}</p>` : ''}
       <div class="row wrap" style="gap:6px">${skinTags(r)}${a.skin_tone ? `<span class="tag">${esc(a.skin_tone)}</span>` : ''}${a.incentivized ? '<span class="tag">Gifted</span>' : ''}</div>
-      <div class="row" style="gap:8px"><span class="small">${esc(r.author_name ?? 'Anonymous')}</span>${r.verified ? '<span class="xs" style="color:var(--forest)">✓ Verified buyer</span>' : ''}<span class="xs faint grow">${fmtDate(r.reviewed_at)}</span><a class="src" href="${esc(r.review_sources?.url ?? '#')}" target="_blank" rel="noopener">${esc(retailerName(r.review_sources?.retailer ?? ''))}</a></div>
+      <div class="row" style="gap:8px"><span class="small">${esc(r.author_name ?? 'Anonymous')}</span>${r.verified ? '<span class="xs" style="color:var(--forest)">✓ Verified buyer</span>' : ''}<span class="xs faint grow">${fmtDate(r.reviewed_at)}</span><a class="src view-on" href="${esc(r.review_sources?.url ?? '#')}" target="_blank" rel="noopener">View on ${esc(retailerName(r.review_sources?.retailer ?? ''))} ↗</a></div>
     </div>`;
 }
 const go = (r) => { location.hash = `#/${r}`; };
@@ -211,7 +211,7 @@ function nav(active) {
     <a class="tab" href="#/login">Log in</a>
     <a class="btn dark" href="#/signup">Create account</a>`;
   }
-  const tabs = [['for-you', 'For you'], ['creators', 'Creators'], ['community', 'Community'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
+  const tabs = [['for-you', 'Explore'], ['creators', 'Creators'], ['community', 'Community'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
   const n = cartCount();
   return `
     <a href="#/for-you" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
@@ -240,12 +240,12 @@ function quickCheckin() {
   const target = 'anua_night';
   const s = state.stars[target] ?? 4;
   return `
-    <section class="card stack" aria-label="Quick check-in">
-      <div class="row between"><span class="h4" style="font-size:15px">How’s your skin today?</span><span class="mono">+10 pts</span></div>
-      <div class="row wrap" style="gap:6px">${feels.map((f) => `<button class="chip ${state.quickFeel === f ? 'on' : ''}" data-act="feel" data-v="${f}">${f}</button>`).join('')}</div>
-      <div class="row card soft" style="padding:10px">
-        ${thumb(target, 30, 36)}
-        <div class="grow"><div class="small" style="font-weight:500">Rate Anua Retinol Night Cream</div><div class="xs muted">Week 3: is it working?</div></div>
+    <section class="card stack quick-checkin" aria-label="Quick check-in">
+      <div class="row between"><span class="h4">How’s your skin today?</span><span class="mono forest">+10 pts</span></div>
+      <div class="feel-row">${feels.map((f) => `<button class="chip ${state.quickFeel === f ? 'on' : ''}" data-act="feel" data-v="${f}">${f}</button>`).join('')}</div>
+      <div class="row rate-row">
+        <span class="thumb" style="width:26px;height:32px;background:#fff;padding:2px"><img src="${P(target).img}" alt=""></span>
+        <div class="grow" style="min-width:0"><div class="small ellipsis" style="font-weight:500">Rate Anua Retinol Night Cream</div><div class="xs faint">Week 3: is it working?</div></div>
         <span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= s ? 'on' : ''}" data-act="star" data-id="${target}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span>
       </div>
       <button class="btn dark block" data-act="quick-checkin" ${state.quickDone ? 'disabled' : ''}>${state.quickDone ? 'Logged today ✓' : 'Log check-in'}</button>
@@ -270,13 +270,12 @@ function myShelf() {
   const ranked = [...base, ...added].sort((a, b) => (state.ratings[b.id] ?? 0) - (state.ratings[a.id] ?? 0));
   const rank = open ? ranked.findIndex((s) => s.id === open.id) + 1 : 0;
   return `
-    <section class="card stack" aria-label="My shelf" style="position:relative">
+    <section class="stack my-shelf" aria-label="My shelf" style="position:relative">
       <div class="row between">
-        <div><h2 class="h2" style="font-size:28px">My Shelf</h2><div class="xs muted">${base.length + added.length} products  ranked by you</div></div>
+        <div><h2 class="h2 shelf-title">My Shelf</h2><div class="xs muted">${base.length + added.length} products  ranked by you</div></div>
         <a class="btn" href="#/search">+ Add</a>
       </div>
-      ${items.length ? `${shelfRows(items, { open: state.shelfOpen })}
-      <p class="xs muted" style="margin-top:6px">Tap any product to rate it, review it or log a refill.</p>` : '<div class="empty" style="padding:20px 8px">Your shelf is empty. Tap “+ Add” to add the products you use.</div>'}
+      ${items.length ? shelfRows(items, { open: state.shelfOpen }) : '<div class="empty" style="padding:20px 8px">Your shelf is empty. Tap “+ Add” to add the products you use.</div>'}
       ${open ? `
         <div class="shelf-pop stack" style="position:relative;width:auto">
           <div class="row between"><span class="mono">${esc(P(open.id).brand)}</span><button class="link" style="color:#fff" data-act="shelf-close">Close</button></div>
@@ -303,13 +302,13 @@ function finishProfileCard() {
   if (state.setupStep >= 4) return '';
   const left = [[3, 'Preferences + goals', '~1 min'], [4, 'Your current shelf', '~2 min']].filter(([n]) => n > state.setupStep);
   return `
-    <section class="card dark stack">
-      <div class="row">${svg('hydrate', 26)}${svg('treat', 26)}${svg('protect', 26)}</div>
+    <section class="card dark stack finish-card">
+      <div class="row" style="gap:6px">${svg('hydrate', 24)}${svg('treat', 26)}${svg('protect', 26)}</div>
       <span class="mono lime">Skin profile: ${state.setupStep} of 4 done</span>
-      <h3 class="h2" style="font-size:26px">Finish your profile to unlock Picked for you</h3>
-      <div class="meter"><span style="width:${strength()}%"></span></div>
-      ${left.map(([n, l, t]) => `<a class="row" href="#/setup/${n}" style="text-decoration:none;padding:8px 12px;border-radius:var(--radius-sm);background:rgb(255 255 255 / 8%)"><span class="grow small">${n}: ${l}</span><span class="xs" style="color:#c8dcc9">${t}</span></a>`).join('')}
-      <p class="xs" style="color:#c8dcc9">Each step sharpens your picks. Finish both: +150 pts and picks matched on all 4 steps.</p>
+      <h3 class="finish-title">Finish your profile to unlock Picked for you</h3>
+      <div class="seg-meter">${[1, 2, 3, 4].map((i) => `<i class="${i <= state.setupStep ? 'on' : ''}"></i>`).join('')}</div>
+      ${left.map(([n, l, t]) => `<a class="todo" href="#/setup/${n}"><i></i><span class="grow">${n}: ${l}</span><span class="t">${t}</span></a>`).join('')}
+      <p class="xs" style="color:var(--canvas)">Each step sharpens your picks. Finish both: +150 pts and picks matched on all 4 steps.</p>
       <a class="btn lime" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start">Finish my profile →</a>
     </section>`;
 }
@@ -333,40 +332,48 @@ function runningLow() {
   if (!low.length) return '';
   return `
     <section class="card stack running-low" aria-label="Running low">
-      <span class="mono">Running low</span>
-      ${low.map((r) => `
-        <div class="row" style="gap:10px">
-          ${thumb(r.id, 30, 36)}
-          <div class="grow"><div class="small" style="font-weight:500">${esc(P(r.id).name)}</div><div class="xs muted">${r.note}</div></div>
-          ${state.cart.some((c) => c.id === r.id && c.kind === 'refill')
-            ? '<button class="btn sm" disabled>Added to cart</button>'
-            : `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill</button>`}
-        </div>`).join('')}
+      <div class="row between"><span class="h4" style="font-size:13px">Running low</span><span class="xs faint">Refill or replace</span></div>
+      ${low.map((r) => {
+        const inCart = state.cart.some((c) => c.id === r.id && c.kind === 'refill');
+        const left = r.action === 'replace' ? `<span class="xs faint">${r.note}</span>` : `<span class="row" style="gap:6px"><span class="low-bar"><span style="width:${r.note.includes('day') ? 12 : 40}%"></span></span><span class="xs faint">${r.note.replace('~', '')}</span></span>`;
+        return `
+        <div class="row" style="gap:8px">
+          ${thumb(r.id, 24, 30)}
+          <div class="grow" style="min-width:0"><div class="xs ellipsis" style="font-weight:500;color:var(--ink)">${esc(P(r.id).name)}</div>${left}</div>
+          ${inCart
+            ? '<button class="btn sm" disabled>In cart ✓</button>'
+            : r.action === 'replace'
+              ? `<a class="btn sm" href="#/product/${r.replaceWith}">Replace</a>`
+              : `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill${P(r.id).price ? ` ${money(P(r.id).price)}` : ''}</button>`}
+        </div>`;
+      }).join('')}
     </section>`;
 }
 
-const leftCol = (extra = '') => `${quickCheckin()}${myShelf()}${runningLow()}${extra}`;
+// Figma Hi-fi v7 "Shelf panel": one white panel holding the check-in, the shelf, running low and the shelf hint.
+const leftCol = (extra = '', after = '') => `<div class="side-panel">${quickCheckin()}${myShelf()}${runningLow()}<p class="xs muted">Tap any product to rate it, review it or log a refill.</p>${extra}</div>${after}`;
 
 /* ================= right rail ================= */
 
 function rightRail() {
   const saved = state.saved ?? [];
   const shown = state.savedAll ? saved : saved.slice(0, 5);
+  const total = saved.reduce((a, id) => a + (P(id).price || 0), 0);
   return `
-    <section class="card stack" style="margin-bottom:56px">
-      <div class="row between"><h2 class="h2" style="font-size:28px">Want To Try</h2><span class="mono" style="color:#113916">${saved.length} saved</span></div>
-      <p class="xs muted">Save products from your picks, reviews and Community. Buy them, or sample them with points.</p>
+    <section class="card stack want-rail" style="margin-bottom:56px">
+      <div class="row between"><h2 class="h4">Want to try</h2><span class="mono forest">${saved.length} saved</span></div>
+      <p class="xs faint">Save picks from Explore, Creators and Community. Buy them, or sample them with points.</p>
       ${saved.length ? shown.map((id) => `
         <div class="row" style="align-items:flex-start;gap:10px">
-          ${thumb(id, 40, 48)}
-          <div class="grow stack" style="gap:2px">
-            <span class="mono">${esc(P(id).brand)}</span>
+          ${thumb(id, 40, 44)}
+          <div class="grow stack" style="gap:2px;min-width:0">
+            <span class="mono faint" style="font-size:9px">${esc(P(id).brand)}</span>
             ${productLink(id, `<span class="small" style="font-weight:500">${esc(P(id).name)}</span>`)}
-            <span class="row xs" style="gap:10px">${P(id).price ? `<span class="mono">${money(P(id).price)}</span>` : ''}<button class="link" data-act="add" data-id="${id}">${state.added[id] ? 'In cart ✓' : 'Add to cart'}</button><button class="link" data-act="save" data-id="${id}">Remove</button></span>
+            <span class="row" style="gap:8px">${P(id).price ? `<span class="mono" style="color:var(--ink)">${money(P(id).price)}</span>` : ''}<button class="link mono forest rail-link" data-act="add" data-id="${id}">${state.added[id] ? 'In cart ✓' : 'Add to cart'}</button></span>
           </div>
-        </div>`).join('') : '<div class="empty" style="padding:20px 8px">Nothing saved yet. Tap “Save” on a review or pick.</div>'}
+        </div>`).join('') : '<div class="empty" style="padding:20px 8px">Nothing saved yet. Tap “+ Want to try” on a pick or review.</div>'}
       ${saved.length > 5 ? `<button class="btn block" data-act="saved-all">${state.savedAll ? 'Show fewer' : `Show all ${saved.length}`}</button>` : ''}
-      ${saved.length ? `<button class="btn dark block" data-act="add-many" data-ids="${saved.join(',')}">Add all to cart</button>` : ''}
+      ${saved.length ? `<button class="btn dark block" data-act="add-many" data-ids="${saved.join(',')}">Add all to cart${total ? ` · ${money(total)}` : ''}</button>` : ''}
     </section>`;
 }
 
@@ -462,38 +469,39 @@ function recommendationsCard() {
       <article class="rec">
         <div class="row" style="gap:16px;align-items:flex-start">
           <span class="rank">${i + 1}</span>
-          ${thumb(pr.id, 72, 84)}
-          <div class="grow stack" style="gap:4px">
-            <span class="mono">${esc(pr.brand)}</span>
-            ${productLink(pr.id, `<span class="h4" style="font-size:17px">${esc(pr.name)}</span>`)}
-            <div class="row wrap" style="gap:6px">${r.step ? `<span class="pill ${r.gap ? 'gap' : ''}">${r.gap ? `Fills your ${esc(r.step.toLowerCase())} gap` : esc(r.step)}</span>` : ''}${r.solves.map((c) => `<span class="tag">${esc(c)}</span>`).join('')}</div>
+          <span style="margin-top:14px">${thumb(pr.id, 56, 56)}</span>
+          <div class="grow stack" style="gap:4px;min-width:0">
+            <span class="mono faint">${esc(pr.brand)}</span>
+            ${productLink(pr.id, `<span class="rec-name">${esc(pr.name)}</span>`)}
+            <div class="row wrap" style="gap:6px">${r.step ? `<span class="gap-chip ${r.gap ? 'on' : ''}">${r.gap ? `Fills your ${esc(r.step.toLowerCase())} gap` : esc(r.step)}</span>` : ''}${r.solves.map((c) => `<span class="rec-tag">${esc(c)}</span>`).join('')}</div>
+            <span class="row" style="gap:14px;margin-top:4px"><span class="buybar"><span style="width:${pl.pct_positive}%"></span></span><span class="buy-pct">${pl.pct_positive}% say BUY</span><span class="xs muted">${pl.reviews.toLocaleString()} reviews</span>${r.matched ? `<span class="xs faint">${r.matched} matched</span>` : ''}</span>
           </div>
-          <div class="stack" style="align-items:flex-end;gap:4px">${ring(pl.avg_rating * 2)}<span class="xs muted">${pl.pct_positive}% rate it 4★+</span></div>
+          <span style="margin-top:20px">${ring(pl.avg_rating * 2)}</span>
         </div>
         <div class="rec-why">
           <div class="stack" style="gap:6px">
             <span class="mono forest">What this solves</span>
-            <p class="small">${esc(r.what_solves)}${r.fit ? ` ${esc(r.fit)}` : ''}</p>
-            ${r.top_pros.length ? `<ul class="pc-list pros">${r.top_pros.map((t) => `<li><span>${esc(t)}</span></li>`).join('')}</ul>` : ''}
+            <p class="rec-p">${esc(r.what_solves)}</p>
+            ${r.fit ? `<p class="small muted">${esc(r.fit)}</p>` : ''}
           </div>
           <div class="stack" style="gap:6px">
             <span class="mono forest">What people like you are saying</span>
-            <p class="small"><b style="font-weight:500">${pl.pct_positive}%</b> of ${pl.reviews.toLocaleString()} ${who} rated it 4 stars or more.</p>
-            ${pl.quotes.map((q) => `<blockquote class="small">“${esc(q.body.trim())}” <span class="xs muted">· ${esc(q.author_name ?? 'Reviewer')}${q.skin_types?.length ? `, ${esc(q.skin_types.join(' + ').toLowerCase())} skin` : ''}</span></blockquote>`).join('')}
+            <p class="rec-p">${pl.pct_positive}% of ${pl.reviews.toLocaleString()} ${who} rated it 4★ or more.</p>
+            ${pl.quotes.slice(0, 1).map((q) => `<blockquote><span class="small">“${esc(q.body.trim())}”</span><span class="xs faint" style="display:block;margin-top:2px">${esc(q.author_name ?? 'Reviewer')}${q.skin_types?.length ? `, ${esc(q.skin_types.join(' + ').toLowerCase())} skin` : ''}</span></blockquote>`).join('')}
           </div>
         </div>
         <div class="row wrap" style="gap:8px">
           <a class="btn" href="#/product/${pr.id}">See all reviews + ratings</a>
-          ${pr.price_usd ? `<button class="btn dark" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? '✓ In your cart' : `Add to cart · ${money(Number(pr.price_usd))}`}</button>` : ''}
+          ${pr.price_usd ? `<button class="btn dark" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
           <button class="btn" data-act="save" data-id="${pr.id}">${(state.saved ?? []).includes(pr.id) ? '✓ Saved' : '+ Want to try'}</button>
         </div>
       </article>`;
   };
   return `
     <section class="card stack" style="gap:18px">
-      <div class="stack" style="gap:4px">
-        <h2 class="h2" style="font-size:28px">Your Top 3 Picks</h2>
-        <p class="xs muted">Based on your skin profile and what’s already on your shelf, ranked by how people with skin like yours rated them.</p>
+      <div class="stack" style="gap:3px">
+        <h2 class="h4" style="font-size:17px">Your top 3 picks</h2>
+        <p class="small muted">Based on your skin profile and what’s already on your shelf, ranked by how people with skin like yours rated them.</p>
       </div>
       ${recs.status === 'loading' ? '<div class="empty">Finding your picks…</div>' : picks.map(pick).join('<hr class="divider">')}
     </section>`;
@@ -506,31 +514,34 @@ function profileTags(extra = []) {
   return [a.skinType?.[0], a.concerns?.slice(0, 2).join(' + '), a.climate && `${a.climate.humidity.label} · ${a.climate.place.split(',')[0]}`, a.age?.[0], a.diet?.[0], ...extra].filter(Boolean).map(esc);
 }
 
+// "Your box" from Figma Hi-fi v7 (node 186:3742): four product shapes behind an olive lid and a photo box.
+const BOX_ILLO = `<svg class="box-illo" viewBox="0 0 194 124" aria-hidden="true">
+  <defs><clipPath id="box-clip"><rect x="8.45" y="51.48" width="176" height="70.4" rx="8.8"/></clipPath></defs>
+  <g fill="#F7F6F3">
+    <path d="M172.4 79.2c2.09 0 3.75-1.75 3.63-3.84l-2.64-48.25a3.47 3.47 0 0 0-1.89-2.99v-3.85c0-1.47-1.2-2.67-2.67-2.67h-13.23c-1.48 0-2.67 1.2-2.67 2.67v3.6a3.47 3.47 0 0 0-2.46 3.28l-2.1 48.25c-.1 2.07 1.56 3.8 3.63 3.8h20.4Z"/>
+    <rect x="83.87" y="17.6" width="50.09" height="14.79" rx="5.37"/><path d="M75.33 42.78c0-5.74 4.65-10.39 10.38-10.39h46.11c5.74 0 10.39 4.65 10.39 10.39v16.35c0 5.74-4.65 10.39-10.39 10.39H85.71c-5.73 0-10.38-4.65-10.38-10.39V42.78Z"/>
+    <path d="M66.48 35.47a2.79 2.79 0 0 1 2.79 2.79v32.49c0 3.7-3 6.69-6.69 6.69H56.5c-3.7 0-6.69-3-6.69-6.69V38.26a2.79 2.79 0 0 1 2.79-2.79 2.79 2.79 0 0 1-2.79-2.79V22.53c0-3.7 3-6.69 6.69-6.69h6.08c3.7 0 6.69 3 6.69 6.69v10.15a2.79 2.79 0 0 1-2.79 2.79Z"/>
+    <path d="M19.48 15.86c2.28.16 3.87.6 5.32 1.05 1.44.44 2.65.86 4.38 1.11 1.63.24 3.12.05 4.21-.22a10 10 0 0 0 1.66-.51l.08-.03a1.5 1.5 0 0 1 1.3 2.7l-.01.01-.06.03a11.3 11.3 0 0 1-2.27.76c-.66.16-1.45.3-2.33.37v4.93h3.35c1.27 0 2.3 1.03 2.3 2.3v4.99c0 .21-.03.41-.08.6h.27c3.36 0 6.09 2.73 6.09 6.09v31.35c0 3.37-2.73 6.09-6.09 6.09H21.14c-3.37 0-6.09-2.72-6.09-6.09V40c0-3.36 2.72-6.09 6.09-6.09h.27a2.3 2.3 0 0 1-.08-.6v-4.99c0-1.27 1.03-2.3 2.3-2.3h3.25v-5.39c-1.11-.27-2.06-.58-2.95-.85-1.35-.42-2.69-.78-4.65-.92a6.6 6.6 0 0 0-4.09 1.04c-.49.3-.87.61-1.12.84l-.33.34a1.5 1.5 0 0 1-2.2-2.03l.03-.03.08-.09c.1-.1.24-.25.42-.42.36-.33.89-.76 1.57-1.18a9.7 9.7 0 0 1 5.85-1.48Z"/>
+  </g>
+  <image href="assets/img/hero.jpg" x="8.45" y="51.48" width="176" height="70.4" preserveAspectRatio="xMidYMid slice" clip-path="url(#box-clip)"/>
+  <rect x="5.81" y="44" width="181.28" height="15.84" rx="5.28" fill="#A1A261"/>
+  <text x="96.5" y="89.1" text-anchor="middle" fill="#113916" font-family="Geist Mono, monospace" font-size="8.8" font-weight="500" letter-spacing="0.35">YOUR BOX</text>
+</svg>`;
+
 function forYou() {
   const done = state.setupStep >= 4;
   const tags = profileTags();
+  const missing = 4 - state.setupStep;
   const main = `
-    <div class="row between"><h1 class="h2">For you</h1></div>
-    <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${tags.map((t) => `<span class="tag">${t}</span>`).join('')}<a class="xs" href="#/setup/1">Edit profile</a></div>
+    <h1 class="h2 page-title">Explore</h1>
+    <div class="row wrap" style="gap:8px"><span class="mono faint">Matched to you</span>${tags.map((t) => `<span class="tag">${t}</span>`).join('')}${done ? '<a class="edit-link" href="#/setup/1">Edit profile</a>' : `<a class="edit-link" href="#/setup/${state.setupStep + 1}">${missing} step${missing === 1 ? '' : 's'} missing →</a>`}</div>
     <section class="hero hero-pick">
-      <div class="row" style="align-items:center;gap:24px">
-        <div class="grow stack" style="gap:10px">
-          ${done ? '' : '<span class="mono lime">Picked for you</span>'}
-          <h2 class="hero-title">Too many options? We’ll pick for you.</h2>
-          <p class="xs" style="color:#d9e6d6">${done ? 'One product per step, chosen from 1,486 people who match you on all 4 profile steps.' : `Picked for you builds a 4-step routine from people like you. Finish ${4 - state.setupStep} more profile steps to unlock it.`}</p>
-          ${done ? '<a class="btn lime" href="#/picked" style="align-self:flex-start;margin-top:6px">See my routine →</a>' : `<a class="btn lime" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start;margin-top:6px">Finish profile to unlock →</a>`}
-        </div>
-        <div class="box-illo" aria-hidden="true">
-          <svg class="items" viewBox="0 0 184 60" aria-hidden="true">
-            <g fill="#fff"><rect x="4" y="27" width="30" height="33" rx="6"/><rect x="15" y="19" width="8" height="9"/><rect x="9" y="13" width="20" height="7" rx="2"/><rect x="17" y="5" width="4" height="9"/><rect x="2" y="5" width="19" height="4" rx="2"/></g>
-            <g fill="#fff"><rect x="46" y="31" width="22" height="29" rx="5"/><rect x="49" y="18" width="16" height="12" rx="3"/></g>
-            <g fill="#fff"><rect x="78" y="35" width="54" height="25" rx="6"/><rect x="76" y="22" width="58" height="12" rx="5"/></g>
-            <g fill="#fff"><rect x="144" y="25" width="26" height="35" rx="6"/><rect x="148" y="14" width="18" height="10" rx="3"/></g>
-            <g fill="#e4e6dc"><rect x="49" y="30" width="16" height="1.5"/><rect x="76" y="33.5" width="58" height="1.5"/><rect x="148" y="23.5" width="18" height="1.5"/></g>
-          </svg>
-          <span class="lid"></span><span class="box"></span><span class="label">Your box</span>
-        </div>
+      <div class="hero-text">
+        <h2 class="hero-title">Too many options? We’ll pick for you.</h2>
+        <p class="hero-sub">One product per step, chosen from 1,486 people who match you on all 4 profile steps.</p>
+        <a class="btn lime" href="#/picked" style="align-self:flex-start;margin-top:12px">See my routine →</a>
       </div>
+      <div class="hero-box">${BOX_ILLO}</div>
     </section>
     ${recommendationsCard()}`;
   return { layout: '', left: leftCol(finishProfileCard()), main, right: rightRail(), ask: true };
@@ -566,6 +577,7 @@ function strengthCard() {
         ${rows.map(([a, b]) => `<div class="row xs unlock-row"><span style="color:var(--lime)">✦</span><span style="font-weight:500">${a}</span><span style="color:#d9e6d6">${b}</span></div>`).join('')}
         <p class="xs" style="color:#d9e6d6">What are points for? 500 pts takes $5 off, and 1,500 pts unlocks a free sample box of your top 3 picks.</p>
       </div>
+      <div class="row" style="gap:6px">${svg('hydrate', 24)}${svg('treat', 26)}${svg('protect', 26)}</div>
     </section>`;
 }
 
@@ -605,6 +617,23 @@ function chipGroup([key, label, opts, single, max]) {
   return `<div class="stack" style="gap:8px"><span class="field-label">${label}</span><div class="row wrap" style="gap:6px">${opts.map((o) => `<button class="chip ${sel.includes(o) ? 'on' : ''}" data-act="answer" data-key="${key}" data-v="${esc(o)}" data-single="${single ? 1 : ''}" data-max="${max || ''}">${o}</button>`).join('')}</div></div>`;
 }
 
+// Setup step 4 shelf, grouped by routine step like the Figma (Cleanse + tone, Treat, Moisturize, Protect + lips...).
+const SHELF_GROUPS = [['Cleanse + tone', 'cleanse', ['Cleanse', 'Tone']], ['Treat', 'treat', ['Treat', 'Masks']], ['Moisturize', 'hydrate', ['Moisturize', 'Eyes']], ['Protect + lips', 'protect', ['Protect', 'Lips']]];
+function groupedShelf(ids) {
+  const stepOf = (id) => String(P(id).step ?? '').replace(/ step$/, '').replace('Eye', 'Eyes').replace('Eyess', 'Eyes');
+  const used = new Set();
+  const groups = SHELF_GROUPS.map(([label, icon, steps]) => {
+    const items = ids.filter((id) => !used.has(id) && steps.includes(stepOf(id)));
+    items.forEach((id) => used.add(id));
+    return [label, icon, items];
+  });
+  const rest = ids.filter((id) => !used.has(id));
+  if (rest.length) groups.push(['Other', 'cleanse', rest]);
+  return `<div class="shelf grouped-shelf">${groups.filter(([, , items]) => items.length).map(([label, icon, items]) => `
+    <div class="row" style="gap:6px">${svg(icon, 16)}<span class="mono faint">${label}</span></div>
+    <div class="plank-row">${items.slice(0, 7).map((id) => `<span class="slot"><img src="${P(id).img}" alt="${esc(P(id).name)}"></span>`).join('')}</div>`).join('<div style="height:10px"></div>')}</div>`;
+}
+
 function setupPage(n) {
   if (n === 'done') return setupDone();
   const s = SETUP[n - 1];
@@ -616,10 +645,8 @@ function setupPage(n) {
       </section>`).join('') : `
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
-        <form class="shelf-search" data-form="shelf-add"><div class="row"><input name="q" data-suggest="shelf" class="grow" style="height:38px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:0 12px;font:inherit" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button class="btn dark">Add</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
-        <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button></div>
-        <p class="xs muted">${shelfIds().length ? `${shelfIds().length} product${shelfIds().length === 1 ? '' : 's'} on your shelf.` : 'Your shelf is empty. Add the products you use now.'}</p>
-        ${shelfIds().length ? shelfRows(shelfIds().map((id) => ({ id })), { selectable: false }) : ''}
+        <form class="shelf-search" data-form="shelf-add"><div class="row" style="gap:6px"><input name="q" data-suggest="shelf" class="grow shelf-input" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button type="button" class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button><button type="button" class="btn" data-act="toast" data-msg="Order import is coming soon">Import orders</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
+        ${shelfIds().length ? groupedShelf(shelfIds()) : '<p class="xs muted">Your shelf is empty. Add the products you use now.</p>'}
         <div class="notice">We use your shelf to find what your routine is missing, what’s running low and what to replace.</div>
       </section>`;
   const back = n > 1 ? `<a class="btn" href="#/setup/${n - 1}">← Back</a>` : '<a class="btn" href="#/for-you">Skip for now</a>';
@@ -773,17 +800,17 @@ function communityPage() {
       <button class="btn ${state.filterOpen ? 'dark' : ''}" data-act="filters-toggle">${state.filterOpen ? '✕' : '⚲'}  Filter + sort  ${active}</button>
     </div>
     ${panel}
-    <div class="notice">Reviews from your friends and people you follow, ranked by how similar their skin is to yours. <a href="#/setup/2" class="xs grow" style="text-align:right">Edit skin profile</a></div>
+    <div class="notice match-banner"><span class="forest">●</span><span class="grow">Ranked by similarity to you: ${profileTags().join(' ')}</span><a href="#/setup/2" class="edit-link">Edit skin profile</a></div>
     ${feed.map((r, i) => `
-      <article class="card stack">
+      <article class="card stack review-card">
         <div class="row"><img class="avatar" src="${r.avatar}" alt=""><div class="grow"><div class="row"><span class="h4">${esc(r.name)}</span><span class="src">${r.rel}</span></div><div class="xs muted">${r.rel}  ${r.when}</div></div>${match(r.similar)}</div>
-        <div class="row">${thumb(r.product, 56, 56)}<div class="grow"><div class="mono">${esc(P(r.product).brand)}</div><div style="font-size:15px">${esc(P(r.product).name)}</div><div class="xs muted">${r.usage}</div></div>${ring(r.score)}</div>
-        <p>${esc(r.text)}</p>
+        <div class="row" style="gap:12px">${thumb(r.product, 56, 56)}<div class="grow"><div class="mono faint">${esc(P(r.product).brand)}</div><div class="h4">${esc(P(r.product).name)}</div><div class="xs muted">${r.usage}</div></div>${ring(r.score)}</div>
+        <p style="font-size:13px">${esc(r.text)}</p>
         <div class="row wrap" style="gap:6px">${r.tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono">Tracked progress: ${r.photos.length} check-ins via DEW tracker</span><div class="grid-3" style="grid-template-columns:repeat(4,1fr)">${r.photos.map((p, j) => `<div class="photo"><img src="assets/img/progress/${p}.jpg" alt=""><span class="mono">Week ${[1, 2, 4, 6][j]}</span></div>`).join('')}</div></div>` : ''}
-        <div class="row xs muted" style="gap:18px">
+        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Tracked progress: ${r.photos.length} check-ins via DEW tracker</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="assets/img/progress/${p}.jpg" alt=""><span class="mono">Week ${[1, 2, 4, 6][j]}</span></div>`).join('')}</div></div>` : ''}
+        <div class="row small muted review-actions" style="gap:18px">
           <button class="link" style="text-decoration:none;${state.helpful[r.name + i] ? 'color:var(--forest);font-weight:500' : ''}" data-act="helpful" data-k="${esc(r.name + i)}">▲ Helpful  ${r.helpful + (state.helpful[r.name + i] ? 1 : 0)}</button>
-          <span>◌ ${r.comments} comments</span><span class="grow"></span>
+          <span>◌ ${r.comments} comments</span><button class="link" style="text-decoration:none" data-act="toast" data-msg="Link copied">↗ Share</button><span class="grow"></span>
           ${r.score >= 6 ? `<button class="btn" data-act="save" data-id="${r.product}">${(state.saved ?? []).includes(r.product) ? 'Saved ✓' : 'Save'}</button>` : '<button class="btn" data-act="toast" data-msg="Hidden from your picks">Hide product</button>'}
         </div>
       </article>`).join('') || '<div class="empty">No reviews match these filters.</div>'}`;
@@ -805,33 +832,41 @@ const routineTotal = () => ROUTINE.reduce((a, r) => a + (r.owned && r.options[st
 function pickedPage() {
   const sample = state.pickedMode === 'sample';
   const hero = `
-    <section class="hero hero-image" style="padding:32px;min-height:240px;justify-content:center">
-      <h1 class="h1" style="color:var(--forest);white-space:normal">${sample ? 'Your routine, sampled for you.' : 'Your routine, picked just for you.'}</h1>
-      <p class="small" style="color:var(--forest);max-width:520px">${sample ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'One product per step. You already have a great sunscreen, so we kept it and only filled the gaps.'}</p>
-      <div class="row wrap" style="gap:6px">${profileTags().map((t) => `<span class="tag" style="background:#ffffffb0">${t}</span>`).join('')}</div>
+    <section class="hero picked-hero">
+      <div class="stack" style="gap:10px;flex:1;min-width:0">
+        <h1 class="picked-title">${sample ? 'Your routine, sampled for you.' : 'Your routine, picked just for you.'}</h1>
+        <p class="picked-sub">${sample ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'One product per step. You already have a great sunscreen, so we kept it and only filled the gaps.'}</p>
+        <div class="row wrap" style="gap:6px;margin-top:6px">${profileTags().map((t) => `<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+      <img class="picked-box" src="assets/svg/routine-box.svg?v=${SVG_V}" alt="">
     </section>`;
   if (sample) return { layout: 'layout-wide', left: leftCol(), main: hero + modeToggle() + sampleBuilder() };
+  const f = state.pickFilters ?? { budget: '$30–$60', keep: true, fragrance: false, vegan: false };
+  const fchip = (on, label, k, v) => `<button class="chip ${on ? 'on' : ''}" data-act="pick-filter" data-k="${k}"${v ? ` data-v="${v}"` : ''}>${label}</button>`;
+  const filters = `
+    <div class="row wrap" style="gap:6px"><span class="mono faint">Budget</span>${['Under $30', '$30–$60', 'Any'].map((b) => fchip(f.budget === b, b, 'budget', b)).join('')}<span style="width:6px"></span>${fchip(f.keep, `${f.keep ? '✓ ' : ''}Keep what’s on my shelf`, 'keep')}${fchip(f.fragrance, 'Fragrance-free only', 'fragrance')}${fchip(f.vegan, 'Vegan', 'vegan')}</div>`;
   const cards = ROUTINE.map((r, i) => {
     const id = r.options[state.routinePick[r.step]];
     const owned = r.owned === id;
     return `
-      <div class="card stack" style="padding:16px;${owned ? 'background:var(--surface-soft);border:2px solid var(--forest)' : ''}">
-        <div class="row">${svg(r.icon, 20)}<span class="mono">${i + 1}  ${r.step}</span></div>
-        <div class="thumb" style="height:150px;width:100%;background:${owned ? '#fff' : 'var(--surface-soft)'}"><img src="${P(id).img}" alt="" style="max-height:130px"></div>
-        <div class="row" style="align-items:flex-start"><div class="grow"><div class="mono">${esc(P(id).brand)}</div><div class="small" style="font-weight:500">${esc(P(id).name)}</div></div>${ring(9.4 - i * 0.3 - state.routinePick[r.step] * 0.3)}</div>
-        <div class="mono" style="color:var(--ink)">${r.buy}% of people like you say buy</div>
-        <div class="xs muted">Results in ${r.results}</div>
-        <p class="xs muted">${owned ? r.why : r.why}</p>
-        <div class="row between">${owned ? '<span class="mono">On your shelf</span>' : `<span class="mono">Est. ${money(P(id).price)}</span>`}<button class="btn sm" data-act="routine-swap" data-step="${r.step}">↻ Swap</button></div>
+      <div class="card stack step-card">
+        <div class="row" style="gap:8px">${svg(r.icon, 24)}<span class="mono">${i + 1}: ${r.step}</span></div>
+        <div class="thumb step-img"><img src="${P(id).img}" alt=""></div>
+        <div class="row" style="align-items:flex-start;gap:8px"><div class="grow" style="min-width:0"><div class="mono faint">${esc(P(id).brand)}</div><div class="small" style="font-weight:500">${esc(P(id).name)}</div></div>${ring(9.4 - i * 0.3 - state.routinePick[r.step] * 0.3)}</div>
+        <div class="stack" style="gap:3px"><div class="buy-pct">${r.buy}% of people like you say BUY</div><div class="xs muted">Results in ${r.results}</div></div>
+        <p class="xs muted grow">${r.why}</p>
+        <div class="row between">${owned ? '<span class="mono forest" style="font-size:12px">On your shelf</span>' : `<span class="mono" style="font-size:12px;color:var(--ink)">Est. ${money(P(id).price)}</span>`}${owned ? '<button class="btn" data-act="toast" data-msg="Kept on your shelf">Keep ✓</button>' : `<button class="btn" data-act="routine-swap" data-step="${r.step}">↻ Swap</button>`}</div>
       </div>`;
   }).join('');
-  const main = `${hero}${modeToggle()}
+  const stat = (k, v) => `<div class="stack" style="gap:2px"><span class="mono faint">${k}</span><span class="h4">${v}</span></div>`;
+  const main = `${hero}${modeToggle()}${filters}
     <div class="grid-2" style="grid-template-columns:repeat(4,minmax(0,1fr))">${cards}</div>
-    <section class="card row between wrap">
-      <div class="row" style="gap:28px"><div><div class="mono">New products</div><div class="h3">${ROUTINE.filter((r) => r.owned !== routineIds()[ROUTINE.indexOf(r)]).length}</div></div><div><div class="mono">Est. total</div><div class="h3">${money(routineTotal())}</div></div><div><div class="mono">Expected results</div><div class="h3">3–4 weeks</div></div><div><div class="mono">Backed by</div><div class="h3">1,486 people</div></div></div>
-      <div class="stack" style="align-items:flex-end"><button class="btn dark" data-act="add-routine">Add box to cart</button><button class="btn" data-act="toast" data-msg="Added to your shelf. Tracking starts today.">Add to shelf + start tracking</button></div>
+    <section class="card row wrap box-summary">
+      ${stat('New products', ROUTINE.filter((r) => r.owned !== routineIds()[ROUTINE.indexOf(r)]).length)}${stat('Est. total', money(routineTotal()))}${stat('Expected results', '3–4 weeks')}${stat('Backed by', '1,486 people  212 tracked routines')}
+      <span class="grow"></span>
+      <button class="btn dark" data-act="add-routine">Add box to cart</button>
     </section>
-    <div class="notice"><span class="mono forest">Why only 4?</span><span class="grow">We hid 44 other products that scored lower for your profile, so you can decide in a minute instead of a weekend.</span></div>`;
+    <div class="notice why-four"><span class="mono forest">Why only 4?</span><span class="grow">We hid 44 other products that scored lower for your profile, so you can decide in a minute instead of a week.</span><button class="edit-link" style="border:0;background:none;cursor:pointer" data-act="toast" data-msg="All 48 scored products are coming soon">Show them →</button></div>`;
   return { layout: 'layout-wide', left: leftCol(), main };
 }
 
@@ -899,7 +934,7 @@ function cartPage() {
     ${checkoutSteps(0)}
     <h1 class="h1">Your cart</h1>
     <p class="muted">One checkout for every brand. DEW orders from the brand or an authorized retailer at the same price, and adds each product to your shelf when it arrives.</p>
-    ${state.cart.length ? `<section class="card" style="padding:0">${items}</section>` : `<section class="card empty"><p class="h3">Your cart is empty</p><p class="small" style="margin:8px 0 16px">Add picks from For you, refills from your shelf, or a whole routine.</p><a class="btn dark" href="#/picked">See my routine →</a></section>`}
+    ${state.cart.length ? `<section class="card" style="padding:0">${items}</section>` : `<section class="card empty"><p class="h3">Your cart is empty</p><p class="small" style="margin:8px 0 16px">Add picks from Explore, refills from your shelf, or a whole routine.</p><a class="btn dark" href="#/picked">See my routine →</a></section>`}
     <p class="xs muted">Prices match the brand site. Free returns within 30 days if a product breaks you out: tell Dew in your weekly check-in.</p>`;
   const right = `
     <section class="card stack" style="padding:24px">
@@ -931,7 +966,7 @@ function orderPlaced() {
       <p class="muted">${o.items.length} products, arriving Thu, Nov 12. We added them to your shelf as “arriving” and will start tracking on day 1.</p>
       <div class="row wrap">${o.items.map((i) => thumb(i.id, 52, 62)).join('')}</div>
       <div class="card soft row" style="padding:12px">${svg('flame', 20)}<span class="small">+${o.earned} pts earned on this order. You have ${state.points.toLocaleString()} pts.</span></div>
-      <div class="row"><a class="btn dark" href="#/for-you">Back to For you</a><button class="btn" data-act="toast" data-msg="Tracking: label created, ships tomorrow">Track order</button></div>
+      <div class="row"><a class="btn dark" href="#/for-you">Back to Explore</a><button class="btn" data-act="toast" data-msg="Tracking: label created, ships tomorrow">Track order</button></div>
     </section>`;
   return { layout: 'layout-solo', main };
 }
@@ -1046,9 +1081,9 @@ function checkinPage() {
   const rate = [['goodal_toner', 'Week 6  AM'], ['anua_guasha', 'Week 4  PM'], ['boj_glow', 'Week 6  AM + PM'], ['cerave_int', 'Week 3  PM']];
   const status = (id) => state.stars[`st_${id}`] || (state.ratings[id] >= 6 ? 'Working' : 'Not working');
   const main = `
-    <span class="mono">Week 6 check-in: Nov 3  ~2 min</span>
+    <span class="mono faint">Week 6 check-in: Nov 3  ~2 min</span>
     <h1 class="h1">How’s your skin this week?</h1>
-    <p class="muted">Two parts: how your skin is doing overall, then how each product is working. Both sharpen your picks.</p>
+    <p class="small muted">Two parts: how your skin is doing overall, then how each product is working. Both sharpen your picks.</p>
     <section class="card stack" style="gap:16px">
       <div class="row between"><div><h2 class="h4" style="font-size:16px">Overall skin health</h2><p class="xs muted">Your whole routine, not one product</p></div><span class="pill" style="background:var(--lime)">Part 1: you</span></div>
       <div class="row" style="align-items:stretch">
@@ -1057,22 +1092,22 @@ function checkinPage() {
         <div class="stack" style="width:200px"><div class="photo"><img src="assets/img/progress/w5.jpg" alt="This week’s progress photo"><span class="private" style="position:absolute;top:8px;left:8px">🔒 Private</span></div><span class="xs muted">Only you can see this. <button class="link" data-act="toast" data-msg="Open the DEW app to retake">Retake ↺</button></span></div>
       </div>
       <span class="field-label">How does your skin feel vs last week?</span>
-      ${Object.keys(c.feel).map((k) => `<div class="row"><span class="small" style="width:90px">${k}</span><div class="grid-3 grow" style="grid-template-columns:repeat(5,1fr);gap:6px">${scale.map((s) => `<button class="chip ${c.feel[k] === s ? 'on' : ''}" style="justify-content:center;background:${c.feel[k] === s ? '' : 'var(--surface-soft)'};border-color:transparent" data-act="ci-feel" data-k="${k}" data-v="${s}">${s}</button>`).join('')}</div></div>`).join('')}
+      ${Object.keys(c.feel).map((k) => `<div class="row"><span class="small" style="width:90px">${k}</span><div class="grid-3 grow" style="grid-template-columns:repeat(5,1fr);gap:6px">${scale.map((s, i) => `<button class="scale-seg ${c.feel[k] === s ? 'on' : i < 3 ? 'low' : ''}" data-act="ci-feel" data-k="${k}" data-v="${s}">${s}</button>`).join('')}</div></div>`).join('')}
       <span class="field-label">Anything different this week?</span>
       <div class="row wrap" style="gap:6px">${['Poor sleep', 'Stressed', 'Traveled', 'Period week', 'Lots of sun', 'Tried something new'].map((x) => `<button class="chip ${c.extra.includes(x) ? 'on' : ''}" data-act="ci-extra" data-v="${x}">${x}</button>`).join('')}</div>
     </section>
     <section class="card stack">
-      <div class="row between"><div><h2 class="h4" style="font-size:16px">Rate your products</h2><p class="xs muted">Quick taps. Each rating updates your shelf ranking.</p></div><span class="pill" style="background:var(--surface-soft)">Part 2: products</span></div>
+      <div class="row between"><div><h2 class="h4" style="font-size:16px">Rate your products</h2><p class="xs muted">Quick taps. Each rating updates your shelf ranking.</p></div><span class="pill" style="background:var(--lime)">Part 2: products</span></div>
       ${rate.map(([id, when]) => { const st = Math.round(state.ratings[id] / 2); return `
         <div class="row card soft" style="padding:12px">${thumb(id, 30, 38)}<div class="grow"><div class="small" style="font-weight:500">${esc(P(id).brand)} ${esc(P(id).name)}</div><div class="xs muted">${when}</div></div>
           <span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= st ? 'on' : ''}" data-act="rate-shelf" data-id="${id}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span>
-          ${['Working', 'Not sure', 'Not working'].map((s) => `<button class="chip ${status(id) === s ? 'on' : ''}" data-act="ci-status" data-id="${id}" data-v="${s}">${s}</button>`).join('')}
+          ${['Working', 'Not sure', 'Not working'].map((s) => `<button class="chip sm ${status(id) === s ? 'on' : ''}" data-act="ci-status" data-id="${id}" data-v="${s}">${s}</button>`).join('')}
         </div>`; }).join('')}
     </section>
     <section class="card stack">
-      <h2 class="h4" style="font-size:16px">Part 3  Your Anua TXA Brightening Pad hit week 6. Buy or don’t buy?</h2>
+      <h2 class="small" style="font-size:13px;font-weight:500">Part 3  Your Anua TXA Brightening Pad hit week 6. Buy or don’t buy?</h2>
       <p class="xs muted">Only asked when a product reaches its typical results week. This is the first thing people like you see on your review.</p>
-      <div class="grid-2">${[['buy', '✓ Buy', 'It worked for me and I’d repurchase'], ['skip', '✕ Don’t buy', 'Didn’t work, or not worth it']].map(([k, a, b]) => `<button class="card stack" data-act="ci-verdict" data-v="${k}" style="text-align:left;${c.verdict === k ? 'background:var(--forest);color:#fff;border-color:var(--forest)' : ''}"><span style="font-size:28px">${a}</span><span class="xs" style="opacity:.8">${b}</span></button>`).join('')}</div>
+      <div class="grid-2">${[['buy', '✓ BUY', 'It worked for me and I’d repurchase'], ['skip', '✕ DON’T BUY', 'Didn’t work, or not worth it']].map(([k, a, b]) => `<button class="card stack" data-act="ci-verdict" data-v="${k}" style="text-align:left;${c.verdict === k ? 'background:var(--forest);color:#fff;border-color:var(--forest)' : ''}"><span style="font-size:28px">${a}</span><span class="xs" style="opacity:.8">${b}</span></button>`).join('')}</div>
       <div class="row"><span class="mono">Your score</span><span class="buybar grow" style="height:6px"><span style="width:91%"></span></span><span style="font-size:22px">9.1</span><span class="tag">Re-ranks to #2 of 11</span></div>
       <textarea data-input="ci-note" placeholder="Add a note for people like you (optional)…" style="min-height:70px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;font:inherit;resize:vertical">${esc(c.note)}</textarea>
     </section>
@@ -1144,8 +1179,8 @@ function profilePage() {
             <span class="xs muted">Week 8 is in progress. Best week so far: week 7 at 95%.</span></div>
         </div>
         <div class="grid-2">
-          <div class="card stack"><div class="row between"><h3 class="h4">Challenges</h3><span class="mono forest">Earn points</span></div>${CHALLENGES.map(([t, d, n, of, pts]) => `<div class="stack" style="gap:4px"><div class="row between"><span class="small" style="font-weight:500">${t}</span><span class="mono forest">+${pts} pts</span></div><span class="xs muted">${d}</span><div class="buybar" style="width:100%"><span style="width:${(n / of) * 100}%;background:var(--lime)"></span></div><span class="mono">${n} / ${of}</span></div>`).join('')}</div>
-          <div class="card stack"><h3 class="h4">Milestones</h3>${MILESTONES.map(([t, d, ok]) => `<div class="row card ${ok ? '' : 'soft'}" style="padding:10px;${ok ? 'background:var(--fill-muted);border-color:transparent' : ''}"><span class="ring sm" style="${ok ? 'background:var(--forest);border-color:var(--forest);color:#fff' : 'border-color:var(--line)'}">${ok ? '✓' : '○'}</span><div><div class="small" style="font-weight:500">${ok ? '' : 'Next: '}${t}</div><div class="xs muted">${d}</div></div></div>`).join('')}</div>
+          <div class="card stack"><div class="row between"><h3 class="h4">Challenges</h3><span class="mono forest">Earn points</span></div>${CHALLENGES.map(([t, d, n, of, pts], i) => `<div class="row" style="gap:12px;align-items:flex-start"><span class="challenge-icon">${svg(['hydrate', 'protect', 'cleanse', 'treat'][i % 4], 26)}</span><div class="stack grow" style="gap:4px"><div class="row between"><span class="small" style="font-weight:500">${t}</span><span class="mono forest">+${pts} pts</span></div><span class="xs muted">${d}</span><div class="buybar" style="width:100%"><span style="width:${(n / of) * 100}%;background:var(--lime)"></span></div><span class="mono">${n} / ${of}</span></div></div>`).join('')}</div>
+          <div class="card stack"><h3 class="h4">Milestones</h3>${MILESTONES.map(([t, d, ok]) => `<div class="row card ${ok ? '' : 'soft'}" style="padding:10px;${ok ? 'background:var(--fill-muted);border-color:transparent' : ''}">${ok ? '<span class="ring sm" style="background:var(--forest);border-color:var(--forest);color:#fff">✓</span>' : `<span class="ring sm" style="border-color:transparent;background:#fff">${svg(t.includes('Shelf') ? 'star' : 'flame', 16)}</span>`}<div><div class="small" style="font-weight:500">${ok ? '' : 'NEW: '}${t}</div><div class="xs muted">${d}</div></div></div>`).join('')}</div>
         </div>
       </section>
       <section class="card stack">
@@ -1168,7 +1203,7 @@ function profilePage() {
           <div class="row">${thumb(id, 28, 36)}<div><div class="mono">${esc(P(id).brand)}</div><div class="small">${esc(P(id).name)}</div></div></div>
           <span class="mono">Results seen: ${w}</span><p class="small">“${t}”</p><span class="xs muted">Public: helped 48 people like you</span></div>`).join('')}</div>`;
   }
-  return { layout: '', left: leftCol(downloadApp()), main: header + body, right: trackerRail(), ask: true };
+  return { layout: '', left: leftCol('', downloadApp()), main: header + body, right: trackerRail(), ask: true };
 }
 
 /* ================= public reviews ================= */
@@ -1212,7 +1247,7 @@ function reviewsPage() {
         ${SKIN_TYPES.map((t) => `<button class="chip ${f.skin === t ? 'on' : ''}" data-act="rv-skin" data-v="${t}">${t}</button>`).join('')}
       </div>
     </section>
-    <div class="row between"><span class="small muted">${feed.status === 'ok' ? `${total.toLocaleString()} ${filtered ? 'matching ' : ''}reviews` : ''}</span>${filtered ? '<button class="link" data-act="rv-clear">Clear filters</button>' : ''}</div>
+    <div class="row between"><span class="small muted">${feed.status === 'ok' ? `${total.toLocaleString()} ${filtered ? 'matching ' : ''}reviews` : ''}</span>${filtered ? '<button class="link clear-link" data-act="rv-clear">Clear filters</button>' : ''}</div>
     ${feed.status === 'loading' ? '<div class="empty">Loading reviews…</div>'
       : feed.status === 'error' ? '<div class="empty">Reviews are unavailable right now.</div>'
       : reviews.length ? `<div class="stack" style="gap:12px">${reviews.map((r) => liveReview(r, true)).join('')}</div>`
@@ -1356,7 +1391,7 @@ function summaryCard(id) {
   return `
     <section class="card stack ai-summary">
       <div class="row between"><h3 class="h4">What reviewers say</h3><span class="mono">AI summary</span></div>
-      <p>${esc(s.summary)}</p>
+      <p style="font-size:13px">${esc(s.summary)}</p>
       <div class="grid-2">
         <div class="stack" style="gap:8px"><span class="mono forest">Pros</span>${list(s.pros, 'pros')}</div>
         <div class="stack" style="gap:8px"><span class="mono" style="color:#b23a24">Cons</span>${list(s.cons, 'cons')}</div>
@@ -1389,8 +1424,8 @@ function productPage(id) {
       const r = ratingsByRetailer[s.retailer];
       return `
         <div class="pick">
-          <div class="grow"><div style="font-size:15px">${esc(retailerName(s.retailer))}</div>${SOURCE_NOTE[s.status] ? `<div class="xs muted">${SOURCE_NOTE[s.status]}</div>` : ''}</div>
-          ${r?.rating_avg != null ? `<span class="live-rating" style="font-size:14px">★ ${(+r.rating_avg).toFixed(1)}${r.review_count ? `  ${r.review_count.toLocaleString()} reviews` : ''}</span>` : '<span class="xs faint">No rating</span>'}
+          <div class="grow"><div style="font-size:13px">${esc(retailerName(s.retailer))}</div>${SOURCE_NOTE[s.status] ? `<div class="xs muted">${SOURCE_NOTE[s.status]}</div>` : ''}</div>
+          ${r?.rating_avg != null ? `<span class="live-rating">★ ${(+r.rating_avg).toFixed(1)}${r.review_count ? `  ${r.review_count.toLocaleString()} reviews` : ''}</span>` : '<span class="xs faint">No rating</span>'}
           <a class="btn sm" href="${esc(s.url)}" target="_blank" rel="noopener">View ↗</a>
         </div>`;
     }).join('') || (live?.catalog_only
@@ -1410,12 +1445,15 @@ function productPage(id) {
     <section class="card row" style="gap:20px;align-items:center">
       ${thumb(id, 96, 112)}
       <div class="grow stack" style="gap:6px">
-        <span class="mono">${esc(p.brand)}</span>
-        <h1 class="h2" style="font-size:30px">${esc(p.name)}</h1>
-        <span class="xs muted">${[p.step && `${p.step} step`, p.size, p.price ? money(p.price) : ''].filter(Boolean).join('  ')}</span>
+        <span class="mono faint">${esc(p.brand)}</span>
+        <h1 class="h2" style="font-size:28px">${esc(p.name)}</h1>
+        <span class="xs muted">${[p.step && `${p.step} step`, p.size, p.price ? money(p.price) : ''].filter(Boolean).join(' · ')}</span>
         ${liveRating(id)}
       </div>
-      ${p.price ? `<button class="btn dark" data-act="add" data-id="${id}">${state.added[id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
+      <div class="stack" style="gap:8px;align-self:flex-start">
+        ${p.price ? `<button class="btn dark" data-act="add" data-id="${id}">${state.added[id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
+        <button class="btn" data-act="save" data-id="${id}">${(state.saved ?? []).includes(id) ? '✓ Saved' : '+ Want to try'}</button>
+      </div>
     </section>
     ${summaryCard(id)}
     <section class="card"><h3 class="h4">${live?.catalog_only ? 'Where it’s sold' : 'Where it’s reviewed'}</h3>${sourcesCard}</section>
@@ -1524,7 +1562,7 @@ function render() {
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;
-  document.title = `DEW  ${({ 'for-you': 'For you', creators: 'Creators', community: 'Community', picked: 'Picked for you' })[v.tab] || 'Skincare picked by people like you'}`;
+  document.title = `DEW  ${({ 'for-you': 'Explore', creators: 'Creators', community: 'Community', picked: 'Picked for you' })[v.tab] || 'Skincare picked by people like you'}`;
 }
 
 /* ================= events ================= */
@@ -1592,6 +1630,7 @@ const actions = {
   },
   helpful: (d) => set({ helpful: { ...state.helpful, [d.k]: !state.helpful[d.k] } }),
   'picked-mode': (d) => set({ pickedMode: d.v }),
+  'pick-filter': (d) => { const f = state.pickFilters ?? { budget: '$30–$60', keep: true, fragrance: false, vegan: false }; set({ pickFilters: d.k === 'budget' ? { ...f, budget: d.v } : { ...f, [d.k]: !f[d.k] } }); },
   'routine-swap': (d) => { const r = ROUTINE.find((x) => x.step === d.step); set({ routinePick: { ...state.routinePick, [d.step]: (state.routinePick[d.step] + 1) % r.options.length } }); },
   'add-routine': () => {
     const cart = [...state.cart];
