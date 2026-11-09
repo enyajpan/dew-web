@@ -336,7 +336,7 @@ function runningLow() {
     </section>`;
 }
 
-const leftCol = (extra = '') => `${quickCheckin()}<div class="left-gap"></div>${myShelf()}${runningLow()}${extra}`;
+const leftCol = (extra = '') => `${quickCheckin()}${myShelf()}${runningLow()}${extra}`;
 
 /* ================= right rail ================= */
 
@@ -497,16 +497,22 @@ function forYou() {
   const main = `
     <div class="row between"><h1 class="h2">For you</h1></div>
     <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${tags.map((t) => `<span class="tag">${t}</span>`).join('')}<a class="xs" href="#/setup/1">Edit profile</a></div>
-    <section class="hero">
-      ${done ? '' : '<span class="mono lime">Picked for you</span>'}
-      <h2 class="h1">Too many options? We’ll pick for you.</h2>
-      <div class="row" style="align-items:flex-end;gap:20px">
-        <div class="grow stack">
+    <section class="hero hero-pick">
+      <div class="row" style="align-items:center;gap:24px">
+        <div class="grow stack" style="gap:10px">
+          ${done ? '' : '<span class="mono lime">Picked for you</span>'}
+          <h2 class="hero-title">Too many options? We’ll pick for you.</h2>
           <p class="xs" style="color:#d9e6d6">${done ? 'One product per step, chosen from 1,486 people who match you on all 4 profile steps.' : `Picked for you builds a 4-step routine from people like you. Finish ${4 - state.setupStep} more profile steps to unlock it.`}</p>
-          ${done ? '<a class="btn lime" href="#/picked" style="align-self:flex-start">See my routine →</a>' : `<a class="btn lime" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start">Finish profile to unlock →</a>`}
+          ${done ? '<a class="btn lime" href="#/picked" style="align-self:flex-start;margin-top:6px">See my routine →</a>' : `<a class="btn lime" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start;margin-top:6px">Finish profile to unlock →</a>`}
         </div>
         <div class="box-illo" aria-hidden="true">
-          <span class="bottle" style="left:40px;height:56px"></span><span class="bottle" style="left:80px;height:70px;width:24px"></span><span class="bottle" style="left:120px;height:48px;width:44px"></span><span class="bottle" style="left:176px;height:60px;width:22px"></span>
+          <svg class="items" viewBox="0 0 184 60" aria-hidden="true">
+            <g fill="#fff"><rect x="4" y="27" width="30" height="33" rx="6"/><rect x="15" y="19" width="8" height="9"/><rect x="9" y="13" width="20" height="7" rx="2"/><rect x="17" y="5" width="4" height="9"/><rect x="2" y="5" width="19" height="4" rx="2"/></g>
+            <g fill="#fff"><rect x="46" y="31" width="22" height="29" rx="5"/><rect x="49" y="18" width="16" height="12" rx="3"/></g>
+            <g fill="#fff"><rect x="78" y="35" width="54" height="25" rx="6"/><rect x="76" y="22" width="58" height="12" rx="5"/></g>
+            <g fill="#fff"><rect x="144" y="25" width="26" height="35" rx="6"/><rect x="148" y="14" width="18" height="10" rx="3"/></g>
+            <g fill="#e4e6dc"><rect x="49" y="30" width="16" height="1.5"/><rect x="76" y="33.5" width="58" height="1.5"/><rect x="148" y="23.5" width="18" height="1.5"/></g>
+          </svg>
           <span class="lid"></span><span class="box"></span><span class="label">Your box</span>
         </div>
       </div>

@@ -311,6 +311,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 8, 2026: For you hero matches Figma**
+- The "Too many options? We’ll pick for you." banner matches Hi-fi v7: one-line title (it scales down to stay on one line), text and button stacked on the left, and the Your box illustration with four product shapes on the right.
+- The left column has the same gap between How’s your skin today, My Shelf and Running low.
+
 **November 8, 2026: 16,649 catalog products imported**
 - Every product in `data/skincare-catalog.csv` that DEW didn’t have is now in `products` as a catalog-only row (`catalog_only = true`), with its category, where it’s sold, its store page and the store’s star rating. 1,747 Dermstore rows without a separate brand were left out. Loaded by `node scripts/import-catalog-csv.js` (safe to re-run after rebuilding the CSV).
 - Search, the shelf box and the nav search suggest from all 16,839 products as you type (`/api/products?q=`), and any of them can go on a shelf. Their product pages show where they’re sold and the store’s rating; reviews are only collected for the original 190.
