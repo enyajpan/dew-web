@@ -209,7 +209,7 @@ function nav(active) {
     <span class="nav-spacer"></span>
     <a class="tab ${active === 'reviews' ? 'active' : ''}" href="#/reviews">Public reviews</a>
     <a class="tab" href="#/login">Log in</a>
-    <a class="btn primary" href="#/signup">Create account</a>`;
+    <a class="btn dark" href="#/signup">Create account</a>`;
   }
   const tabs = [['for-you', 'For you'], ['creators', 'Creators'], ['community', 'Community'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
   const n = cartCount();
@@ -310,7 +310,7 @@ function finishProfileCard() {
       <div class="meter"><span style="width:${strength()}%"></span></div>
       ${left.map(([n, l, t]) => `<a class="row" href="#/setup/${n}" style="text-decoration:none;padding:8px 12px;border-radius:var(--radius-sm);background:rgb(255 255 255 / 8%)"><span class="grow small">${n}: ${l}</span><span class="xs" style="color:#c8dcc9">${t}</span></a>`).join('')}
       <p class="xs" style="color:#c8dcc9">Each step sharpens your picks. Finish both: +150 pts and picks matched on all 4 steps.</p>
-      <a class="btn primary" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start">Finish my profile →</a>
+      <a class="btn lime" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start">Finish my profile →</a>
     </section>`;
 }
 
@@ -483,7 +483,7 @@ function recommendationsCard() {
           </div>
         </div>
         <div class="row wrap" style="gap:8px">
-          <a class="btn primary" href="#/product/${pr.id}">See all reviews + ratings</a>
+          <a class="btn" href="#/product/${pr.id}">See all reviews + ratings</a>
           ${pr.price_usd ? `<button class="btn dark" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? '✓ In your cart' : `Add to cart · ${money(Number(pr.price_usd))}`}</button>` : ''}
           <button class="btn" data-act="save" data-id="${pr.id}">${(state.saved ?? []).includes(pr.id) ? '✓ Saved' : '+ Want to try'}</button>
         </div>
@@ -623,7 +623,7 @@ function setupPage(n) {
         <div class="notice">We use your shelf to find what your routine is missing, what’s running low and what to replace.</div>
       </section>`;
   const back = n > 1 ? `<a class="btn" href="#/setup/${n - 1}">← Back</a>` : '<a class="btn" href="#/for-you">Skip for now</a>';
-  const next = n < 4 ? `<button class="btn primary" data-act="setup-next" data-n="${n}">Continue to ${SETUP[n].name.toLowerCase()} →</button>` : '<button class="btn dark" data-act="setup-next" data-n="4">Finish my profile →</button>';
+  const next = n < 4 ? `<button class="btn dark" data-act="setup-next" data-n="${n}">Continue to ${SETUP[n].name.toLowerCase()} →</button>` : '<button class="btn dark" data-act="setup-next" data-n="4">Finish my profile →</button>';
   const main = `${bar}<span class="mono" style="margin-top:12px">Step ${n} of 4</span><h1 class="h1">${s.title}</h1><p class="muted">${s.sub}</p>${body}<div class="row between setup-nav">${back}${next}</div>`;
   return { layout: 'layout-focus', main, right: strengthCard() };
 }
@@ -827,7 +827,7 @@ function pickedPage() {
     <div class="grid-2" style="grid-template-columns:repeat(4,minmax(0,1fr))">${cards}</div>
     <section class="card row between wrap">
       <div class="row" style="gap:28px"><div><div class="mono">New products</div><div class="h3">${ROUTINE.filter((r) => r.owned !== routineIds()[ROUTINE.indexOf(r)]).length}</div></div><div><div class="mono">Est. total</div><div class="h3">${money(routineTotal())}</div></div><div><div class="mono">Expected results</div><div class="h3">3–4 weeks</div></div><div><div class="mono">Backed by</div><div class="h3">1,486 people</div></div></div>
-      <div class="stack" style="align-items:flex-end"><button class="btn dark" data-act="add-routine">Add box to cart</button><button class="btn primary" data-act="toast" data-msg="Added to your shelf. Tracking starts today.">Add to shelf + start tracking</button></div>
+      <div class="stack" style="align-items:flex-end"><button class="btn dark" data-act="add-routine">Add box to cart</button><button class="btn" data-act="toast" data-msg="Added to your shelf. Tracking starts today.">Add to shelf + start tracking</button></div>
     </section>
     <div class="notice"><span class="mono forest">Why only 4?</span><span class="grow">We hid 44 other products that scored lower for your profile, so you can decide in a minute instead of a weekend.</span></div>`;
   return { layout: 'layout-wide', left: leftCol(), main };
@@ -1025,7 +1025,7 @@ function sampleVerdict() {
           ${loved.length ? `<div class="row between small" style="opacity:.75"><span>Sample credit (the minis you tried)</span><span>−${money(credit)}</span></div><hr class="divider" style="background:rgb(255 255 255 / 25%)"><div class="row between"><span>Total before points</span><span style="font-weight:500">${money(full - credit)}</span></div>` : '<p class="small" style="opacity:.75">Mark a sample as Love it to buy the full size with your sample credit.</p>'}
         </div>
         <div class="stack" style="align-items:flex-end">
-          <button class="btn primary" data-act="verdict-cart" ${loved.length ? '' : 'disabled'}>Add ${loved.length} full size${loved.length === 1 ? '' : 's'} to cart →</button>
+          <button class="btn lime" data-act="verdict-cart" ${loved.length ? '' : 'disabled'}>Add ${loved.length} full size${loved.length === 1 ? '' : 's'} to cart →</button>
           <button class="btn" data-act="toast" data-msg="Refills set for every 8 weeks">Subscribe: refill every 8 weeks</button>
           <span class="xs" style="opacity:.75">Full sizes replace the minis on your shelf when they arrive.</span>
         </div>
@@ -1248,7 +1248,7 @@ function welcomePage() {
           <span class="mono forest">Your personal skincare companion</span>
           <h1 class="display">Skincare picked by people like you.</h1>
           <p class="lead">DEW matches you with people who share your skin, climate and goals, then picks, samples and tracks a routine that works for you.</p>
-          <div class="row wrap" style="gap:10px"><a class="btn dark lg" href="#/signup">Create free account</a><a class="btn lg" href="#/login">Log in</a></div>
+          <div class="row wrap" style="gap:10px"><a class="btn dark" href="#/signup">Create free account</a><a class="btn" href="#/login">Log in</a></div>
           <a class="xs" href="#/search" data-act="search" data-q="">Or browse products and reviews without an account →</a>
         </div>
         <div class="welcome-art" aria-hidden="true"><img src="assets/img/hero.jpg" alt=""></div>
@@ -1274,7 +1274,7 @@ function welcomePage() {
       <section class="welcome-cta">
         <h2 class="h2" style="color:#fff">Ready to find what works for your skin?</h2>
         <p style="color:#cbdbea">Free to join. Your profile takes about three minutes.</p>
-        <a class="btn lime lg" href="#/signup">Create free account</a>
+        <a class="btn lime" href="#/signup">Create free account</a>
       </section>
       <footer class="xs muted row between wrap" style="padding:8px 0 24px"><span>© 2026 DEW</span><span>Reviews are collected from brand websites and belong to their authors.</span></footer>
     </div>`;
@@ -1315,7 +1315,7 @@ function signupPage() {
       ${field('email', 'Email', 'email', 'autocomplete="email"')}
       ${field('password', 'Password', 'password', 'autocomplete="new-password" minlength="8"')}
       <span class="xs muted">At least 8 characters.</span>
-      <button class="btn dark block lg" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Creating account…' : 'Create account'}</button>
+      <button class="btn dark block" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Creating account…' : 'Create account'}</button>
     </form>`,
     foot: 'Already have an account? <a href="#/login">Log in</a>',
   });
@@ -1328,7 +1328,7 @@ function loginPage() {
     form: `<form class="stack" data-form="login" style="gap:12px">
       ${field('email', 'Email', 'email', 'autocomplete="email"')}
       ${field('password', 'Password', 'password', 'autocomplete="current-password"')}
-      <button class="btn dark block lg" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Logging in…' : 'Log in'}</button>
+      <button class="btn dark block" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Logging in…' : 'Log in'}</button>
       <button type="button" class="link" data-act="reset-password" style="align-self:center">Forgot your password?</button>
     </form>`,
     foot: 'New to DEW? <a href="#/signup">Create an account</a>',

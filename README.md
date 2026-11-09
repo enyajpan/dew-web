@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: three button styles, two sizes**
+- Buttons now come in three styles: **Dark** for the one main action on a screen, plain **Secondary** for everything else, and **Lime** for the main action on dark green panels and for rewards. The light-blue Primary style is gone: setup "Continue" and the top-bar "Create account" are Dark; "Finish my profile" (profile card) and "Add full sizes to cart" (check-in) sit on dark panels, so they are Lime; "See all reviews" and "Add to shelf + start tracking" sat next to a Dark button, so they are Secondary.
+- Two sizes: default (34 px) and `.sm` (28 px). The large size is gone; the welcome page and the sign-up and log-in buttons use the default size.
+- Removed `.btn.primary` and `.btn.lg` from css/app.css; added a hover color for Lime.
+
 **November 9, 2026: updated character colors**
 - The Cleanse, Treat and Protect characters now match the main components in Figma (Brand guidelines page): Cleanse is pale blue (#CBDBEA), Treat is lime (#CBE942) and Protect is a warmer peach (#F9D28B). Shapes are unchanged.
 - Character image URLs carry a version (`?v=2`) so browsers load the new art instead of a cached copy.
