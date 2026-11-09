@@ -311,6 +311,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: creator cards match Kara's layout (Hi-fi v7 comment)**
+- Every card on Creators like you now uses the layout of Kara Lim's card on Hi-fi v7: name with the "% like you" pill beside it, handle and followers, city and age range, separate Skin type and Environment rows, a "Top 3 products" box (holy grail first, highlighted, then two more with brand and score), and Follow / View full shelf.
+- Each creator in js/data.js gains `location`, `age`, `skin`, `environment` and `top3` (product id + score), taken from the v7 designs. The shelf preview and the quote moved off the card; they are still on each creator's page.
+
 **November 9, 2026: three button styles, two sizes**
 - Buttons now come in three styles: **Dark** for the one main action on a screen, plain **Secondary** for everything else, and **Lime** for the main action on dark green panels and for rewards. The light-blue Primary style is gone: setup "Continue" and the top-bar "Create account" are Dark; "Finish my profile" (profile card) and "Add full sizes to cart" (check-in) sit on dark panels, so they are Lime; "See all reviews" and "Add to shelf + start tracking" sat next to a Dark button, so they are Secondary.
 - Two sizes: default (34 px) and `.sm` (28 px). The large size is gone; the welcome page and the sign-up and log-in buttons use the default size.

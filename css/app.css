@@ -447,3 +447,14 @@ a.suggest-item { text-decoration: none; }
 .search-suggest { min-width: 360px; }
 .suggest-all { display: block; width: 100%; margin-top: 4px; padding: 8px; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; font-size: 12px; text-align: left; color: var(--forest); cursor: pointer; }
 .suggest-all:hover { text-decoration: underline; }
+
+/* Creator cards (Hi-fi v7 · 04 Creators like you, Kara Lim's card) */
+.creator-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.creator-card { gap: 14px; }
+.creator-k { width: 84px; flex: none; }
+.creator-top3 { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px 10px 10px; }
+.creator-top3 > .mono { padding: 0 4px; }
+.top3-row { gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); }
+.top3-row.holy { background: var(--surface-soft); }
+.top3-n { width: 12px; flex: none; font-size: 18px; color: var(--ink-3); }
+.top3-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -677,26 +677,28 @@ function creatorShelfProducts(c) {
 }
 
 function creatorsPage() {
+  // Card layout follows Kara Lim's card on Hi-fi v7 (04 Creators like you).
   const cards = CREATORS.map((c) => {
-    const items = creatorShelfProducts(c).slice(0, 16);
     const following = state.following[c.id];
+    const top3 = c.top3 ?? [[c.holyGrail, 9]];
+    const rows = top3.map(([pid, s], i) => `
+      <div class="row top3-row ${i === 0 ? 'holy' : ''}"><span class="top3-n">${i + 1}</span>${thumb(pid, 30, 36)}<div class="grow" style="min-width:0">${i === 0 ? '<div class="mono forest">★ Holy grail</div>' : `<div class="mono faint">${esc(P(pid).brand)}</div>`}<div class="small top3-name">${esc(P(pid).name)}</div></div>${ring(s, true)}</div>`).join('');
     return `
       <article class="card stack creator-card">
-        <div class="row"><img class="avatar" style="width:44px;height:44px" src="${c.avatar}" alt=""><div class="grow"><div class="h4">${c.name}</div><div class="xs muted">${c.handle}  ${c.followers} followers</div></div>${match(c.match).replace('similar', 'like you')}</div>
-        <div class="row wrap" style="gap:6px">${c.tags.slice(0, 3).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-        <div class="card soft row" style="padding:12px">${thumb(c.holyGrail, 40, 50)}<div class="grow"><span class="mono forest">★ Holy grail</span><div class="small" style="font-weight:500">${esc(P(c.holyGrail).name)}</div><div class="xs muted">“${c.quote}”</div></div>${ring(c.id === 'kara' ? 9.4 : 8.8 + (c.match % 7) / 10, true)}</div>
-        <div class="mini stack" style="gap:12px">
-          <div class="row between"><span class="mono">${c.name.split(' ')[0]}’s shelf</span><span class="xs muted">${items.length} products</span></div>
-          ${[items.slice(0, 8), items.slice(8, 16)].filter((r) => r.length).map((r) => `<div class="plank-row">${r.map((id) => `<img src="${P(id).img}" alt="${esc(P(id).name)}" title="${esc(P(id).name)}">`).join('')}</div>`).join('<div style="height:6px"></div>')}
+        <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:8px"><span class="h4">${c.name}</span><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${c.handle}  ${c.followers} followers</div>${c.location ? `<div class="xs muted">${c.location}  ·  Age ${c.age}</div>` : ''}</div></div>
+        <div class="stack" style="gap:8px">
+          <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Skin type</span>${(c.skin ?? c.tags.slice(0, 2)).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
+          <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Environment</span><span class="tag">${c.environment ?? c.tags[2]}</span></div>
         </div>
-        <div class="row"><button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><a class="btn" href="#/creators/${c.id}">View shelf →</a></div>
+        <div class="creator-top3 stack" style="gap:4px"><span class="mono" style="color:var(--ink);margin-bottom:4px">Top 3 products</span>${rows}</div>
+        <div class="row"><button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><a class="btn" href="#/creators/${c.id}">View full shelf →</a></div>
       </article>`;
   }).join('');
   const main = `
     <div class="stack" style="max-width:1392px;width:100%;margin:0 auto;gap:16px">
       <h1 class="h2">Creators like you</h1>
       <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${profileTags().slice(0, 4).map((t) => `<span class="tag">${t}</span>`).join('')}<span class="xs faint">Creators with your skin, climate and age match yours. Sponsored posts are always labeled.</span></div>
-      <div class="grid-3">${cards}</div>
+      <div class="creator-grid">${cards}</div>
     </div>`;
   return { layout: 'layout-solo', main };
 }
