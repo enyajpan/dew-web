@@ -490,10 +490,16 @@ function recommendationsCard() {
     </section>`;
 }
 
+// Tags that sum up the skin profile, e.g. Combination · Breakouts + Redness · Humid · Miami · 25–29.
+// The climate tag comes from the typed location, so it only appears once a place was found.
+function profileTags(extra = []) {
+  const a = state.answers;
+  return [a.skinType?.[0], a.concerns?.slice(0, 2).join(' + '), a.climate && `${a.climate.humidity.label} · ${a.climate.place.split(',')[0]}`, a.age?.[0], a.diet?.[0], ...extra].filter(Boolean).map(esc);
+}
+
 function forYou() {
   const done = state.setupStep >= 4;
-  const a = state.answers;
-  const tags = [a.skinType?.[0], a.concerns?.slice(0, 2).join(' + '), a.climate && `${a.climate.humidity.label} · ${a.climate.place.split(',')[0]}`, a.age?.[0], a.diet?.[0]].filter(Boolean).map(esc);
+  const tags = profileTags();
   const main = `
     <div class="row between"><h1 class="h2">For you</h1></div>
     <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${tags.map((t) => `<span class="tag">${t}</span>`).join('')}<a class="xs" href="#/setup/1">Edit profile</a></div>
@@ -559,11 +565,14 @@ function locationField(label) {
   const a = state.answers;
   const c = a.climate;
   const look = state.climateLookup ?? {};
+  // Profiles saved before locations were typed have a place but no climate yet: look it up once.
+  const typed = /humid|uv\b/i.test(a.location?.[0] ?? '') ? '' : (a.location?.[0] ?? '');
+  if (typed && !c && !look.busy && !look.error) setTimeout(() => lookUpClimate(typed), 0);
   const chips = c ? `
       <div class="row wrap" style="gap:6px"><span class="chip on">${esc(c.humidity.label)} · ${c.humidity.value}% humidity</span><span class="chip on">${esc(c.uv.label)} · UV ${c.uv.value}</span><span class="chip on">${esc(c.dryness.label)}</span></div>
       <span class="xs muted">Averages for ${esc(c.place)} over the last 30 days.</span>` : '';
   return `<div class="stack" style="gap:8px"><span class="field-label">${label}</span>
-      <form class="row" data-form="location"><input name="q" class="grow" value="${esc(a.location?.[0] ?? '')}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Type your city, e.g. Austin, TX" autocomplete="address-level2"><button class="btn dark">${c ? 'Update' : 'Find'}</button></form>
+      <form class="row" data-form="location"><input name="q" class="grow" value="${esc(typed)}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Type your city, e.g. Austin, TX" autocomplete="address-level2"><button class="btn dark">${c ? 'Update' : 'Find'}</button></form>
       ${look.busy ? '<span class="xs muted">Checking humidity and UV…</span>' : look.error ? `<span class="xs" style="color:#b3261e">${esc(look.error)}</span>` : chips}</div>`;
 }
 
@@ -678,7 +687,7 @@ function creatorsPage() {
   const main = `
     <div class="stack" style="max-width:1392px;width:100%;margin:0 auto;gap:16px">
       <h1 class="h2">Creators like you</h1>
-      <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29'].map((t) => `<span class="tag">${t}</span>`).join('')}<span class="xs faint">Creators with your skin, climate and age match yours. Sponsored posts are always labeled.</span></div>
+      <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${profileTags().slice(0, 4).map((t) => `<span class="tag">${t}</span>`).join('')}<span class="xs faint">Creators with your skin, climate and age match yours. Sponsored posts are always labeled.</span></div>
       <div class="grid-3">${cards}</div>
     </div>`;
   return { layout: 'layout-solo', main };
@@ -789,7 +798,7 @@ function pickedPage() {
     <section class="hero hero-image" style="padding:32px;min-height:240px;justify-content:center">
       <h1 class="h1" style="color:var(--forest);white-space:normal">${sample ? 'Your routine, sampled for you.' : 'Your routine, picked just for you.'}</h1>
       <p class="small" style="color:var(--forest);max-width:520px">${sample ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'One product per step. You already have a great sunscreen, so we kept it and only filled the gaps.'}</p>
-      <div class="row wrap" style="gap:6px">${['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29', 'Dairy-free'].map((t) => `<span class="tag" style="background:#ffffffb0">${t}</span>`).join('')}</div>
+      <div class="row wrap" style="gap:6px">${profileTags().map((t) => `<span class="tag" style="background:#ffffffb0">${t}</span>`).join('')}</div>
     </section>`;
   if (sample) return { layout: 'layout-wide', left: leftCol(), main: hero + modeToggle() + sampleBuilder() };
   const cards = ROUTINE.map((r, i) => {
@@ -1092,7 +1101,7 @@ function profilePage() {
       <img class="avatar" style="width:88px;height:88px" src="assets/img/progress/w5.jpg" alt="">
       <div class="grow stack">
         <div class="row"><h1 class="h2">${esc(currentUser() ? firstName() || 'You' : 'Mia Tan')}</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
-        <div class="row wrap" style="gap:6px">${['Combination', 'Breakouts + redness', 'Humid  Miami', '25–29', 'Fragrance-free', '$15–30'].map((t) => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="row wrap" style="gap:6px">${profileTags([state.answers.musts?.[0], state.answers.budget?.[0]]).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
       </div>
       <div class="stack"><a class="btn dark" href="#/setup/1">Update skin profile</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
