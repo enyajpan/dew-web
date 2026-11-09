@@ -616,3 +616,10 @@ a.suggest-item { text-decoration: none; }
 .askdew-panel .chip { background: #fff; font-weight: 500; color: var(--ink-2); }
 .askdew-panel .chat-input { background: #fff; }
 .askdew-panel .send { width: 28px; height: 28px; }
+
+/* Shelf column: the panel fills the full height of the screen, with more room between
+   the check-in, My Shelf and Running low. The hint sits at the bottom. */
+.col[aria-label="Your shelf"] { padding-bottom: 16px; }
+.col[aria-label="Your shelf"] > .side-panel { flex: 1 0 auto; gap: 32px; padding: 18px 16px 16px; justify-content: space-between; }
+.side-panel .my-shelf { padding-top: 0; }
+@media (max-width: 820px) { .col[aria-label="Your shelf"] > .side-panel { flex: none; } }

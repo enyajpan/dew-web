@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: shelf panel fills the screen height**
+
+- The left column's panel (skin check-in, My Shelf, Running low) now runs the full height of the screen on every page.
+- The three sections are spread evenly down the panel with at least 32 px between them, and the "Tap any product…" hint sits at the bottom. On short screens the gaps shrink to 32 px and the column scrolls as before; below 820 px wide the panel goes back to its natural height.
+
 **November 9, 2026: the name is "Dew", not "DEW"**
 
 - Every typed "DEW" on the site now reads "Dew": page title and description, welcome page, checkout copy, order and sample box numbers (#Dew-20481), the Ask Dew system prompt and code comments.
