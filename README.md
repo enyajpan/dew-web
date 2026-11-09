@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: shelf search finds every catalog product**
+- The "What's on your shelf right now?" box (step 4 of the skin profile) now has its own dropdown instead of the browser's suggestion list. The browser list only showed a product when the typed text appeared in it word for word, so "body shop satsuma" showed nothing and Add failed even though search had found 7 matches.
+- Each typed word just has to appear somewhere in the brand or name, in any order, across all 18k+ catalog products. Results show a photo, brand and name; click one, or use the arrow keys and Enter.
+- Add (or Enter) with no suggestion picked adds the best match from the full catalog, searching again if the dropdown hasn't caught up yet.
+
 **November 8, 2026: more places to shop**
 - Where you shop (Preferences + goals step) adds Target, Walmart, Drugstores & Pharmacies, Bluemercury and Other.
 

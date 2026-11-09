@@ -613,7 +613,7 @@ function setupPage(n) {
       </section>`).join('') : `
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
-        <form class="row" data-form="shelf-add"><input name="q" list="product-suggestions" class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a product name, e.g. “Heartleaf”" autocomplete="off"><button class="btn dark">Add</button></form>
+        <form class="shelf-search" data-form="shelf-add"><div class="row"><input name="q" data-shelf-search class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button class="btn dark">Add</button></div><div class="shelf-suggest" id="shelf-suggest" role="listbox"></div></form>
         <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button></div>
         <p class="xs muted">${shelfIds().length ? `${shelfIds().length} product${shelfIds().length === 1 ? '' : 's'} on your shelf.` : 'Your shelf is empty. Add the products you use now.'}</p>
         ${shelfIds().length ? shelfRows(shelfIds().map((id) => ({ id })), { selectable: false }) : ''}
@@ -1684,11 +1684,7 @@ document.addEventListener('submit', (e) => {
     const id = productFromQuery(q);
     if (id) go(`product/${id}`); else { set({ lastSearch: q, searchPages: 1 }); go('search'); }
   }
-  if (form.dataset.form === 'shelf-add') {
-    const id = productFromQuery(q) ?? catalogEntries().find(([, l]) => l.toLowerCase().includes(q.trim().toLowerCase()))?.[0];
-    if (id && q.trim()) addToShelf(id); else toast('No product matches that name yet. Try picking one from the suggestions.');
-    form.reset();
-  }
+  if (form.dataset.form === 'shelf-add') shelfAddFromQuery(form, q);
   if (form.dataset.form === 'location') lookUpClimate(q);
   if (form.dataset.form === 'ask') askDewSend(q);
   if (form.dataset.form === 'reviews-search') set({ rv: { ...state.rv, q: q.trim(), limit: 20 } });
@@ -1741,7 +1737,81 @@ document.addEventListener('change', (e) => {
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }
   if (e.target.getAttribute('list') === 'product-suggestions') suggestFromCatalog(e.target.value);
+  if (e.target.matches('[data-shelf-search]')) shelfSuggest(e.target.value);
 });
+
+/* Shelf step search: DEW's own dropdown instead of the browser's suggestion list, which
+   only shows a product when the typed text appears in it word for word ("body shop
+   satsuma" hid "Body Shop · Satsuma Hand Cream"). Every typed word just has to appear
+   somewhere in the brand or name, and the whole 18k-product catalog is searched. */
+const queryWords = (q) => String(q).toLowerCase().replace(/[·,]/g, ' ').split(/\s+/).filter(Boolean);
+const matchesWords = (label, words) => words.every((w) => label.toLowerCase().includes(w));
+let shelfHits = [];
+let shelfActive = -1;
+let shelfTimer;
+let shelfSeq = 0;
+
+async function shelfMatches(q) {
+  const words = queryWords(q);
+  if (!words.length) return [];
+  const r = await fetch(`/api/products?q=${encodeURIComponent(words.join(' '))}`);
+  const api = r.ok ? remember(await r.json()).map((p) => p.id) : [];
+  // DEW's own sample products first, then the catalog in its ranked order.
+  const local = Object.keys(PRODUCTS).filter((id) => matchesWords(`${P(id).brand} ${P(id).name}`, words));
+  return [...new Set([...local, ...api])];
+}
+
+function drawShelfSuggest(q) {
+  const box = document.getElementById('shelf-suggest');
+  const input = document.querySelector('[data-shelf-search]');
+  if (!box) return;
+  const open = q.trim().length >= 2;
+  input?.setAttribute('aria-expanded', String(open));
+  box.classList.toggle('open', open);
+  if (!open) { box.innerHTML = ''; return; }
+  const onShelf = new Set(shelfIds());
+  box.innerHTML = shelfHits.length
+    ? shelfHits.slice(0, 8).map((id, i) => `<button type="button" role="option" class="suggest-item ${i === shelfActive ? 'active' : ''}" data-act="shelf-add" data-id="${esc(id)}">${thumb(id, 36, 36)}<span class="grow"><span class="xs muted">${esc(P(id).brand)}</span><span class="suggest-name">${esc(P(id).name)}</span></span>${onShelf.has(id) ? '<span class="xs muted">On shelf ✓</span>' : ''}</button>`).join('')
+    : `<div class="xs muted suggest-empty">No products match “${esc(q.trim())}”. Try fewer words or just the brand.</div>`;
+}
+
+function shelfSuggest(value) {
+  clearTimeout(shelfTimer);
+  shelfActive = -1;
+  if (value.trim().length < 2) { shelfHits = []; drawShelfSuggest(value); return; }
+  const seq = ++shelfSeq;
+  shelfTimer = setTimeout(async () => {
+    try {
+      const hits = await shelfMatches(value);
+      if (seq !== shelfSeq) return; // a newer keystroke is already searching
+      shelfHits = hits;
+      drawShelfSuggest(value);
+    } catch (err) { /* keep the current suggestions */ }
+  }, 180);
+}
+
+// "Add" or Enter: the highlighted suggestion, else an exact name, else the best match.
+async function shelfAddFromQuery(form, q) {
+  if (!q.trim()) return;
+  let id = shelfHits[shelfActive] ?? productFromQuery(q);
+  if (!id) {
+    clearTimeout(shelfTimer);
+    try { id = (await shelfMatches(q))[0]; } catch (err) { /* handled below */ }
+  }
+  if (id) { shelfHits = []; shelfActive = -1; form.reset(); addToShelf(id); } else toast(`No product matches “${q.trim()}”. Try fewer words or just the brand.`);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!e.target.matches?.('[data-shelf-search]') || !shelfHits.length) return;
+  const n = Math.min(shelfHits.length, 8);
+  if (e.key === 'ArrowDown') { e.preventDefault(); shelfActive = (shelfActive + 1) % n; drawShelfSuggest(e.target.value); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); shelfActive = (shelfActive - 1 + n) % n; drawShelfSuggest(e.target.value); }
+  if (e.key === 'Escape') { shelfHits = []; shelfActive = -1; drawShelfSuggest(''); }
+});
+// Keep the box focused while a suggestion is clicked; close the list when focus leaves.
+document.addEventListener('mousedown', (e) => { if (e.target.closest('.shelf-suggest')) e.preventDefault(); });
+document.addEventListener('focusout', (e) => { if (e.target.matches?.('[data-shelf-search]')) setTimeout(() => drawShelfSuggest(''), 150); });
+document.addEventListener('focusin', (e) => { if (e.target.matches?.('[data-shelf-search]') && e.target.value.trim().length >= 2) shelfSuggest(e.target.value); });
 
 // As you type in a search or shelf box, suggest matches from the whole catalog (not just
 // products with reviews). Updates the suggestion list in place so the box keeps focus.
