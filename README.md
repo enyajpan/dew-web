@@ -16,7 +16,7 @@ These counts are live: the badges read [`/api/stats`](https://dew-skincare.verce
 
 - **For you:** your top 3 picks, a Picked for you banner and refill reminders. Running low only offers Refill, which adds the product to your cart and then reads "Added to cart". Only the middle column shows a scrollbar.
 - **My shelf:** tap a product to see weeks used, your rank and score, rate it (lime stars when picked, white outlines when not), log a refill or ask Dew. New accounts start with an empty shelf.
-- **Skin profile:** four onboarding steps with profile strength and points: (1) age and skin, (2) environment and day-to-day lifestyle (time outdoors, sleep, stress, diet, hydration), (3) goals, (4) current shelf. You type where you live, and DEW looks up that place’s humidity and UV (30-day averages) and shows them as two chips, e.g. "Humid; 74% humidity" and "High UV; UV 7.4", once a place is found. The shelf step starts empty and shows each product’s photo as you add it.
+- **Skin profile:** four onboarding steps with profile strength and points: (1) age and skin, (2) environment and day-to-day lifestyle (time outdoors, sleep, stress, diet, hydration), (3) goals, (4) current shelf. You type where you live, and DEW looks up that place’s humidity and UV (30-day averages) and shows them as two chips, e.g. "Humid: 74% humidity" and "High UV: UV 7.4", once a place is found. The shelf step starts empty and shows each product’s photo as you add it.
 - **Creators and Community:** creator shelves with rankings by category and purpose; a friends-only feed with a collapsible filter and sort panel.
 - **Picked for you:** a full-size 4-step routine you can swap and add to the cart, or **Sample it first** with three minis paid for with points.
 - **Cart and checkout:** refills, swaps and routine picks in one order, with points redemption (500 pts = $5 off).
@@ -310,6 +310,9 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 8, 2026: colons in climate chips**
+- The location step's climate chips use a colon instead of a semicolon ("Humid: 74% humidity", "High UV: UV 7.4").
 
 **November 8, 2026: tidier Profile strength panel**
 - In the setup sidebar's Finish to unlock list, each perk stays on one line, matching Figma. The character icons at the bottom of the panel are gone.

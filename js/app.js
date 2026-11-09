@@ -574,7 +574,7 @@ function locationField(label) {
   const typed = /humid|uv\b/i.test(a.location?.[0] ?? '') ? '' : (a.location?.[0] ?? '');
   if (typed && !c && !look.busy && !look.error) setTimeout(() => lookUpClimate(typed), 0);
   const chips = c ? `
-      <div class="row wrap" style="gap:6px"><span class="chip on">${esc(c.humidity.label)}; ${c.humidity.value}% humidity</span><span class="chip on">${esc(c.uv.label)}; UV ${c.uv.value}</span></div>
+      <div class="row wrap" style="gap:6px"><span class="chip on">${esc(c.humidity.label)}: ${c.humidity.value}% humidity</span><span class="chip on">${esc(c.uv.label)}: UV ${c.uv.value}</span></div>
       <span class="xs muted">Averages for ${esc(c.place)} over the last 30 days.</span>` : '';
   return `<div class="stack" style="gap:8px"><span class="field-label">${label}</span>
       <form class="row" data-form="location"><input name="q" class="grow" value="${esc(typed)}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Type your city, e.g. Austin, TX" autocomplete="address-level2"><button class="btn dark">${c ? 'Update' : 'Find'}</button></form>
