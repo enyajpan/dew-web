@@ -14,7 +14,7 @@ const defaultState = () => ({
   setupStep: 2, // onboarding steps finished (0-4)
   answers: {
     location: ['Miami, Florida'], climate: { place: 'Miami, Florida', humidity: { value: 74, label: 'Humid' }, uv: { value: 7.4, label: 'High UV' }, dryness: { label: 'Moist air' } }, diet: ['Dairy-free'],
-    outdoors: ['1–2 hrs'], sleep: ['6–8 hrs'], stress: ['Medium'],
+    outdoors: ['1–2 hrs'], sleep: ['6–8 hrs'], stress: ['Medium'], hydration: ['Drinks 2L+ water'],
     skinType: ['Combination'], concerns: ['Breakouts', 'Redness', 'Dark spots'], age: ['25–29'], gender: ['Woman'], ethnicity: ['Southeast Asian'],
     goals: ['Clear breakouts', 'Calm redness', 'Fade dark spots'], size: ['Standard  4–5 steps'], budget: ['$15–30'], musts: ['Fragrance-free', 'Cruelty-free'], shops: ['Sephora', 'Olive Young'],
   },
@@ -48,10 +48,16 @@ const defaultState = () => ({
 });
 
 let state = load();
+// "Drinks 2L+ water" used to be a Diet option; it now lives under Hydration.
+function migrate(s) {
+  const diet = s.answers?.diet;
+  if (!diet?.includes('Drinks 2L+ water')) return s;
+  return { ...s, answers: { ...s.answers, diet: diet.filter((d) => d !== 'Drinks 2L+ water'), hydration: s.answers.hydration?.length ? s.answers.hydration : ['Drinks 2L+ water'] } };
+}
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { ...defaultState(), ...JSON.parse(raw) };
+    if (raw) return migrate({ ...defaultState(), ...JSON.parse(raw) });
   } catch (e) { /* storage unavailable: run in memory */ }
   return defaultState();
 }
@@ -536,7 +542,7 @@ const SETUP = [
   ] },
   { n: 2, name: 'Environment + lifestyle', title: 'Where and how you live', sub: 'Humidity, sun, sleep and diet change what works on your skin.', groups: [
     ['Your environment', 'protect', [['location', 'Where you live']]],
-    ['Your day-to-day', 'cleanse', [['outdoors', 'Time outdoors', ['Mostly indoors', '1–2 hrs', '3+ hrs'], true], ['sleep', 'Sleep', ['Under 6 hrs', '6–8 hrs', '8+ hrs'], true], ['stress', 'Stress lately', ['Low', 'Medium', 'High'], true], ['diet', 'Diet', ['Balanced', 'Dairy-free', 'Vegan', 'Vegetarian', 'Lots of sugar', 'High protein', 'Drinks 2L+ water']]]],
+    ['Your day-to-day', 'cleanse', [['outdoors', 'Time outdoors', ['Mostly indoors', '1–2 hrs', '3+ hrs'], true], ['sleep', 'Sleep', ['Under 6 hrs', '6–8 hrs', '8+ hrs'], true], ['stress', 'Stress lately', ['Low', 'Medium', 'High'], true], ['diet', 'Diet', ['Balanced', 'Dairy-free', 'Vegan', 'Vegetarian', 'Lots of sugar', 'High protein']], ['hydration', 'Hydration', ['Under 1L a day', '1–2L a day', 'Drinks 2L+ water'], true]]],
   ] },
   { n: 3, name: 'Preferences + goals', title: 'What do you want from your routine?', sub: 'Your goals rank the picks. Budget and must-haves filter out anything that doesn’t fit.', groups: [
     ['Preferences + goals', 'treat', [['goals', 'Top goals (pick up to 3)', ['Clear breakouts', 'Calm redness', 'Fade dark spots', 'Smoother texture', 'Hydration', 'Anti-aging', 'Glow'], false, 3], ['size', 'Routine size', ['Minimal  3 steps', 'Standard  4–5 steps', 'Full  6+ steps'], true], ['budget', 'Budget per product', ['Under $15', '$15–30', '$30–60', '$60+'], true], ['musts', 'Must-haves', ['Fragrance-free', 'Cruelty-free', 'Vegan', 'Reef-safe SPF', 'Fungal-acne safe', 'Pregnancy-safe']], ['shops', 'Where you shop', ['Sephora', 'Ulta', 'Amazon', 'Olive Young', 'Brand sites']]]],
@@ -1714,7 +1720,7 @@ async function submitAuth(kind, fd) {
 async function onAuthChange(event, user) {
   if (user) {
     const saved = await loadAppState();
-    state = saved ? { ...defaultState(), ...saved } : newAccountState();
+    state = saved ? migrate({ ...defaultState(), ...saved }) : newAccountState();
     state.authBusy = false; state.authError = ''; state.authNotice = '';
     save();
     go(saved ? 'for-you' : 'setup/1');
@@ -1774,7 +1780,7 @@ onData(render);
 initAuth(onAuthChange).then(async (user) => {
   if (user) {
     const saved = await loadAppState();
-    if (saved) state = { ...defaultState(), ...saved };
+    if (saved) state = migrate({ ...defaultState(), ...saved });
   }
   render();
 });
