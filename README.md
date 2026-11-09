@@ -316,7 +316,7 @@ Newest first. Every major change gets an entry here.
 - The box on Picked for you was a still image of the first frame of the Figma "Box reveal (animated)" component (Hi-fi v7, 186:9796). It is now built from layers and plays the prototype: a 0.8s hold, three 0.12s shakes, the lid flaps swing open, then the four routine products and the characters pop out with a bounce.
 - The products in the box are the user's current routine picks, so a swap shows up in the box.
 - It plays once each time you open the page. Clicking a filter or swapping a product shows the open box without replaying it. With reduced motion turned on, the open box shows straight away.
-- New asset: `assets/svg/box-front.svg` (the front panel and its label, from Figma). `routine-box.svg` is no longer used.
+- New asset: `assets/svg/box-front.svg` (the front panel and its label, from Figma). The old still image, `routine-box.svg`, was removed.
 
 **November 9, 2026: live site matched to Hi-fi v7 (Figma)**
 - Top nav: white background (was off-white), smaller 84 px logo, 12 px tabs in secondary ink, search field on the canvas color, points pill with a border, smaller cart count. The first tab is now "Explore" (was "For you"), and so is the page title.
