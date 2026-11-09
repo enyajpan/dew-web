@@ -16,8 +16,12 @@ const STEP = {
 };
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const slug = (s) => norm(s).replace(/ /g, '-').slice(0, 60);
-// "nivea" -> "Nivea"; leave brands that already use capitals ("e.l.f.", "COSRX") alone.
-const brandCase = (b) => (b === b.toLowerCase() && b.length > 3 ? b.replace(/(^|[\s-])\p{L}/gu, (c) => c.toUpperCase()) : b);
+// "nivea" -> "Nivea", "paula-s-choice" -> "Paula's Choice"; leave brands that already use capitals ("e.l.f.", "COSRX") alone.
+const brandCase = (b) => {
+  if (b !== b.toLowerCase() || b.length <= 3) return b;
+  const words = /^[a-z0-9]+(-[a-z0-9]+)+$/.test(b) ? b.replace(/-s-/g, "'s-").replace(/-/g, " ") : b;
+  return words.replace(/(^|[\s-])\p{L}/gu, (c) => c.toUpperCase());
+};
 
 function parseCsv(text) {
   const [head, ...lines] = text.trim().split('\n');
@@ -35,10 +39,8 @@ const have = new Set(existing.filter((p) => !p.catalog_only).map((p) => `${norm(
 
 const seen = new Set();
 const out = [];
-let noBrand = 0;
 for (const r of rows) {
-  if (!r.brand.trim()) { noBrand++; continue; } // Dermstore rows whose brand couldn't be told apart from the name
-  const brand = brandCase(r.brand.trim());
+  const brand = brandCase(r.brand.trim() || 'Unknown brand');
   const key = `${norm(brand)}|${norm(r.product_name)}`;
   if (have.has(key) || seen.has(key)) continue;
   seen.add(key);
@@ -50,7 +52,7 @@ for (const r of rows) {
     listed_rating: Number(r.rating) || null, listed_review_count: Number(r.review_count) || null,
   });
 }
-console.log(`${rows.length} rows: ${out.length} to import, ${rows.length - out.length - noBrand} already in DEW or duplicates, ${noBrand} without a brand`);
+console.log(`${rows.length} rows: ${out.length} to import or refresh, ${rows.length - out.length} already in DEW or listed twice`);
 if (dryRun) process.exit(0);
 for (let i = 0; i < out.length; i += 1000) {
   const { error: e } = await db.from('products').upsert(out.slice(i, i + 1000));

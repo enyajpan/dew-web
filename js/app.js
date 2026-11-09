@@ -1428,17 +1428,21 @@ function productPage(id) {
 function searchPage() {
   const q = (state.lastSearch || '').trim().toLowerCase();
   const catalog = { ...Object.fromEntries(Object.keys(liveProducts()).map((id) => [id, P(id)])), ...PRODUCTS };
-  const remote = q && q !== 'new' ? searchProducts(q) : [];
+  // Every catalog match, 40 at a time ("Show more" loads the next 40).
+  const pages = q && q !== 'new' ? Array.from({ length: state.searchPages ?? 1 }, (_, i) => useJson(`/api/products?q=${encodeURIComponent(q)}&paged=1&limit=40&offset=${i * 40}`)) : [];
+  const remote = pages.flatMap((p) => remember(p.data?.products));
+  const total = pages[0]?.data?.total ?? 0;
   const hits = Object.entries(catalog).filter(([, p]) => !q || q === 'new' || `${p.brand} ${p.name} ${p.step}`.toLowerCase().includes(q));
   for (const r of remote) if (!hits.some(([id]) => id === r.id)) hits.push([r.id, P(r.id)]);
   const list = q === 'new' ? LAUNCHES.map((l) => [l.id, P(l.id)]) : hits;
   const main = `
     <h1 class="h2">${q && q !== 'new' ? `Results for “${esc(state.lastSearch)}”` : q === 'new' ? 'New launches' : 'All products'}</h1>
-    <p class="xs muted">${list.length} products. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in DEW so far` : ''}</p>
+    <p class="xs muted">${q && q !== 'new' && total > list.length ? `Showing ${list.length} of ${total.toLocaleString()} products` : `${list.length} products`}. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in DEW so far` : ''}</p>
     <section class="card">${list.map(([id, p], i) => `
       <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${[p.step && `${p.step} step`, p.size].filter(Boolean).join('  ')}</div>${liveRating(id)}</div><span class="small">${p.price ? money(p.price) : ''}</span>
         ${signedOut() ? '' : `<button class="btn sm" data-act="shelf-add" data-id="${id}">${shelfIds().includes(id) ? 'On shelf ✓' : '+ Shelf'}</button>`}
-        <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>'}</section>`;
+        <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || (pages.some((p) => p.status === 'loading') ? '<div class="empty">Searching…</div>' : '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>')}</section>
+    ${total > remote.length ? `<button class="btn" data-act="search-more" style="align-self:flex-start">Show more (${(total - remote.length).toLocaleString()} left)</button>` : ''}`;
   return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail(), ask: true };
 }
 
@@ -1527,7 +1531,8 @@ const actions = {
   swap: (d) => addToCart(d.id, 'swap', `Replaces ${P(d.from).name} (you rated it ${state.ratings[d.from].toFixed(1)})`),
   add: (d) => addToCart(d.id, 'pick'),
   'add-many': (d) => { d.ids.split(',').filter(Boolean).forEach((id) => addToCart(id, 'pick')); },
-  search: (d) => { set({ lastSearch: d.q }); go('search'); },
+  search: (d) => { set({ lastSearch: d.q, searchPages: 1 }); go('search'); },
+  'search-more': () => set({ searchPages: (state.searchPages ?? 1) + 1 }),
   'log-out': () => signOut(),
   save: (d) => {
     const saved = state.saved ?? [];
@@ -1672,7 +1677,7 @@ document.addEventListener('submit', (e) => {
   const q = fd.get('q') || '';
   if (form.dataset.form === 'search') {
     const id = productFromQuery(q);
-    if (id) go(`product/${id}`); else { set({ lastSearch: q }); go('search'); }
+    if (id) go(`product/${id}`); else { set({ lastSearch: q, searchPages: 1 }); go('search'); }
   }
   if (form.dataset.form === 'shelf-add') {
     const id = productFromQuery(q) ?? catalogEntries().find(([, l]) => l.toLowerCase().includes(q.trim().toLowerCase()))?.[0];

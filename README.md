@@ -28,7 +28,7 @@ These counts are live: the badges read [`/api/stats`](https://dew-skincare.verce
 - **AI review summaries:** each product page has "What reviewers say", a Claude-written overview with pros and cons from up to 150 reviews.
 - **Public reviews:** a live feed of every collected review, searchable, filterable by product, skin type and rating, and sortable.
 - **Ask Dew:** a real chatbot (Claude) for signed-in users that uses your skin profile, your shelf and DEW's review summaries.
-- **Shelf + Want to try:** search suggests products from the whole 16,839-product catalog as you type and adds them to your shelf; "Save" puts products in the Want to try list on the right.
+- **Shelf + Want to try:** search suggests products from the whole 18,579-product catalog as you type and adds them to your shelf; "Save" puts products in the Want to try list on the right.
 - **Live reviews:** every product has a page (`#/product/<id>`) with its star rating on each site that reviews it and real reviews you can filter by skin type. "What people like you are saying" shows the newest reviews from people with your skin type, and picks and search show live star ratings.
 
 Points, cart, ratings and check-ins are saved in your browser (localStorage). Use **Reset demo data** at the bottom of the profile tracker to start over, and **Demo: jump to 1,500 pts** to see the sample box unlock.
@@ -195,7 +195,7 @@ Browser  →  dew-skincare.vercel.app/api/...  →  Supabase API  →  Postgres
 - **Database:** Supabase (Postgres). Schema in `supabase/migrations/`: products, review sources, rating snapshots, reviews and scrape runs. Public reads, server-only writes.
 - **API** (Vercel functions in `api/`):
   - `GET /api/products` and `GET /api/products?id=t28_sos`: products we collect reviews for, with the latest published star rating per retailer. `?id=` also works for catalog-only products.
-  - `GET /api/products?q=cerave cleanser`: up to 40 matches from the whole catalog, products with reviews first.
+  - `GET /api/products?q=cerave cleanser`: up to 40 matches from the whole catalog, products with reviews first. Add `&paged=1&offset=40` to get `{ total, products }` and page through every match.
   - `GET /api/reviews?product=t28_sos&skin_type=Combination&q=redness&rating=low&sort=helpful&limit=20&offset=0`: scraped reviews. Every filter is optional.
   - `GET /api/summary?product=t28_sos`: the AI pros/cons summary.
   - `GET /api/recommendations?skin_type=Combination&concerns=Breakouts,Redness&owned=Cleanse,Tone&exclude=…`: the top 3 picks with what each solves and what people like you say.
@@ -283,7 +283,7 @@ The products in it are also loaded into DEW as catalog-only products (searchable
 - **Sources:**
   - **Ulta:** each brand’s skin care page, using the brand list from Ulta’s own sitemap. Gives brand, name, price, rating, review count and photo.
   - **Shopify stores:** the public product list (`/products.json`) of multi-brand shops (Credo, Soko Glam, Peach & Lily, The Detox Market, Wishtrend) and about 60 brand sites that answered (of 130 tried). Sites that aren’t on Shopify or refuse bots are skipped.
-  - **Dermstore:** product sitemap. The brand is matched against brands found in the other sources; about 1,700 Dermstore rows have no brand match, so their brand is part of the name.
+  - **Dermstore:** product sitemap. The brand is matched against brands found in the other sources; rows it can’t match get their brand from Dermstore’s brand directory (`node scripts/fill-catalog-brands.js`), and 49 that still can’t be told apart are listed as "Unknown brand".
   - **Open Beauty Facts:** the open product database (ODbL licence), filtered to skincare categories.
 - **Filter:** keyword rules on the name and product type keep skincare and drop makeup, hair, fragrance, tools, merch and gift cards.
 - **Duplicates:** one row per brand + name. `sold_at` lists every source that carries it.
@@ -310,6 +310,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 ## Changelog
 
 Newest first. Every major change gets an entry here.
+
+**November 8, 2026: every catalog product has a page**
+- All 18,504 rows of `data/skincare-catalog.csv` are now DEW products: 18,579 products in total, each searchable with its own product page, reviews or not. The 1,747 Dermstore rows that had no brand got one from Dermstore’s brand directory (`node scripts/fill-catalog-brands.js`); 49 that still can’t be told apart are listed under "Unknown brand".
+- Search shows every match: 40 at a time with "Show more" (`/api/products?q=…&paged=1&offset=…`).
 
 **November 8, 2026: product photos fit their frames**
 - Product photos shrink to fit inside their thumbnail, shelf and creator-shelf frames, and anything left over is clipped instead of spilling past the container (e.g. the Holy grail card on creator pages).
