@@ -1,15 +1,15 @@
 // POST /api/ask  { messages: [{ role: 'user'|'assistant', content }], profile: { skinType, concerns, goals, shelf } }
 // Ask Dew: a skincare assistant answered by Claude, grounded in the person's profile
-// and in DEW's review summaries for any products they mention. Signed-in users only.
+// and in Dew's review summaries for any products they mention. Signed-in users only.
 import Anthropic from '@anthropic-ai/sdk';
 import { db, send } from './_db.js';
 
 const MODEL = 'claude-opus-5-5';
 const anthropic = new Anthropic();
 
-const SYSTEM = `You are Dew, the skincare assistant inside DEW, an app that matches people with products that worked for others with the same skin type, climate and goals.
+const SYSTEM = `You are Dew, the skincare assistant inside Dew, an app that matches people with products that worked for others with the same skin type, climate and goals.
 Answer like a knowledgeable friend: warm, specific and brief (usually under 120 words). Plain text only: no headings or bold; short "- " bullets are fine.
-Use the person's profile and the review data provided. When you cite what reviewers say, say it comes from DEW's review data. If the data doesn't cover something, say so rather than guessing.
+Use the person's profile and the review data provided. When you cite what reviewers say, say it comes from Dew's review data. If the data doesn't cover something, say so rather than guessing.
 You can explain ingredients, routine order, layering and how to introduce new products. You are not a doctor: for persistent, painful or worsening skin problems, suggest seeing a dermatologist. Don't diagnose conditions or recommend prescription drugs.`;
 
 const STOP = new Set(['what', 'which', 'with', 'that', 'this', 'have', 'from', 'your', 'should', 'would', 'could', 'about', 'there', 'their', 'when', 'best', 'good', 'skin', 'does', 'will', 'into', 'than', 'then', 'them', 'they', 'like', 'just', 'using', 'products', 'product']);

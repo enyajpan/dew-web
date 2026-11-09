@@ -17,7 +17,7 @@
   --r5: #ff7a63;
   --nav-h: 64px;
   --gap: 16px;
-  /* Corner radius scale (DEW Radius in Figma): sm for controls, md for containers, lg for big surfaces, full for anything round */
+  /* Corner radius scale (Dew Radius in Figma): sm for controls, md for containers, lg for big surfaces, full for anything round */
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
@@ -101,6 +101,8 @@ h1, h2, h3, p { margin: 0; }
 .row.between { justify-content: space-between; }
 .row.wrap { flex-wrap: wrap; }
 .grow { flex: 1; min-width: 0; }
+/* Keep the brand name as "Dew" inside all-caps labels and buttons */
+.nc { text-transform: none; }
 .mono { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
 .mono.lime { color: var(--lime); }
 .mono.forest { color: var(--forest); }

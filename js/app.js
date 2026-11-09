@@ -106,7 +106,7 @@ const pctBand = (p) => band(p / 10);
 const match = (p) => `<span class="pill match ${pctBand(p)}">${p}% similar</span>`;
 const thumb = (id, w = 48, h = 56) => `<span class="thumb" style="width:${w}px;height:${h}px"><img src="${P(id).img}" alt="${esc(P(id).name)}"></span>`;
 // ?v= busts browser caches when the character art changes in Figma.
-const SVG_V = 3;
+const SVG_V = 4;
 const svg = (name, w) => `<img src="assets/svg/${name}.svg?v=${SVG_V}" alt="" style="width:${w}px">`;
 const starsTxt = (n) => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
 // The sample shelf is only for the demo; a new account's shelf starts empty.
@@ -200,7 +200,7 @@ const signedOut = () => auth.enabled && !currentUser();
 function nav(active) {
   if (signedOut()) {
     return `
-    <a href="#/welcome" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
+    <a href="#/welcome" aria-label="Dew home"><img class="logo" src="assets/svg/logo.svg" alt="Dew"></a>
     <form class="search" data-form="search" role="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
       <input name="q" data-suggest="search" placeholder="Search products and reviews…" value="${esc(state.lastSearch || '')}" autocomplete="off" role="combobox" aria-controls="search-suggest" aria-expanded="false">
@@ -214,7 +214,7 @@ function nav(active) {
   const tabs = [['for-you', 'Explore'], ['creators', 'Creators'], ['community', 'Community'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
   const n = cartCount();
   return `
-    <a href="#/for-you" aria-label="DEW home"><img class="logo" src="assets/svg/logo.svg" alt="DEW"></a>
+    <a href="#/for-you" aria-label="Dew home"><img class="logo" src="assets/svg/logo.svg" alt="Dew"></a>
     <form class="search" data-form="search" role="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="#9a9e92" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="#9a9e92" stroke-width="2" stroke-linecap="round"/></svg>
       <input name="q" data-suggest="search" placeholder="Search products, ingredients, people…" value="${esc(state.lastSearch || '')}" autocomplete="off" role="combobox" aria-controls="search-suggest" aria-expanded="false">
@@ -292,7 +292,7 @@ function myShelf() {
             <a class="btn sm" href="#/check-in">Review</a>
             <a class="btn sm" href="#/product/${open.id}">Reviews</a>
             <button class="btn sm" data-act="refill" data-id="${open.id}">Log refill</button>
-            <button class="btn sm" data-act="ask" data-q="${esc(`What pairs well with ${P(open.id).name}?`)}">Ask Dew</button>
+            <button class="btn sm" data-act="ask" data-q="${esc(`What pairs well with ${P(open.id).name}?`)}">Ask <span class="nc">Dew</span></button>
           </div>
         </div>` : ''}
     </section>`;
@@ -318,9 +318,9 @@ function downloadApp() {
     <section class="card dark stack">
       <div class="row">${svg('hydrate', 26)}${svg('treat', 26)}${svg('protect', 26)}</div>
       <span class="mono lime">Track on the go</span>
-      <h3 class="h3" style="font-size:24px">Log your progress in the DEW app</h3>
+      <h3 class="h3" style="font-size:24px">Log your progress in the Dew app</h3>
       <p class="small" style="color:#c8dcc9">Take your weekly progress photo with the same framing every time, tick off your AM and PM routine, and get refill nudges. Everything syncs back here.</p>
-      <a class="row" href="#/profile" data-act="toast" data-msg="The DEW iOS app is coming soon" style="align-self:flex-start;gap:8px;padding:8px 16px 8px 12px;background:#000;border:1px solid #a6a6a6;border-radius:var(--radius-sm);text-decoration:none;color:#fff">
+      <a class="row" href="#/profile" data-act="toast" data-msg="The Dew iOS app is coming soon" style="align-self:flex-start;gap:8px;padding:8px 16px 8px 12px;background:#000;border:1px solid #a6a6a6;border-radius:var(--radius-sm);text-decoration:none;color:#fff">
         <svg width="18" height="22" viewBox="0 0 814 1000"><path fill="#fff" d="M788 340c-6 4-110 63-110 193 0 151 132 204 136 206-1 3-21 73-70 145-44 63-90 126-160 126s-88-41-169-41c-79 0-107 42-171 42s-109-58-160-130C25 797 0 677 0 563c0-183 119-280 236-280 62 0 114 41 153 41 37 0 95-43 166-43 27 0 124 2 188 99zM549 154c30-35 51-84 51-133 0-7-1-14-2-19-48 2-105 32-140 72-27 31-53 80-53 130 0 8 1 15 2 18 3 1 9 1 14 1 43 0 97-29 128-69z"/></svg>
         <span><span style="display:block;font-size:9px">Download on the</span><span style="font-size:17px;font-weight:500;line-height:1">App Store</span></span>
       </a>
@@ -382,7 +382,7 @@ function askDew() {
   return `
     <section class="askdew-panel" aria-label="Ask Dew">
       <div class="row">${svg('hydrate', 22)}<span class="h4 grow">Ask Dew</span><button class="link mono" data-act="ask-close">Minimize ↘</button></div>
-      <p class="xs muted">${currentUser() ? 'Your AI skincare assistant, powered by Claude. Answers use your skin profile, your shelf and DEW’s review data.' : 'Your AI skincare assistant. Log in to chat with Dew for real.'}</p>
+      <p class="xs muted">${currentUser() ? 'Your AI skincare assistant, powered by Claude. Answers use your skin profile, your shelf and Dew’s review data.' : 'Your AI skincare assistant. Log in to chat with Dew for real.'}</p>
       <div class="chat" id="chat">${state.chat.map((m) => `<div class="msg ${m.me ? 'me' : 'dew'}${m.pending ? ' typing' : ''}">${m.pending ? '<span></span><span></span><span></span>' : esc(m.text)}</div>`).join('')}</div>
       <div class="row wrap" style="gap:6px">
         ${['What should I add to my routine?', 'Best SPF for humid days', 'Can I use retinol and vitamin C together?'].map((q) => `<button class="chip" data-act="ask" data-q="${q}">↳ ${q}</button>`).join('')}
@@ -645,7 +645,7 @@ function setupPage(n) {
       </section>`).join('') : `
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
-        <form class="shelf-search" data-form="shelf-add"><div class="row" style="gap:6px"><input name="q" data-suggest="shelf" class="grow shelf-input" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button type="button" class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button><button type="button" class="btn" data-act="toast" data-msg="Order import is coming soon">Import orders</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
+        <form class="shelf-search" data-form="shelf-add"><div class="row" style="gap:6px"><input name="q" data-suggest="shelf" class="grow shelf-input" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button type="button" class="btn" data-act="toast" data-msg="Scanning works in the Dew app">Scan barcode</button><button type="button" class="btn" data-act="toast" data-msg="Order import is coming soon">Import orders</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
         ${shelfIds().length ? groupedShelf(shelfIds()) : '<p class="xs muted">Your shelf is empty. Add the products you use now.</p>'}
         <div class="notice">We use your shelf to find what your routine is missing, what’s running low and what to replace.</div>
       </section>`;
@@ -765,7 +765,7 @@ function creatorPage(id) {
     <section class="stack"><h2 class="h3">${c.name.split(' ')[0]}’s rankings by category</h2><p class="xs muted">Everything she uses, ranked by her within each step. Her holy grail is her #1 ${P(c.holyGrail).step.toLowerCase()} pick.</p>
       <div class="grid-3">${Object.entries(categories).map(([t, ids]) => rankCard(t, ids, scores, c.holyGrail)).join('')}</div></section>
     ${Object.keys(purposes).length ? `<section class="stack"><h2 class="h3">Best for…</h2><p class="xs muted">What she would recommend for each skin goal.</p><div class="grid-3">${Object.entries(purposes).map(([t, ids]) => rankCard(t, ids, scores)).join('')}</div></section>` : ''}
-    ${c.publicReviews ? `<section class="stack"><h2 class="h3">${c.name.split(' ')[0]}’s public reviews</h2><p class="xs muted">Posted on Sephora, TikTok and YouTube, pulled into DEW.</p>
+    ${c.publicReviews ? `<section class="stack"><h2 class="h3">${c.name.split(' ')[0]}’s public reviews</h2><p class="xs muted">Posted on Sephora, TikTok and YouTube, pulled into Dew.</p>
       <div class="grid-3">${c.publicReviews.map(([pid, src, when, txt]) => `<div class="card stack" style="padding:16px"><div class="row">${thumb(pid, 32, 38)}<div class="grow"><div class="mono">${esc(P(pid).brand)}</div><div class="small">${esc(P(pid).name)}</div></div>${ring(scores[pid] ?? 8)}</div><p class="small">“${esc(txt)}”</p><div class="row"><span class="src">${src}</span><span class="xs muted">${when}</span></div></div>`).join('')}</div></section>` : ''}
     <section class="card row between">
       <div><h3 class="h4">You share ${sharedIds.length} of ${c.name.split(' ')[0]}’s ${creatorShelfProducts(c).length} products</h3><p class="xs muted">Her top 3 that you don’t own: ${creatorShelfProducts(c).filter((p) => !sharedIds.includes(p)).slice(0, 3).map((p) => P(p).name).join(', ')}.</p></div>
@@ -807,7 +807,7 @@ function communityPage() {
         <div class="row" style="gap:12px">${thumb(r.product, 56, 56)}<div class="grow"><div class="mono faint">${esc(P(r.product).brand)}</div><div class="h4">${esc(P(r.product).name)}</div><div class="xs muted">${r.usage}</div></div>${ring(r.score)}</div>
         <p style="font-size:13px">${esc(r.text)}</p>
         <div class="row wrap" style="gap:6px">${r.tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Tracked progress: ${r.photos.length} check-ins via DEW tracker</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="assets/img/progress/${p}.jpg" alt=""><span class="mono">Week ${[1, 2, 4, 6][j]}</span></div>`).join('')}</div></div>` : ''}
+        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Tracked progress: ${r.photos.length} check-ins via <span class="nc">Dew</span> tracker</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="assets/img/progress/${p}.jpg" alt=""><span class="mono">Week ${[1, 2, 4, 6][j]}</span></div>`).join('')}</div></div>` : ''}
         <div class="row small muted review-actions" style="gap:18px">
           <button class="link" style="text-decoration:none;${state.helpful[r.name + i] ? 'color:var(--forest);font-weight:500' : ''}" data-act="helpful" data-k="${esc(r.name + i)}">▲ Helpful  ${r.helpful + (state.helpful[r.name + i] ? 1 : 0)}</button>
           <span>◌ ${r.comments} comments</span><button class="link" style="text-decoration:none" data-act="toast" data-msg="Link copied">↗ Share</button><span class="grow"></span>
@@ -835,7 +835,7 @@ const routineTotal = () => ROUTINE.reduce((a, r) => a + (r.owned && r.options[st
 function boxReveal() {
   const ids = routineIds();
   return `
-    <div class="picked-box" role="img" aria-label="Your DEW 4-step box opening">
+    <div class="picked-box" role="img" aria-label="Your Dew 4-step box opening">
       <div class="rbox" data-s="1"><div class="rbox-in">
         <i class="rb-flap l"></i><i class="rb-flap r"></i><i class="rb-band"></i>
         ${ids.map((id, i) => `<img class="rb-p p${i}" src="${P(id).img}" alt="">`).join('')}
@@ -966,7 +966,7 @@ function cartPage() {
   const main = `
     ${checkoutSteps(0)}
     <h1 class="h1">Your cart</h1>
-    <p class="muted">One checkout for every brand. DEW orders from the brand or an authorized retailer at the same price, and adds each product to your shelf when it arrives.</p>
+    <p class="muted">One checkout for every brand. Dew orders from the brand or an authorized retailer at the same price, and adds each product to your shelf when it arrives.</p>
     ${state.cart.length ? `<section class="card" style="padding:0">${items}</section>` : `<section class="card empty"><p class="h3">Your cart is empty</p><p class="small" style="margin:8px 0 16px">Add picks from Explore, refills from your shelf, or a whole routine.</p><a class="btn dark" href="#/picked">See my routine →</a></section>`}
     <p class="xs muted">Prices match the brand site. Free returns within 30 days if a product breaks you out: tell Dew in your weekly check-in.</p>`;
   const right = `
@@ -994,7 +994,7 @@ function orderPlaced() {
   const main = `
     <section class="card stack" style="max-width:640px;width:100%;margin:48px auto 0;padding:40px">
       <div class="row">${svg('hydrate', 34)}${svg('treat', 34)}${svg('protect', 34)}</div>
-      <span class="mono forest">Order #${o.no} placed</span>
+      <span class="mono forest">Order #${o.no.replace(/^Dew/i, '<span class="nc">Dew</span>')} placed</span>
       <h1 class="h1">Your routine is on its way.</h1>
       <p class="muted">${o.items.length} products, arriving Thu, Nov 12. We added them to your shelf as “arriving” and will start tracking on day 1.</p>
       <div class="row wrap">${o.items.map((i) => thumb(i.id, 52, 62)).join('')}</div>
@@ -1020,7 +1020,7 @@ function sampleCheckout() {
       <div class="row" style="padding:18px;${i ? 'border-top:1px solid var(--line)' : ''}">${thumb(id, 60, 70)}
         <div class="grow stack" style="gap:3px"><span class="pill" style="align-self:flex-start;background:var(--lime)">Mini  ${s.mini[id]}</span><span class="mono">${esc(P(id).brand)}</span><span style="font-size:15px">${esc(P(id).name)}</span><span class="xs muted">Step ${i + 1}  ${s.label}</span></div>
         <span style="font-size:16px;font-weight:500">${money(s.value)}</span></div>`; }).join('')}</section>
-    <p class="xs muted">Minis come in a recyclable DEW sample box. One free box per 1,500 pts.</p>
+    <p class="xs muted">Minis come in a recyclable Dew sample box. One free box per 1,500 pts.</p>
     <a class="btn" href="#/picked" data-act="picked-mode" data-v="sample" style="align-self:flex-start">← Change my picks</a>`;
   const right = `
     <section class="card stack" style="padding:24px">
@@ -1046,7 +1046,7 @@ function samplePlaced() {
     <div class="stack" style="max-width:640px;width:100%;margin:32px auto 0;gap:20px">
       <section class="card stack" style="padding:40px">
         <div class="row">${svg('hydrate', 34)}${svg('treat', 34)}${svg('protect', 34)}</div>
-        <span class="mono forest">Sample box #DEW-S0193 placed</span>
+        <span class="mono forest">Sample box #<span class="nc">Dew</span>-S0193 placed</span>
         <h1 class="h1">Your sample box is on its way.</h1>
         <p class="muted">3 minis arriving Sat, Nov 7. Start them together on day 1 so your check-ins can tell what is working.</p>
         <div class="row">${SAMPLE_SLOTS.map((s) => thumb(sm.picks[s.key], 52, 62)).join('')}</div>
@@ -1083,7 +1083,7 @@ function sampleVerdict() {
   }).join('');
   const main = `
     <div class="stack" style="max-width:1200px;width:100%;margin:0 auto;gap:20px">
-      <span class="mono forest">Day 14 of 14  Sample box #DEW-S0193</span>
+      <span class="mono forest">Day 14 of 14  Sample box #<span class="nc">Dew</span>-S0193</span>
       <h1 class="h1">How did your samples do?</h1>
       <p class="muted">Your trial is done. Keep what worked, drop what didn’t. Your verdicts re-rank your picks and help 1,486 people like you.</p>
       <div class="grid-3">${cards}</div>
@@ -1122,7 +1122,7 @@ function checkinPage() {
       <div class="row" style="align-items:stretch">
         <div class="card soft grow stack"><span class="mono">Skin health score</span><div class="row" style="align-items:baseline"><span style="font-size:52px;line-height:1">8.4</span><span class="xs" style="color:var(--forest)">▲ 0.6 vs last week</span></div>
           <div class="bars" style="height:90px">${[38, 50, 58, 66, 74, 92].map((h, i) => `<div><i style="height:${h}%;${i < 5 ? 'background:var(--fill-muted)' : ''}"></i><span class="mono">W${i + 1}</span></div>`).join('')}</div></div>
-        <div class="stack" style="width:200px"><div class="photo"><img src="assets/img/progress/w5.jpg" alt="This week’s progress photo"><span class="private" style="position:absolute;top:8px;left:8px">🔒 Private</span></div><span class="xs muted">Only you can see this. <button class="link" data-act="toast" data-msg="Open the DEW app to retake">Retake ↺</button></span></div>
+        <div class="stack" style="width:200px"><div class="photo"><img src="assets/img/progress/w5.jpg" alt="This week’s progress photo"><span class="private" style="position:absolute;top:8px;left:8px">🔒 Private</span></div><span class="xs muted">Only you can see this. <button class="link" data-act="toast" data-msg="Open the Dew app to retake">Retake ↺</button></span></div>
       </div>
       <span class="field-label">How does your skin feel vs last week?</span>
       ${Object.keys(c.feel).map((k) => `<div class="row"><span class="small" style="width:90px">${k}</span><div class="grid-3 grow" style="grid-template-columns:repeat(5,1fr);gap:6px">${scale.map((s, i) => `<button class="scale-seg ${c.feel[k] === s ? 'on' : i < 3 ? 'low' : ''}" data-act="ci-feel" data-k="${k}" data-v="${s}">${s}</button>`).join('')}</div></div>`).join('')}
@@ -1217,7 +1217,7 @@ function profilePage() {
         </div>
       </section>
       <section class="card stack">
-        <div class="row between"><div class="row"><h3 class="h4">Progress photos</h3><span class="private">🔒 Private</span></div><button class="link mono" data-act="toast" data-msg="Add this week’s photo in the DEW app">Add this week +</button></div>
+        <div class="row between"><div class="row"><h3 class="h4">Progress photos</h3><span class="private">🔒 Private</span></div><button class="link mono" data-act="toast" data-msg="Add this week’s photo in the Dew app">Add this week +</button></div>
         <p class="xs muted">Only you can see these. Pick any photo to attach it to a review, or keep them all private.</p>
         <div class="grid-3" style="grid-template-columns:repeat(6,1fr);gap:8px">${['w0', 'w1', 'w2', 'w3', 'w4', 'w5'].map((p, i) => `<div class="photo"><img src="assets/img/progress/${p}.jpg" alt="Week ${i + 1}"><span class="mono">Wk ${i + 1}</span></div>`).join('')}</div>
       </section>
@@ -1244,7 +1244,7 @@ function profilePage() {
 const RV_SORTS = [['newest', 'Newest'], ['helpful', 'Most helpful'], ['highest', 'Highest rated'], ['lowest', 'Lowest rated']];
 const RV_RATINGS = [['', 'Any rating'], ['5', '5 stars'], ['4', '4 stars'], ['low', '3 stars or less']];
 
-// Every review DEW has collected, newest first, searchable and filterable by product.
+// Every review Dew has collected, newest first, searchable and filterable by product.
 function reviewsPage() {
   const f = { q: '', product: '', skin: '', rating: '', sort: 'newest', limit: 20, ...state.rv };
   const p = new URLSearchParams({ limit: String(f.limit), sort: f.sort });
@@ -1317,7 +1317,7 @@ function welcomePage() {
         <div class="stack" style="gap:18px;max-width:560px">
           <span class="mono forest">Your personal skincare companion</span>
           <h1 class="display">Skincare picked by people like you.</h1>
-          <p class="lead">DEW matches you with people who share your skin, climate and goals, then picks, samples and tracks a routine that works for you.</p>
+          <p class="lead">Dew matches you with people who share your skin, climate and goals, then picks, samples and tracks a routine that works for you.</p>
           <div class="row wrap" style="gap:10px"><a class="btn dark" href="#/signup">Create free account</a><a class="btn" href="#/login">Log in</a></div>
           <a class="xs" href="#/search" data-act="search" data-q="">Or browse products and reviews without an account →</a>
         </div>
@@ -1330,7 +1330,7 @@ function welcomePage() {
         <div><span class="stat">5</span><span class="xs muted">skin types to filter by</span></div>
       </section>` : ''}
       <section class="stack" style="gap:14px">
-        <h2 class="h2">How DEW works</h2>
+        <h2 class="h2">How Dew works</h2>
         <div class="grid-3">${steps.map(([n, t, d]) => `<div class="card stack"><span class="step-n">${n}</span><h3 class="h4">${t}</h3><p class="small muted">${d}</p></div>`).join('')}</div>
       </section>
       <section class="stack" style="gap:14px">
@@ -1346,7 +1346,7 @@ function welcomePage() {
         <p style="color:#cbdbea">Free to join. Your profile takes about three minutes.</p>
         <a class="btn lime" href="#/signup">Create free account</a>
       </section>
-      <footer class="xs muted row between wrap" style="padding:8px 0 24px"><span>© 2026 DEW</span><span>Reviews are collected from brand websites and belong to their authors.</span></footer>
+      <footer class="xs muted row between wrap" style="padding:8px 0 24px"><span>© 2026 Dew</span><span>Reviews are collected from brand websites and belong to their authors.</span></footer>
     </div>`;
   return { layout: 'layout-solo', main };
 }
@@ -1357,7 +1357,7 @@ function authCard({ title, sub, form, foot }) {
     main: `
       <div class="auth-wrap">
         <section class="auth-card stack">
-          <img src="assets/svg/logo.svg" alt="DEW" style="width:84px">
+          <img src="assets/svg/logo.svg" alt="Dew" style="width:84px">
           <div class="stack" style="gap:6px"><h1 class="h2">${title}</h1><p class="small muted">${sub}</p></div>
           ${state.authError ? `<div class="auth-error" role="alert">${esc(state.authError)}</div>` : ''}
           ${state.authNotice ? `<div class="auth-notice" role="status">${esc(state.authNotice)}</div>` : ''}
@@ -1365,7 +1365,7 @@ function authCard({ title, sub, form, foot }) {
           <p class="small muted" style="text-align:center">${foot}</p>
         </section>
         <aside class="auth-side stack">
-          <span class="mono lime">Why DEW</span>
+          <span class="mono lime">Why <span class="nc">Dew</span></span>
           <p class="h3" style="color:#fff;font-weight:400">“Redness around my nose was gone by week 2.”</p>
           <p class="xs" style="color:#cbdbea">Find the products that worked for people with your skin type, climate and goals.</p>
           ${statsLine() ? `<span class="xs" style="color:#cbdbea">${statsLine()}</span>` : ''}
@@ -1401,7 +1401,7 @@ function loginPage() {
       <button class="btn dark block" ${state.authBusy ? 'disabled' : ''}>${state.authBusy ? 'Logging in…' : 'Log in'}</button>
       <button type="button" class="link" data-act="reset-password" style="align-self:center">Forgot your password?</button>
     </form>`,
-    foot: 'New to DEW? <a href="#/signup">Create an account</a>',
+    foot: 'New to Dew? <a href="#/signup">Create an account</a>',
   });
 }
 
@@ -1462,7 +1462,7 @@ function productPage(id) {
           <a class="btn sm" href="${esc(s.url)}" target="_blank" rel="noopener">View ↗</a>
         </div>`;
     }).join('') || (live?.catalog_only
-      ? `<div class="pick"><div class="grow"><div style="font-size:15px">Sold at ${esc(live.sold_at)}</div><div class="xs muted">From DEW’s product catalog. We don’t collect reviews for this product yet.</div></div>${live.product_url ? `<a class="btn sm" href="${esc(live.product_url)}" target="_blank" rel="noopener">View ↗</a>` : ''}</div>`
+      ? `<div class="pick"><div class="grow"><div style="font-size:15px">Sold at ${esc(live.sold_at)}</div><div class="xs muted">From Dew’s product catalog. We don’t collect reviews for this product yet.</div></div>${live.product_url ? `<a class="btn sm" href="${esc(live.product_url)}" target="_blank" rel="noopener">View ↗</a>` : ''}</div>`
       : `<p class="xs muted">${products.status === 'loading' ? 'Loading…' : 'We don’t track any review pages for this product yet.'}</p>`);
 
   const reviewList = revs.status === 'loading'
@@ -1499,7 +1499,7 @@ function productPage(id) {
       ${noSkinData ? `<p class="xs muted">These reviewers didn’t share their skin type, so you’re seeing all reviews.</p>` : ''}
       ${live?.catalog_only && !total ? '<div class="empty">No reviews collected for this product yet.</div>' : reviewList}
       ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
-      ${statsLine() ? `<p class="xs faint live-count">DEW has collected ${statsLine()} so far.</p>` : ''}
+      ${statsLine() ? `<p class="xs faint live-count">Dew has collected ${statsLine()} so far.</p>` : ''}
     </section>`;
   return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
 }
@@ -1518,7 +1518,7 @@ function searchPage() {
   const list = q === 'new' ? LAUNCHES.map((l) => [l.id, P(l.id)]) : hits;
   const main = `
     <h1 class="h2">${q && q !== 'new' ? `Results for “${esc(state.lastSearch)}”` : q === 'new' ? 'New launches' : 'All products'}</h1>
-    <p class="xs muted">${q && q !== 'new' && total > list.length ? `Showing ${list.length} of ${total.toLocaleString()} products` : `${list.length} products`}. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in DEW so far` : ''}</p>
+    <p class="xs muted">${q && q !== 'new' && total > list.length ? `Showing ${list.length} of ${total.toLocaleString()} products` : `${list.length} products`}. Tap + to add to your cart.${statsLine() ? `  ·  ${statsLine()} in Dew so far` : ''}</p>
     <section class="card">${list.map(([id, p], i) => `
       <div class="pick"><span class="rank" style="font-size:14px">${i + 1}</span>${thumb(id, 48, 52)}<div class="grow"><div class="mono">${esc(p.brand)}</div><div>${productLink(id, esc(p.name))}</div><div class="xs muted">${[p.step && `${p.step} step`, p.size].filter(Boolean).join('  ')}</div>${liveRating(id)}</div><span class="small">${p.price ? money(p.price) : ''}</span>
         ${signedOut() ? '' : `<button class="btn sm" data-act="shelf-add" data-id="${id}">${shelfIds().includes(id) ? 'On shelf ✓' : '+ Shelf'}</button>`}
@@ -1597,7 +1597,7 @@ function render() {
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;
-  document.title = `DEW  ${({ 'for-you': 'Explore', creators: 'Creators', community: 'Community', picked: 'Picked for you' })[v.tab] || 'Skincare picked by people like you'}`;
+  document.title = `Dew  ${({ 'for-you': 'Explore', creators: 'Creators', community: 'Community', picked: 'Picked for you' })[v.tab] || 'Skincare picked by people like you'}`;
 }
 
 /* ================= events ================= */
@@ -1693,7 +1693,7 @@ const actions = {
   checkout: () => {
     const t = totals();
     const earned = Math.round(t.total);
-    const order = { no: `DEW-${20480 + state.orders.length + 1}`, items: state.cart.map((c) => ({ id: c.id, qty: c.qty })), total: t.total, earned };
+    const order = { no: `Dew-${20480 + state.orders.length + 1}`, items: state.cart.map((c) => ({ id: c.id, qty: c.qty })), total: t.total, earned };
     set({ orders: [...state.orders, order], cart: [], added: {}, points: state.points - t.ptsUsed + earned });
     go('order-placed');
   },
@@ -1820,7 +1820,7 @@ document.addEventListener('input', (e) => {
   if (e.target.matches('[data-suggest]')) suggestFor(e.target);
 });
 
-/* Product search dropdown for the top search bar and the shelf step. DEW's own list instead of
+/* Product search dropdown for the top search bar and the shelf step. Dew's own list instead of
    the browser's suggestion list, which only shows a product when the typed text appears in it
    word for word ("body shop satsuma" hid "Body Shop · Satsuma Hand Cream"). Every typed word
    just has to appear somewhere in the brand or name, and the whole 18k-product catalog is searched.
@@ -1837,7 +1837,7 @@ async function catalogMatches(q) {
   if (!words.length) return [];
   const r = await fetch(`/api/products?q=${encodeURIComponent(words.join(' '))}`);
   const api = r.ok ? remember(await r.json()).map((p) => p.id) : [];
-  // DEW's own sample products first, then the catalog in its ranked order.
+  // Dew's own sample products first, then the catalog in its ranked order.
   const local = Object.keys(PRODUCTS).filter((id) => matchesWords(`${P(id).brand} ${P(id).name}`, words));
   return [...new Set([...local, ...api])];
 }

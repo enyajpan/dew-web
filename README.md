@@ -311,6 +311,14 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: the name is "Dew", not "DEW"**
+
+- Every typed "DEW" on the site now reads "Dew": page title and description, welcome page, checkout copy, order and sample box numbers (#Dew-20481), the Ask Dew system prompt and code comments.
+- All-caps labels and buttons (Geist Mono) would still render the name as "DEW", so the name sits in a `.nc` span that keeps its normal case, e.g. "TRACKED PROGRESS: 4 CHECK-INS VIA Dew TRACKER".
+- The box front label (`assets/svg/box-front.svg`) was re-exported from Figma as "Dew 4-STEP BOX".
+- Figma: 107 text layers, 45 layer and component names (e.g. "Logo / Dew / Dark") and the variable collections (Dew Brand, Dew Radius) were renamed. Three "THE DEW PHILOSOPHY" labels on the Hi-fi v1 moodboard use a trial font that isn't installed, so Figma can't edit them.
+- The logo artwork itself still spells the wordmark in capitals; redrawing it is a separate decision.
+
 **November 9, 2026: Ask Dew on every page, in light blue**
 
 - Ask Dew is now pinned to the bottom right of every page: cart, checkout, setup, check-in, product, sample and the signed-out welcome, log in and sign up pages, as well as the pages that already had it. Before, only pages that opted in showed it. Signed-out visitors get the built-in sample answers, as before.

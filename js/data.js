@@ -1,4 +1,4 @@
-// Static content for the DEW prototype. Prices, scores and counts are placeholders.
+// Static content for the Dew prototype. Prices, scores and counts are placeholders.
 
 const IMG = (k) => `assets/img/products/${k}.png`;
 const PERSON = (k) => `assets/img/people/${k}.jpg`;
