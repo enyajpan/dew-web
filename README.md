@@ -311,6 +311,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: updated character colors**
+- The Cleanse, Treat and Protect characters now match the main components in Figma (Brand guidelines page): Cleanse is pale blue (#CBDBEA), Treat is lime (#CBE942) and Protect is a warmer peach (#F9D28B). Shapes are unchanged.
+- Character image URLs carry a version (`?v=2`) so browsers load the new art instead of a cached copy.
+
 **November 9, 2026: four corner radius sizes**
 - Corner rounding now uses four CSS variables that match the DEW Radius tokens in Figma: `--radius-sm` 8 px (buttons, inputs, tags, small thumbnails), `--radius-md` 16 px (cards, toasts, panels, photo tiles), `--radius-lg` 24 px (hero banners, modals, large panels) and `--radius-full` (chips, pills, avatars, bars). `--radius` stays as an alias for `--radius-md`.
 - Every radius in css/app.css and the inline styles in js/app.js now uses one of these four. The 13 one-off values are gone: 4, 6, 9 and 10 px became 8; 12 and 14 px became 16; 20 px became 24; thin bars and the 999 px pills became full.

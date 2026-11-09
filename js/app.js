@@ -105,7 +105,9 @@ const ring = (s, sm) => `<span class="ring ${sm ? 'sm ' : ''}${band(+s)}">${(+s)
 const pctBand = (p) => band(p / 10);
 const match = (p) => `<span class="pill match ${pctBand(p)}">${p}% similar</span>`;
 const thumb = (id, w = 48, h = 56) => `<span class="thumb" style="width:${w}px;height:${h}px"><img src="${P(id).img}" alt="${esc(P(id).name)}"></span>`;
-const svg = (name, w) => `<img src="assets/svg/${name}.svg" alt="" style="width:${w}px">`;
+// ?v= busts browser caches when the character art changes in Figma.
+const SVG_V = 2;
+const svg = (name, w) => `<img src="assets/svg/${name}.svg?v=${SVG_V}" alt="" style="width:${w}px">`;
 const starsTxt = (n) => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
 // The sample shelf is only for the demo; a new account's shelf starts empty.
 const baseShelf = () => (state.shelfDemo === false ? [] : SHELF);
