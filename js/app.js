@@ -106,7 +106,7 @@ const pctBand = (p) => band(p / 10);
 const match = (p) => `<span class="pill match ${pctBand(p)}">${p}% similar</span>`;
 const thumb = (id, w = 48, h = 56) => `<span class="thumb" style="width:${w}px;height:${h}px"><img src="${P(id).img}" alt="${esc(P(id).name)}"></span>`;
 // ?v= busts browser caches when the character art changes in Figma.
-const SVG_V = 2;
+const SVG_V = 3;
 const svg = (name, w) => `<img src="assets/svg/${name}.svg?v=${SVG_V}" alt="" style="width:${w}px">`;
 const starsTxt = (n) => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
 // The sample shelf is only for the demo; a new account's shelf starts empty.
@@ -829,6 +829,39 @@ function modeToggle() {
 const routineIds = () => ROUTINE.map((r) => r.options[state.routinePick[r.step]]);
 const routineTotal = () => ROUTINE.reduce((a, r) => a + (r.owned && r.options[state.routinePick[r.step]] === r.owned ? 0 : P(r.options[state.routinePick[r.step]]).price), 0);
 
+// "Box reveal (animated)" from Figma Hi-fi v7 (186:9796): the box sits closed, shakes three times,
+// the lid flaps swing open and your four routine products pop out with the characters.
+// playBoxReveal() steps data-s from 1 to 6 with the prototype's timings.
+function boxReveal() {
+  const ids = routineIds();
+  return `
+    <div class="picked-box" role="img" aria-label="Your DEW 4-step box opening">
+      <div class="rbox" data-s="1"><div class="rbox-in">
+        <i class="rb-flap l"></i><i class="rb-flap r"></i><i class="rb-band"></i>
+        ${ids.map((id, i) => `<img class="rb-p p${i}" src="${P(id).img}" alt="">`).join('')}
+        <img class="rb-front" src="assets/svg/box-front.svg?v=${SVG_V}" alt="">
+        <img class="rb-c treat" src="assets/svg/treat.svg?v=${SVG_V}" alt="">
+        <img class="rb-c star" src="assets/svg/star.svg?v=${SVG_V}" alt="">
+        <img class="rb-c hydrate" src="assets/svg/hydrate.svg?v=${SVG_V}" alt="">
+      </div></div>
+    </div>`;
+}
+
+let boxTimers = [];
+function playBoxReveal(fresh) {
+  boxTimers.forEach(clearTimeout); boxTimers = [];
+  const box = document.querySelector('.rbox');
+  if (!box) return;
+  const still = !fresh || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) { box.classList.add('no-anim'); box.dataset.s = '6'; return; }
+  // [step, wait before it starts (ms)]: 0.8s hold, three 0.12s shakes, lid 0.25s, pop 0.45s
+  let t = 0;
+  [[2, 800], [3, 130], [4, 130], [5, 130], [6, 300]].forEach(([n, wait]) => {
+    t += wait;
+    boxTimers.push(setTimeout(() => { box.dataset.s = String(n); }, t));
+  });
+}
+
 function pickedPage() {
   const sample = state.pickedMode === 'sample';
   const hero = `
@@ -838,7 +871,7 @@ function pickedPage() {
         <p class="picked-sub">${sample ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'One product per step. You already have a great sunscreen, so we kept it and only filled the gaps.'}</p>
         <div class="row wrap" style="gap:6px;margin-top:6px">${profileTags().map((t) => `<span class="tag">${t}</span>`).join('')}</div>
       </div>
-      <img class="picked-box" src="assets/svg/routine-box.svg?v=${SVG_V}" alt="">
+      ${boxReveal()}
     </section>`;
   if (sample) return { layout: 'layout-wide', left: leftCol(), main: hero + modeToggle() + sampleBuilder() };
   const f = state.pickFilters ?? { budget: '$30–$60', keep: true, fragrance: false, vegan: false };
@@ -1558,6 +1591,7 @@ function render() {
   if (v.right) cols.push(`<aside class="col rail" aria-label="Side panel">${v.right}</aside>`);
   app.innerHTML = cols.join('');
   [...app.querySelectorAll('.col')].forEach((c, i) => { if (scrolls[i]) c.scrollTop = scrolls[i]; });
+  playBoxReveal(lastRoute !== r);
   document.getElementById('overlay').innerHTML = `${v.ask ? askDew() : ''}${rewardModal()}`;
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
