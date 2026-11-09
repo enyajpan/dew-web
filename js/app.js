@@ -621,7 +621,7 @@ function setupPage(n) {
       </section>`;
   const back = n > 1 ? `<a class="btn" href="#/setup/${n - 1}">← Back</a>` : '<a class="btn" href="#/for-you">Skip for now</a>';
   const next = n < 4 ? `<button class="btn primary" data-act="setup-next" data-n="${n}">Continue to ${SETUP[n].name.toLowerCase()} →</button>` : '<button class="btn dark" data-act="setup-next" data-n="4">Finish my profile →</button>';
-  const main = `${bar}<span class="mono" style="margin-top:12px">Step ${n} of 4</span><h1 class="h1">${s.title}</h1><p class="muted">${s.sub}</p>${body}<div class="row between">${back}${next}</div>`;
+  const main = `${bar}<span class="mono" style="margin-top:12px">Step ${n} of 4</span><h1 class="h1">${s.title}</h1><p class="muted">${s.sub}</p>${body}<div class="row between setup-nav">${back}${next}</div>`;
   return { layout: 'layout-focus', main, right: strengthCard() };
 }
 

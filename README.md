@@ -311,6 +311,9 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 8, 2026: setup buttons fit on phones**
+- On screens 600px wide or narrower, the setup steps' Continue button wraps its label onto two lines instead of running off the screen, and the Back/Skip button matches its height.
+
 **November 8, 2026: colons in climate chips**
 - The location step's climate chips use a colon instead of a semicolon ("Humid: 74% humidity", "High UV: UV 7.4").
 

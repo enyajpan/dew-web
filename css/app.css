@@ -422,3 +422,10 @@ h1, h2, h3, p { margin: 0; }
 .unlock-row { gap: 6px; flex-wrap: nowrap; align-items: baseline; }
 .unlock-row > span { white-space: nowrap; flex: none; }
 .unlock-row > span:last-child { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Setup Back/Skip and Continue: on phones the long Continue label wraps inside its button instead of running off screen. */
+@media (max-width: 600px) {
+  .setup-nav { align-items: stretch; }
+  .setup-nav .btn { flex: none; height: auto; min-height: 34px; }
+  .setup-nav .btn:last-child { flex: 1 1 0; min-width: 0; height: auto; min-height: 34px; padding: 8px 12px; white-space: normal; text-align: center; line-height: 1.35; }
+}
