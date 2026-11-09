@@ -306,7 +306,7 @@ function finishProfileCard() {
       <span class="mono lime">Skin profile: ${state.setupStep} of 4 done</span>
       <h3 class="h2" style="font-size:26px">Finish your profile to unlock Picked for you</h3>
       <div class="meter"><span style="width:${strength()}%"></span></div>
-      ${left.map(([n, l, t]) => `<a class="row" href="#/setup/${n}" style="text-decoration:none;padding:8px 12px;border-radius:10px;background:rgb(255 255 255 / 8%)"><span class="grow small">${n}: ${l}</span><span class="xs" style="color:#c8dcc9">${t}</span></a>`).join('')}
+      ${left.map(([n, l, t]) => `<a class="row" href="#/setup/${n}" style="text-decoration:none;padding:8px 12px;border-radius:var(--radius-sm);background:rgb(255 255 255 / 8%)"><span class="grow small">${n}: ${l}</span><span class="xs" style="color:#c8dcc9">${t}</span></a>`).join('')}
       <p class="xs" style="color:#c8dcc9">Each step sharpens your picks. Finish both: +150 pts and picks matched on all 4 steps.</p>
       <a class="btn primary" href="#/setup/${state.setupStep + 1}" style="align-self:flex-start">Finish my profile →</a>
     </section>`;
@@ -319,7 +319,7 @@ function downloadApp() {
       <span class="mono lime">Track on the go</span>
       <h3 class="h3" style="font-size:24px">Log your progress in the DEW app</h3>
       <p class="small" style="color:#c8dcc9">Take your weekly progress photo with the same framing every time, tick off your AM and PM routine, and get refill nudges. Everything syncs back here.</p>
-      <a class="row" href="#/profile" data-act="toast" data-msg="The DEW iOS app is coming soon" style="align-self:flex-start;gap:8px;padding:8px 16px 8px 12px;background:#000;border:1px solid #a6a6a6;border-radius:9px;text-decoration:none;color:#fff">
+      <a class="row" href="#/profile" data-act="toast" data-msg="The DEW iOS app is coming soon" style="align-self:flex-start;gap:8px;padding:8px 16px 8px 12px;background:#000;border:1px solid #a6a6a6;border-radius:var(--radius-sm);text-decoration:none;color:#fff">
         <svg width="18" height="22" viewBox="0 0 814 1000"><path fill="#fff" d="M788 340c-6 4-110 63-110 193 0 151 132 204 136 206-1 3-21 73-70 145-44 63-90 126-160 126s-88-41-169-41c-79 0-107 42-171 42s-109-58-160-130C25 797 0 677 0 563c0-183 119-280 236-280 62 0 114 41 153 41 37 0 95-43 166-43 27 0 124 2 188 99zM549 154c30-35 51-84 51-133 0-7-1-14-2-19-48 2-105 32-140 72-27 31-53 80-53 130 0 8 1 15 2 18 3 1 9 1 14 1 43 0 97-29 128-69z"/></svg>
         <span><span style="display:block;font-size:9px">Download on the</span><span style="font-size:17px;font-weight:500;line-height:1">App Store</span></span>
       </a>
@@ -559,7 +559,7 @@ function strengthCard() {
       <div class="row" style="align-items:baseline"><span style="font-size:64px;line-height:1">${strength()}%</span><span class="mono lime">→ 100%</span></div>
       <div class="meter"><span style="width:${strength()}%"></span></div>
       <p class="xs" style="color:#d9e6d6">Picks are ${strength()}% personalized right now. Finish all 4 steps for picks built only from people like you.</p>
-      <div class="stack" style="gap:8px;padding:12px;border-radius:12px;background:rgb(255 255 255 / 8%)">
+      <div class="stack" style="gap:8px;padding:12px;border-radius:var(--radius-md);background:rgb(255 255 255 / 8%)">
         <span class="mono lime">Finish to unlock</span>
         ${rows.map(([a, b]) => `<div class="row xs unlock-row"><span style="color:var(--lime)">✦</span><span style="font-weight:500">${a}</span><span style="color:#d9e6d6">${b}</span></div>`).join('')}
         <p class="xs" style="color:#d9e6d6">What are points for? 500 pts takes $5 off, and 1,500 pts unlocks a free sample box of your top 3 picks.</p>
@@ -578,7 +578,7 @@ function locationField(label) {
       <div class="row wrap" style="gap:6px"><span class="chip on">${esc(c.humidity.label)}: ${c.humidity.value}% humidity</span><span class="chip on">${esc(c.uv.label)}: UV ${c.uv.value}</span></div>
       <span class="xs muted">Averages for ${esc(c.place)} over the last 30 days.</span>` : '';
   return `<div class="stack" style="gap:8px"><span class="field-label">${label}</span>
-      <form class="row" data-form="location"><input name="q" class="grow" value="${esc(typed)}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Type your city, e.g. Austin, TX" autocomplete="address-level2"><button class="btn dark">${c ? 'Update' : 'Find'}</button></form>
+      <form class="row" data-form="location"><input name="q" class="grow" value="${esc(typed)}" style="height:38px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:0 12px;font:inherit" placeholder="Type your city, e.g. Austin, TX" autocomplete="address-level2"><button class="btn dark">${c ? 'Update' : 'Find'}</button></form>
       ${look.busy ? '<span class="xs muted">Checking humidity and UV…</span>' : look.error ? `<span class="xs" style="color:#b3261e">${esc(look.error)}</span>` : chips}</div>`;
 }
 
@@ -614,7 +614,7 @@ function setupPage(n) {
       </section>`).join('') : `
       <section class="card stack">
         <div class="row">${svg('cleanse', 24)}<h3 class="h4" style="font-size:16px">What’s on your shelf right now?</h3></div>
-        <form class="shelf-search" data-form="shelf-add"><div class="row"><input name="q" data-suggest="shelf" class="grow" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button class="btn dark">Add</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
+        <form class="shelf-search" data-form="shelf-add"><div class="row"><input name="q" data-suggest="shelf" class="grow" style="height:38px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:0 12px;font:inherit" placeholder="Start typing a brand or product, e.g. “Heartleaf”" autocomplete="off" role="combobox" aria-controls="shelf-suggest" aria-expanded="false"><button class="btn dark">Add</button></div><div class="suggest-box" id="shelf-suggest" role="listbox"></div></form>
         <div class="row"><button class="btn" data-act="toast" data-msg="Scanning works in the DEW app">Scan barcode</button></div>
         <p class="xs muted">${shelfIds().length ? `${shelfIds().length} product${shelfIds().length === 1 ? '' : 's'} on your shelf.` : 'Your shelf is empty. Add the products you use now.'}</p>
         ${shelfIds().length ? shelfRows(shelfIds().map((id) => ({ id })), { selectable: false }) : ''}
@@ -1070,7 +1070,7 @@ function checkinPage() {
       <p class="xs muted">Only asked when a product reaches its typical results week. This is the first thing people like you see on your review.</p>
       <div class="grid-2">${[['buy', '✓ Buy', 'It worked for me and I’d repurchase'], ['skip', '✕ Don’t buy', 'Didn’t work, or not worth it']].map(([k, a, b]) => `<button class="card stack" data-act="ci-verdict" data-v="${k}" style="text-align:left;${c.verdict === k ? 'background:var(--forest);color:#fff;border-color:var(--forest)' : ''}"><span style="font-size:28px">${a}</span><span class="xs" style="opacity:.8">${b}</span></button>`).join('')}</div>
       <div class="row"><span class="mono">Your score</span><span class="buybar grow" style="height:6px"><span style="width:91%"></span></span><span style="font-size:22px">9.1</span><span class="tag">Re-ranks to #2 of 11</span></div>
-      <textarea data-input="ci-note" placeholder="Add a note for people like you (optional)…" style="min-height:70px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;resize:vertical">${esc(c.note)}</textarea>
+      <textarea data-input="ci-note" placeholder="Add a note for people like you (optional)…" style="min-height:70px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;font:inherit;resize:vertical">${esc(c.note)}</textarea>
     </section>
     <div class="row between"><button class="btn" data-act="toast" data-msg="Draft saved">Save draft</button><button class="btn dark" data-act="ci-submit" ${c.submitted ? 'disabled' : ''}>${c.submitted ? 'Submitted ✓' : 'Submit check-in  +60 pts'}</button></div>`;
   const right = `
@@ -1086,7 +1086,7 @@ function trackerRail() {
   return `
     <h2 class="h3">Your tracker</h2>
     <section class="card stack"><div class="row">${svg('flame', 44)}<span style="font-size:48px;line-height:1">${state.streak}</span></div><span class="mono">Day streak</span>
-      <div class="row" style="gap:6px">${'MTWTFSS'.split('').map((d, i) => `<span class="stack" style="align-items:center;gap:3px"><i style="width:14px;height:14px;border-radius:99px;display:block;background:${i < 6 ? 'var(--olive)' : 'var(--fill-muted)'}"></i><span class="mono">${d}</span></span>`).join('')}</div></section>
+      <div class="row" style="gap:6px">${'MTWTFSS'.split('').map((d, i) => `<span class="stack" style="align-items:center;gap:3px"><i style="width:14px;height:14px;border-radius:var(--radius-full);display:block;background:${i < 6 ? 'var(--olive)' : 'var(--fill-muted)'}"></i><span class="mono">${d}</span></span>`).join('')}</div></section>
     <section class="card stack">
       <div class="row">${svg('star', 26)}<span style="font-size:26px">${toGo ? `${toGo} pts to go` : 'Unlocked!'}</span></div>
       <span class="mono">${Math.min(state.points, REWARD_PTS).toLocaleString()} of 1,500 pts</span>

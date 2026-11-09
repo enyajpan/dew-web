@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: four corner radius sizes**
+- Corner rounding now uses four CSS variables that match the DEW Radius tokens in Figma: `--radius-sm` 8 px (buttons, inputs, tags, small thumbnails), `--radius-md` 16 px (cards, toasts, panels, photo tiles), `--radius-lg` 24 px (hero banners, modals, large panels) and `--radius-full` (chips, pills, avatars, bars). `--radius` stays as an alias for `--radius-md`.
+- Every radius in css/app.css and the inline styles in js/app.js now uses one of these four. The 13 one-off values are gone: 4, 6, 9 and 10 px became 8; 12 and 14 px became 16; 20 px became 24; thin bars and the 999 px pills became full.
+- Visible changes are small: buttons and tags are a little rounder, cards and toasts a little rounder, hero banners slightly rounder.
+
 **November 9, 2026: top search bar gets the same dropdown**
 - The search bar at the top of every page now uses the shelf step's word-by-word dropdown instead of the browser's suggestion list: words in any order, across the whole catalog, with a photo, brand and name for each match.
 - Clicking a match (or arrow keys + Enter) opens that product's page. "See all results" at the bottom, or Enter with nothing highlighted, opens the full search page as before.
