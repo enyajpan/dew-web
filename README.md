@@ -311,6 +311,9 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 8, 2026: tidier Profile strength panel**
+- In the setup sidebar's Finish to unlock list, each perk stays on one line, matching Figma. The character icons at the bottom of the panel are gone.
+
 **November 8, 2026: Hydration question**
 - "Drinks 2L+ water" moved out of Diet into a new Hydration question below it in Your day-to-day (Under 1L a day, 1–2L a day, Drinks 2L+ water; pick one). Profiles that had it under Diet are moved over automatically.
 

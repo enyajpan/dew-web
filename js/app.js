@@ -560,10 +560,9 @@ function strengthCard() {
       <p class="xs" style="color:#d9e6d6">Picks are ${strength()}% personalized right now. Finish all 4 steps for picks built only from people like you.</p>
       <div class="stack" style="gap:8px;padding:12px;border-radius:12px;background:rgb(255 255 255 / 8%)">
         <span class="mono lime">Finish to unlock</span>
-        ${rows.map(([a, b]) => `<div class="row xs" style="gap:6px"><span style="color:var(--lime)">✦</span><span style="font-weight:500">${a}</span><span style="color:#d9e6d6">${b}</span></div>`).join('')}
+        ${rows.map(([a, b]) => `<div class="row xs unlock-row"><span style="color:var(--lime)">✦</span><span style="font-weight:500">${a}</span><span style="color:#d9e6d6">${b}</span></div>`).join('')}
         <p class="xs" style="color:#d9e6d6">What are points for? 500 pts takes $5 off, and 1,500 pts unlocks a free sample box of your top 3 picks.</p>
       </div>
-      <div class="row">${svg('hydrate', 24)}${svg('treat', 24)}${svg('protect', 24)}</div>
     </section>`;
 }
 

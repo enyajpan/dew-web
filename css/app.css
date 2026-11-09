@@ -417,3 +417,8 @@ h1, h2, h3, p { margin: 0; }
 .plank-row img { max-width: 56px; max-height: 88px; object-fit: contain; flex: none; }
 .chip img, .card img:not(.avatar):not(.logo) { max-width: 100%; }
 .creator-card .mini .plank-row img { flex: 0 1 40px; min-width: 0; width: auto; }
+
+/* Profile strength "Finish to unlock": each perk on one line, like the Figma. */
+.unlock-row { gap: 6px; flex-wrap: nowrap; align-items: baseline; }
+.unlock-row > span { white-space: nowrap; flex: none; }
+.unlock-row > span:last-child { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
