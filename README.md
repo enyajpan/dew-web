@@ -317,7 +317,7 @@ Newest first. Every major change gets an entry here.
 - The creator page has an All products / All reviews toggle. All reviews lists every review the creator has posted, with search, a product filter, a rating filter, sort and "Show more".
 - My profile: the "My rankings" tab is now your own page in edit mode (blurb, background, announcement, top recommendations with "Edit note", your shelf with "Add product"). "View as public →" opens `#/profile/public`, which shows your page the way other members see it.
 - The Anua Niacinamide 5 TXA Brightening Pad is now Mia's top product (9.5, was 9.1) and her holy grail, so it leads her recommendations, rankings and reviews. Saved demo data is moved to 9.5 too.
-- Cache versions bumped: `js/app.js?v=36`, `data.js?v=8`, `css/app.css?v=29`.
+- Cache versions bumped: `js/app.js?v=37`, `data.js?v=8`, `css/app.css?v=29`.
 
 **November 9, 2026: 10 more creators**
 

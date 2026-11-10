@@ -913,7 +913,7 @@ function pageSide(m, { back, actions, note }) {
       ${m.match ? `<div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${m.match}% like you</span><p class="xs" style="margin-top:6px">${esc(m.matchNote)}</p></div>` : (m.sideNote ?? '')}
       <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h2">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
-      <div class="row">${actions}</div>
+      <div class="row wrap" style="gap:8px">${actions}</div>
       <div class="notice xs">${note}</div>
     </section>`;
 }
