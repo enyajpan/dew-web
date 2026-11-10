@@ -311,6 +311,14 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 10, 2026: Hi-fi v7 creator page and my page**
+
+- "View full shelf" now opens the v7 creator page: a themed blurb and announcement from the creator, a holy grail banner, top 5 recommendations with a "Best for" chip and a note on each, one shelf with every product in two rows (tap a product to see its rank, score, how long they've used it and reviews inline), and "You share X of their products".
+- The creator page has an All products / All reviews toggle. All reviews lists every review the creator has posted, with search, a product filter, a rating filter, sort and "Show more".
+- My profile: the "My rankings" tab is now your own page in edit mode (blurb, background, announcement, top recommendations with "Edit note", your shelf with "Add product"). "View as public →" opens `#/profile/public`, which shows your page the way other members see it.
+- The Anua Niacinamide 5 TXA Brightening Pad is now Mia's top product (9.5, was 9.1) and her holy grail, so it leads her recommendations, rankings and reviews. Saved demo data is moved to 9.5 too.
+- Cache versions bumped: `js/app.js?v=36`, `data.js?v=8`, `css/app.css?v=29`.
+
 **November 9, 2026: 10 more creators**
 
 - Creators like you now lists 16 creators instead of 6. The 10 new ones (Maya, Jun, Sofia, Dev, Hana, Amara, Elena, Kai, Priyanka, Zoe) cover more skin types and climates, including dry, sensitive, eczema-prone and redness-prone skin.

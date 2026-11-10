@@ -1,7 +1,7 @@
 import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
-} from './data.js?v=7';
+} from './data.js?v=8';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
 import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
@@ -50,6 +50,8 @@ const defaultState = () => ({
 let state = load();
 // "Drinks 2L+ water" used to be a Diet option; it now lives under Hydration.
 function migrate(s) {
+  // Hi-fi v7 #128: the Anua TXA pad is now Mia's top product (was 9.1).
+  if (s.ratings?.anua_txa === 9.1) s = { ...s, ratings: { ...s.ratings, anua_txa: 9.5 } };
   const diet = s.answers?.diet;
   if (!diet?.includes('Drinks 2L+ water')) return s;
   return { ...s, answers: { ...s.answers, diet: diet.filter((d) => d !== 'Drinks 2L+ water'), hydration: s.answers.hydration?.length ? s.answers.hydration : ['Drinks 2L+ water'] } };
@@ -735,43 +737,263 @@ function rankCard(title, ids, scores, holy) {
     <div class="row"><span style="font-size:18px;color:var(--ink-3);width:12px">${i + 1}</span>${thumb(id, 32, 38)}<div class="grow">${holy === id ? '<div class="mono forest">★ Holy grail</div>' : ''}<div class="mono">${esc(P(id).brand)}</div><div class="small">${esc(P(id).name)}</div></div>${ring(scores[id] ?? 8, true)}</div>`).join('')}</div>`;
 }
 
+// ---- creator pages (Hi-fi v7 05 + 05b), also used for your own public page (08c) ----
+
+const PAGE_THEMES = {
+  blush: 'linear-gradient(110deg, #fbe0e5 0%, #fdeee4 55%, #fdf3df 100%)',
+  sky: 'linear-gradient(110deg, #e6f1fa 0%, #e9f3f0 55%, #f0f5df 100%)',
+  lime: 'linear-gradient(110deg, #eef7cf 0%, #f4f8e6 100%)',
+  sand: 'linear-gradient(110deg, #f6eee2 0%, #f8f3ea 100%)',
+  white: '#ffffff',
+};
+const BEST_FOR_STEP = { Cleanse: 'Best for gentle cleansing', Tone: 'Best for prep', Treat: 'Best for targeted care', Moisturize: 'Best for hydration', Protect: 'Best for daily SPF', Eye: 'Best for eyes', Mask: 'Best for a reset', Lip: 'Best for lips' };
+const bestForStep = (id) => BEST_FOR_STEP[String(P(id).step).split(' ')[0]] ?? 'Best for everyday';
+const AGO = ['2 weeks ago', '3 weeks ago', '1 month ago', '5 weeks ago', '6 weeks ago', '2 months ago', '3 months ago'];
+const SOURCES = ['TikTok', 'Sephora', 'YouTube', 'Instagram'];
+
+// One shape for every creator, filled in from whatever their data has.
+function creatorModel(c) {
+  const first = c.name.split(' ')[0];
+  const top3 = Object.fromEntries(c.top3 ?? []);
+  const shelfScores = c.shelf ? Object.fromEntries(Object.values(c.shelf).flat()) : {};
+  const ids = c.shelf ? creatorShelfProducts(c) : [...new Set([...(c.top3 ?? []).map(([id]) => id), ...creatorShelfProducts(c)])];
+  const scored = ids.map((id, i) => [id, shelfScores[id] ?? top3[id] ?? Math.max(6.8, 8.7 - i * 0.15)]);
+  const ranked = [...scored].sort((a, b) => b[1] - a[1]);
+  const score = Object.fromEntries(scored);
+  const purposeOf = (id) => Object.entries(c.purposes ?? {}).find(([, v]) => v.includes(id))?.[0];
+  const recs = c.recs
+    ? c.recs.map(([id, best, note]) => ({ id, best, note, score: score[id] }))
+    : ranked.slice(0, 5).map(([id, s], i) => ({ id, score: s, best: purposeOf(id) ?? bestForStep(id), note: id === c.holyGrail ? c.quote : ['Still on my shelf after months of testing.', 'Does exactly what it says, nothing more.', 'An easy yes for my skin type.', 'I reach for this most days.', 'Quietly one of my favorites.'][i] }));
+  const holy = c.holyGrail ?? recs[0].id;
+  const holyNote = c.recs?.find(([id]) => id === holy)?.[2] ?? c.quote;
+  const reviews = [...(c.publicReviews ?? []), ...(c.moreReviews ?? [])].map(([id, src, when, txt]) => ({ id, src, when, txt, score: score[id] ?? 8 }));
+  if (!reviews.length) recs.forEach((r, i) => reviews.push({ id: r.id, src: SOURCES[i % 4], when: AGO[i % AGO.length], txt: r.note, score: r.score }));
+  return {
+    key: c.id, first, name: c.name, avatar: c.avatar, handle: c.handle, followers: c.followers, match: c.match, tags: c.tags,
+    matchNote: `Matched on ${[...(c.skin ?? []), c.environment].filter(Boolean).join(', ').toLowerCase()} climate, age ${c.age ?? '25–29'} and ${((n) => `${n} shared product${n === 1 ? '' : 's'}`)(ids.filter((p) => SHELF.some((s) => s.id === p)).length)}.`,
+    blurb: c.blurb ?? `Hi, I’m ${first}. ${(c.skin ?? c.tags.slice(0, 2)).join(', ')} skin${c.location ? ` in ${c.location.split(',')[0]}` : ''}. ${c.quote} Everything here is something I’ve used for at least a month.`,
+    announcement: c.announcement, theme: c.theme ?? ['sky', 'lime', 'sand', 'blush'][c.id.length % 4],
+    stats: [[ids.length, 'products'], [c.reviews ?? reviews.length, 'reviews'], [c.weeks ?? 12 + (c.id.length * 3) % 20, 'weeks tracked']],
+    holy: { id: holy, score: score[holy] ?? 9, note: holyNote },
+    recs, ranked, score, reviews,
+    using: (id) => { const i = ranked.findIndex(([x]) => x === id); return ['8 months', '6 months', '5 months', '4 months', '3 months', '10 weeks', '8 weeks', '6 weeks'][Math.min(i, 7)]; },
+    bestFor: (id) => recs.find((r) => r.id === id)?.best ?? purposeOf(id) ?? bestForStep(id),
+    noteFor: (id) => recs.find((r) => r.id === id)?.note ?? reviews.find((r) => r.id === id)?.txt ?? 'Still testing this one.',
+    footer: true,
+  };
+}
+
+const bestChip = (t) => `<span class="best-chip">${esc(t)}</span>`;
+
+function pageBanner(m, edit) {
+  const ann = m.announcement;
+  return `
+    <section class="page-banner stack" style="background:${PAGE_THEMES[m.theme] ?? PAGE_THEMES.sky}">
+      <div class="row between"><span class="mono" style="color:#c2412d">From ${esc(m.first)}</span><span class="theme-chip"><i style="background:#f6c9d1"></i><i style="background:#fbe6c4"></i>${esc(m.first)}’s page theme</span></div>
+      <p class="page-blurb">${esc(m.blurb)}</p>
+      ${ann ? `<div class="announce row"><span class="announce-tag">Announcement</span><div class="grow"><div class="small">${esc(ann[0])}</div><div class="xs faint">${esc(ann[1])}  ·  ${esc(ann[2])}</div></div><button class="link mono" data-act="toast" data-msg="${esc(m.first)}’s latest shelf changes are highlighted below">See changes →</button></div>` : ''}
+    </section>`;
+}
+
+function holyBanner(m, who) {
+  const h = m.holy;
+  return `
+    <section class="holy-banner row">
+      <span class="holy-img"><img src="${P(h.id).img}" alt=""></span>
+      <div class="grow stack" style="gap:6px">
+        <span class="mono lime">★ ${esc(who)}’s holy grail</span>
+        <span class="mono" style="color:#c8dcc9">${esc(P(h.id).brand)}</span>
+        <span class="h3" style="font-size:22px">${esc(P(h.id).name)}</span>
+        <span class="small" style="color:#dfe9df">“${esc(h.note)}”</span>
+        <div class="row" style="margin-top:4px"><button class="btn sm lime" data-act="add" data-id="${h.id}">Add to cart</button><button class="btn sm ghost-light" data-act="save" data-id="${h.id}">${(state.saved ?? []).includes(h.id) ? 'Saved ✓' : '+ Want to try'}</button></div>
+      </div>
+      <span class="ring lg-ring">${h.score.toFixed(1)}</span>
+    </section>`;
+}
+
+function recList(m, { edit } = {}) {
+  return `<section class="card stack rec-list">${m.recs.map((r, i) => `
+    <div class="rec-row row">
+      <span class="top3-n" style="font-size:20px;width:16px">${i + 1}</span>${thumb(r.id, 44, 50)}
+      <div class="grow stack" style="gap:5px;min-width:0">
+        <span class="mono faint">${esc(P(r.id).brand)}</span><span class="small" style="font-size:14px">${esc(P(r.id).name)}</span>
+        <div>${bestChip(r.best)}</div>
+        ${edit && state.editNote === r.id
+          ? `<form class="row" data-form="rec-note" data-id="${r.id}" style="gap:6px"><input class="shelf-input grow" name="note" value="${esc(r.note)}" maxlength="160"><button class="btn sm dark">Save</button></form>`
+          : `<p class="small muted">“${esc(r.note)}”</p>`}
+        ${edit && state.editNote !== r.id ? `<button class="link mono" style="align-self:flex-start" data-act="edit-note" data-id="${r.id}">Edit note</button>` : ''}
+      </div>${ring(r.score, true)}
+    </div>`).join('')}</section>`;
+}
+
+function pageShelf(m, { edit, who } = {}) {
+  const ids = m.ranked.map(([id]) => id);
+  const open = state.pageShelfOpen?.[m.key];
+  const rows = [ids.slice(0, Math.ceil(ids.length / 2)), ids.slice(Math.ceil(ids.length / 2))];
+  const rank = open ? ids.indexOf(open) + 1 : 0;
+  const peer = PUBLIC_REVIEWS.find((r) => r.product === open);
+  return `
+    <section class="card stack">
+      <div><h2 class="h3">${edit ? 'My shelf' : `${esc(m.first)}’s shelf`}</h2><div class="xs muted">${ids.length} products  ·  ${edit ? 'drag to reorder, tap one to rate it or edit your note' : `tap one to see ${esc(m.first)}’s rating and notes`}</div></div>
+      <div class="shelf page-shelf">${rows.map((r, ri) => `<div class="plank-row">${r.map((id) => `
+        <button class="slot ${open === id ? 'active' : ''}" data-act="page-shelf" data-key="${m.key}" data-id="${id}" aria-label="${esc(P(id).name)}"><img src="${P(id).img}" alt=""></button>`).join('')}${edit && ri === 1 ? '<a class="slot add-slot" href="#/search" aria-label="Add product"><span>+<br>Add product</span></a>' : ''}</div>`).join('<div style="height:8px"></div>')}</div>
+      ${open ? `
+        <div class="shelf-pop page-pop">
+          <div class="stack" style="gap:10px">
+            <div class="row between"><span class="mono">${esc(P(open).brand)}</span></div>
+            <div class="h3" style="font-size:20px">${esc(P(open).name)}</div>
+            <div class="row" style="gap:28px">
+              <div><div class="k">${edit ? 'Your' : `${esc(m.first)}’s`} rank</div><div class="v">#${rank} of ${ids.length}</div></div>
+              <div><div class="k">${edit ? 'Your' : `${esc(m.first)}’s`} score</div><div class="v">${m.score[open].toFixed(1)}</div></div>
+              <div><div class="k">Using for</div><div class="v">${m.using(open)}</div></div>
+            </div>
+            <div>${bestChip(m.bestFor(open))}</div>
+            <div class="row">${edit
+              ? `<a class="btn sm lime" href="#/check-in">Rate it</a><button class="btn sm ghost-light" data-act="edit-note" data-id="${open}">Edit note</button>`
+              : `<a class="btn sm lime" href="#/product/${open}">See all reviews</a><button class="btn sm ghost-light" data-act="save" data-id="${open}">${(state.saved ?? []).includes(open) ? 'Saved ✓' : '+ Want to try'}</button>`}</div>
+          </div>
+          <div class="stack" style="gap:8px">
+            <div class="row between"><span class="mono" style="color:#c8dcc9">Reviews</span><button class="link mono" style="color:#fff" data-act="page-shelf" data-key="${m.key}" data-id="${open}">Close</button></div>
+            <div class="pop-review"><p class="small">“${esc(m.noteFor(open))}”</p><span class="mono" style="color:#c8dcc9">${edit ? 'Your note' : esc(m.first)}  ·  ${m.using(open)} in</span></div>
+            ${peer ? `<div class="pop-review"><p class="small">“${esc(peer.text)}”</p><span class="mono" style="color:#c8dcc9">Combination skin  ·  ${peer.similar ?? 88}% like you</span></div>` : ''}
+          </div>
+        </div>` : ''}
+    </section>`;
+}
+
+function pageReviews(m) {
+  const f = { q: '', product: '', rating: '', sort: 'newest', limit: 5, ...(state.cr?.[m.key] ?? {}) };
+  const q = f.q.trim().toLowerCase();
+  const age = (w) => { const n = parseInt(w, 10) || 1; return /month/.test(w) ? n * 4 : n; };
+  let list = m.reviews.filter((r) => (!f.product || r.id === f.product)
+    && (!f.rating || (f.rating === 'high' ? r.score >= 9 : f.rating === 'mid' ? r.score >= 8 && r.score < 9 : r.score < 8))
+    && (!q || `${P(r.id).brand} ${P(r.id).name} ${r.txt}`.toLowerCase().includes(q)));
+  list = [...list].sort((a, b) => (f.sort === 'highest' ? b.score - a.score : f.sort === 'lowest' ? a.score - b.score : age(a.when) - age(b.when)));
+  const products = [...new Set(m.reviews.map((r) => r.id))];
+  const sel = (name, opts, cur) => `<select class="rv-select" data-change="cr-filter" data-key="${m.key}" data-f="${name}" aria-label="${name}">${opts.map(([v, l]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  return `
+    <section class="card stack">
+      <form class="row" data-form="cr-search" data-key="${m.key}" style="gap:8px"><input class="shelf-input grow" name="q" value="${esc(f.q)}" placeholder="Search ${esc(m.first)}’s reviews, e.g. “sunscreen”" style="height:40px"><button class="btn dark">Search</button></form>
+      <div class="row wrap" style="gap:8px">
+        ${sel('product', [['', `All products (${products.length})`], ...products.map((id) => [id, P(id).name])], f.product)}
+        ${sel('rating', [['', 'Any rating'], ['high', '9.0 and up'], ['mid', '8.0 to 8.9'], ['low', 'Under 8.0']], f.rating)}
+        ${sel('sort', [['newest', 'Sort: Newest'], ['highest', 'Sort: Highest rated'], ['lowest', 'Sort: Lowest rated']], f.sort)}
+      </div>
+    </section>
+    <div class="row between xs muted"><span>${list.length} review${list.length === 1 ? '' : 's'}</span><span>${list.length ? `Showing 1–${Math.min(f.limit, list.length)}` : ''}</span></div>
+    ${list.slice(0, f.limit).map((r) => `
+      <article class="card stack" style="gap:10px">
+        <div class="row">${thumb(r.id, 32, 36)}<div class="grow"><div class="mono faint">${esc(P(r.id).brand)}</div><div class="small">${esc(P(r.id).name)}</div></div><span class="score-pill ${band(r.score)}">${r.score.toFixed(1)}</span></div>
+        <p>“${esc(r.txt)}”</p>
+        <div class="row"><span class="src">${esc(r.src)}</span><span class="xs muted">${esc(r.when)}</span></div>
+      </article>`).join('') || `<div class="empty">No reviews match. <button class="link" data-act="cr-clear" data-key="${m.key}">Clear filters</button></div>`}
+    ${list.length > f.limit ? `<button class="btn" style="align-self:flex-start" data-act="cr-more" data-key="${m.key}">Show more reviews</button>` : ''}`;
+}
+
+function pageMain(m, { who, top } = {}) {
+  const tab = state.pageTab?.[m.key] ?? 'products';
+  const toggle = `<span class="seg">${[['products', 'All products'], ['reviews', 'All reviews']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="page-tab" data-key="${m.key}" data-v="${k}">${l}</button>`).join('')}</span>`;
+  const shared = m.ranked.map(([id]) => id).filter((id) => SHELF.some((s) => s.id === id));
+  const gaps = m.ranked.map(([id]) => id).filter((id) => !shared.includes(id)).slice(0, 3);
+  return `${top ?? ''}${pageBanner(m)}
+    <div class="row between"><h1 class="h2">${esc(who)}’s ${tab === 'reviews' ? 'reviews' : 'products'}</h1>${toggle}</div>
+    ${tab === 'reviews' ? pageReviews(m) : `
+      ${holyBanner(m, who)}
+      <div><h2 class="h3">Top recommendations</h2><p class="xs muted">${esc(who)}’s five favorites, with notes on each.</p></div>
+      ${recList(m)}
+      ${pageShelf(m, { who })}
+      ${m.footer ? `<section class="card row between"><div><h3 class="h4">You share ${shared.length} of ${esc(m.first)}’s ${m.ranked.length} products</h3><p class="xs muted">${gaps.length} products ${esc(m.first)} rates highly would fill gaps on your shelf: ${gaps.map((p) => P(p).name).join(', ')}.</p></div><button class="btn dark" data-act="add-many" data-ids="${gaps.join(',')}">Add ${esc(m.first)}’s top 3 to my cart</button></section>` : ''}`}`;
+}
+
+function pageSide(m, { back, actions, note }) {
+  return `
+    <section class="card stack">
+      ${back}
+      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${esc(m.followers)} followers</div></div></div>
+      ${m.match ? `<div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${m.match}% like you</span><p class="xs" style="margin-top:6px">${esc(m.matchNote)}</p></div>` : (m.sideNote ?? '')}
+      <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+      <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h2">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
+      <div class="row">${actions}</div>
+      <div class="notice xs">${note}</div>
+    </section>`;
+}
+
+// Your own page: the same layout creators get. Notes and order are yours to edit.
+const MY_RECS = [
+  ['anua_txa', 'Best for dark spots', 'Six weeks in and my summer dark spots are noticeably lighter. One pad every morning before coffee.'],
+  ['biore', 'Best for daily SPF', 'Ten weeks in and zero breakouts. Feels like nothing, even at the beach.'],
+  ['boj_glow', 'Best for glow', 'My “I slept 8 hours” serum. Two drops and I look awake.'],
+  ['anua_night', 'Best for texture', 'Gentle enough that I can use it 3 nights a week without peeling.'],
+  ['torriden_mask', 'Best for hydration', 'Sunday reset, usually with a face mask and a bad reality show.'],
+];
+const MY_BLURB = 'Hi, I’m Mia! Miami girl, matcha addict and weekend beach person. I fell into skincare during a rough breakout year and now I test everything so you don’t have to. Come say hi.';
+
+function myModel() {
+  const pg = state.myPage ?? {};
+  const R = state.ratings;
+  const shelf = [...baseShelf().map((x) => x.id), ...(state.shelfAdds ?? [])].filter((v, i, a) => a.indexOf(v) === i);
+  const ranked = shelf.map((id) => [id, R[id] ?? 8]).sort((a, b) => b[1] - a[1]);
+  const score = Object.fromEntries(ranked);
+  const notes = pg.notes ?? {};
+  const recs = MY_RECS.filter(([id]) => shelf.includes(id)).map(([id, best, note]) => ({ id, best, note: notes[id] ?? note, score: score[id] })).sort((a, b) => b.score - a.score);
+  const name = currentUser() ? firstName() || 'You' : 'Mia Tan';
+  return {
+    key: 'me', first: name.split(' ')[0], name, avatar: 'assets/img/progress/w5.jpg', handle: '@miatan', followers: '38', match: 0,
+    tags: profileTags([state.answers.musts?.[0]]).slice(0, 5),
+    blurb: pg.blurb ?? MY_BLURB, theme: pg.theme ?? 'sky',
+    announcement: pg.announcement === '' ? null : [pg.announcement ?? 'Week 6 check-in: redness is down and my chin finally cleared. The retinol night cream is staying.', 'Posted today', 'Shelf updated today'],
+    stats: [[shelf.length, 'products'], [4, 'reviews'], [6, 'weeks tracked']],
+    holy: { id: recs[0]?.id ?? ranked[0]?.[0], score: recs[0]?.score ?? 9, note: recs[0]?.note ?? '' },
+    recs, ranked, score,
+    reviews: recs.map((r, i) => ({ id: r.id, src: 'Dew', when: AGO[i % AGO.length], txt: r.note, score: r.score })),
+    using: (id) => { const w = shelfItem(id)?.weeks; return w ? `${w} weeks` : 'Just added'; },
+    bestFor: (id) => recs.find((r) => r.id === id)?.best ?? bestForStep(id),
+    noteFor: (id) => notes[id] ?? recs.find((r) => r.id === id)?.note ?? 'No note yet.',
+    footer: false,
+  };
+}
+
+function myPageEditor() {
+  const m = myModel();
+  const pg = state.myPage ?? {};
+  return `
+    <section class="page-banner edit stack" style="background:${PAGE_THEMES[m.theme]}">
+      <div class="row between wrap" style="gap:8px"><div class="row"><span class="announce-tag lime">Editing your public page</span><span class="xs muted">Changes save as you go</span></div>
+        <div class="row theme-pick"><span class="mono faint">Background</span>${Object.keys(PAGE_THEMES).map((k) => `<button class="swatch ${m.theme === k ? 'on' : ''}" style="background:${PAGE_THEMES[k]}" data-act="page-theme" data-v="${k}" aria-label="${k} background"></button>`).join('')}<button class="link xs" data-act="toast" data-msg="Photo backgrounds come with the Dew app">+ Photo</button></div></div>
+      <label class="blurb-edit stack"><span class="row between"><span class="mono faint">Blurb</span><span class="mono faint">${m.blurb.length} / 200</span></span>
+        <textarea data-input="page-blurb" maxlength="200" rows="3">${esc(m.blurb)}</textarea></label>
+      <form class="announce row" data-form="page-announce"><span class="announce-tag">Announcement</span><input class="grow" name="text" value="${esc(pg.announcement ?? m.announcement?.[0] ?? '')}" placeholder="Share an update with your followers"><button class="btn sm dark">Post</button></form>
+    </section>
+    <div><h2 class="h3">My top recommendations</h2><p class="xs muted">Your five favorites, with a note on each. Ranked by your scores.</p></div>
+    ${recList(m, { edit: true })}
+    <a class="dashed-btn" href="#/search">+ Add a recommendation</a>
+    ${pageShelf(m, { edit: true })}
+    <p class="xs muted">Your scores update every time you rate a product in your check-in. Only your blurb, recommendations, shelf and public reviews are shown to others.</p>`;
+}
+
+function myPublicPage() {
+  const m = myModel();
+  m.sideNote = '<div class="card soft stack" style="padding:12px;gap:6px"><span class="mono" style="color:var(--ink)">Public preview</span><p class="xs">This is what other Dew members see. They also see how closely their skin matches yours.</p></div>';
+  const left = pageSide(m, {
+    back: '<a class="mono" href="#/profile" style="text-decoration:none">← Back to editing</a>',
+    actions: '<a class="btn dark" href="#/profile">Back to editing</a>',
+    note: 'Only your blurb, shelves, ratings and public reviews are shown. Your photos and check-ins stay private.',
+  });
+  const top = '<div class="viewing-bar row between"><span class="small">You’re viewing your page the way the public sees it.</span><a class="mono" href="#/profile">Back to editing →</a></div>';
+  return { layout: 'layout-wide', left, main: pageMain(m, { who: m.first, top }) };
+}
+
 function creatorPage(id) {
   const c = CREATORS.find((x) => x.id === id) || CREATORS[0];
-  const shelf = c.shelf || { 'Top products': c.products.map((p, i) => [p, 9.4 - i * 0.2]) };
-  const scores = Object.fromEntries(Object.values(shelf).flat());
-  const categories = c.categories || Object.fromEntries(Object.entries(c.products.reduce((a, p) => { (a[P(p).step] ||= []).push(p); return a; }, {})).map(([k, v]) => [k, v.slice(0, 3)]));
-  const purposes = c.purposes || {};
-  const sharedIds = creatorShelfProducts(c).filter((p) => SHELF.some((s) => s.id === p));
-  const left = `
-    <section class="card stack">
-      <a class="mono" href="#/creators" style="text-decoration:none">← Creators like you</a>
-      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${c.avatar}" alt=""><div><div class="h2" style="font-size:26px">${c.name}</div><div class="xs muted">${c.handle}  ${c.followers} followers</div></div></div>
-      <div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${c.match}% like you</span><p class="xs">Matched on combination skin, acne-prone, humid climate, age 25–29 and ${sharedIds.length + 5} shared products.</p></div>
-      <div class="row wrap" style="gap:6px">${c.tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-      <div class="row between"><div><div class="h2">${creatorShelfProducts(c).length}</div><div class="xs muted">products</div></div><div><div class="h2">${c.reviews || 31}</div><div class="xs muted">reviews</div></div><div><div class="h2">${c.weeks || 18}</div><div class="xs muted">weeks tracked</div></div></div>
-      <div class="row"><button class="btn ${state.following[c.id] ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${state.following[c.id] ? 'Following ✓' : 'Follow'}</button><button class="btn" data-act="toast" data-msg="${sharedIds.length} products in common">Compare with my shelf</button></div>
-    </section>
-    <section class="card stack">
-      <div class="row between"><h3 class="h4">${c.name.split(' ')[0]}’s shelf</h3><span class="xs muted">${creatorShelfProducts(c).length} products</span></div>
-      ${Object.entries(shelf).map(([name, items]) => `
-        <div class="stack" style="gap:6px">
-          <span class="mono">${name}</span>
-          <div class="plank-row" style="min-height:76px;gap:8px">${items.map(([pid, s]) => `<div class="stack" style="gap:3px;align-items:center"><img src="${P(pid).img}" alt="${esc(P(pid).name)}" title="${esc(P(pid).name)}" style="width:44px;height:56px;object-fit:contain"><span class="score-pill ${band(s)}">${s.toFixed(1)}</span></div>`).join('')}</div>
-          <div style="height:6px"></div>
-        </div>`).join('')}
-    </section>`;
-  const main = `
-    <div class="row between"><h1 class="h2">Top products</h1><span class="seg"><button class="on">By category</button><button data-act="toast" data-msg="Scroll down for Best for…">By purpose</button><button data-act="toast" data-msg="Scroll down for reviews">Reviews</button></span></div>
-    <section class="stack"><h2 class="h3">${c.name.split(' ')[0]}’s rankings by category</h2><p class="xs muted">Everything she uses, ranked by her within each step. Her holy grail is her #1 ${P(c.holyGrail).step.toLowerCase()} pick.</p>
-      <div class="grid-3">${Object.entries(categories).map(([t, ids]) => rankCard(t, ids, scores, c.holyGrail)).join('')}</div></section>
-    ${Object.keys(purposes).length ? `<section class="stack"><h2 class="h3">Best for…</h2><p class="xs muted">What she would recommend for each skin goal.</p><div class="grid-3">${Object.entries(purposes).map(([t, ids]) => rankCard(t, ids, scores)).join('')}</div></section>` : ''}
-    ${c.publicReviews ? `<section class="stack"><h2 class="h3">${c.name.split(' ')[0]}’s public reviews</h2><p class="xs muted">Posted on Sephora, TikTok and YouTube, pulled into Dew.</p>
-      <div class="grid-3">${c.publicReviews.map(([pid, src, when, txt]) => `<div class="card stack" style="padding:16px"><div class="row">${thumb(pid, 32, 38)}<div class="grow"><div class="mono">${esc(P(pid).brand)}</div><div class="small">${esc(P(pid).name)}</div></div>${ring(scores[pid] ?? 8)}</div><p class="small">“${esc(txt)}”</p><div class="row"><span class="src">${src}</span><span class="xs muted">${when}</span></div></div>`).join('')}</div></section>` : ''}
-    <section class="card row between">
-      <div><h3 class="h4">You share ${sharedIds.length} of ${c.name.split(' ')[0]}’s ${creatorShelfProducts(c).length} products</h3><p class="xs muted">Her top 3 that you don’t own: ${creatorShelfProducts(c).filter((p) => !sharedIds.includes(p)).slice(0, 3).map((p) => P(p).name).join(', ')}.</p></div>
-      <button class="btn dark" data-act="add-many" data-ids="${creatorShelfProducts(c).filter((p) => !sharedIds.includes(p)).slice(0, 3).join(',')}">Add her top 3 to my cart</button>
-    </section>`;
-  return { layout: 'layout-wide', left, main };
+  const m = creatorModel(c);
+  const following = state.following[c.id];
+  const shared = m.ranked.filter(([p]) => SHELF.some((s) => s.id === p)).length;
+  const left = pageSide(m, {
+    back: '<a class="mono" href="#/creators" style="text-decoration:none">← Creators like you</a>',
+    actions: `<button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><button class="btn" data-act="toast" data-msg="You share ${shared} of ${m.first}’s ${m.ranked.length} products">Compare with my shelf</button>`,
+    note: `${esc(m.first)}’s scores count the same as anyone’s. Sponsored products are labeled on the shelf.`,
+  });
+  return { layout: 'layout-wide', left, main: pageMain(m, { who: m.first }) };
 }
 
 /* ================= community ================= */
@@ -1182,20 +1404,13 @@ function profilePage() {
         <div class="row wrap" style="gap:6px">${profileTags([state.answers.musts?.[0], state.answers.budget?.[0]]).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
       </div>
-      <div class="stack"><a class="btn dark" href="#/setup/1">Update skin profile</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
+      <div class="stack"><a class="btn dark" href="#/setup/1">Update skin profile</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button><a class="btn view-public" href="#/profile/public">View as public →</a>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
     </section>
     <div class="notice">Moved, changed your diet or started a new medication? Update your skin profile and we’ll re-rank your picks.</div>
     <span class="seg" style="align-self:flex-start">${[['rankings', 'My rankings'], ['progress', 'My progress']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="profile-tab" data-v="${k}">${l}</button>`).join('')}</span>`;
   let body;
   if (tab === 'rankings') {
-    const R = state.ratings;
-    const sorted = (ids) => [...ids].sort((a, b) => R[b] - R[a]);
-    const cats = { Cleanser: ['inn_cleanser'], 'Toner + pads': ['anua_txa', 'goodal_toner'], Serum: ['boj_glow'], 'Moisturizer + night cream': ['anua_night', 'cerave_int', 'anua_guasha'], Sunscreen: ['biore'], Eyes: ['drmtlgy_eye', 'sana_eye'], Masks: ['torriden_mask'] };
-    const purp = { 'Best for brightening': ['boj_glow', 'anua_txa', 'goodal_toner'], 'Best for hydration': ['torriden_mask', 'cerave_int', 'boj_glow'], 'Best for anti-aging': ['anua_night', 'sana_eye'], 'Best for dark circles': ['drmtlgy_eye', 'sana_eye'], 'Best for pores': ['goodal_toner', 'inn_cleanser'], 'Best for sunny days': ['biore'] };
-    body = `
-      <section class="stack"><h2 class="h3">My rankings by category</h2><p class="xs muted">Your ${SHELF.length} products, ranked by your own scores within each step.</p><div class="grid-2">${Object.entries(cats).map(([t, ids]) => rankCard(t, sorted(ids), R)).join('')}</div></section>
-      <section class="stack"><h2 class="h3">Best for…</h2><p class="xs muted">What you would recommend to someone with your skin.</p><div class="grid-2">${Object.entries(purp).map(([t, ids]) => rankCard(t, sorted(ids), R)).join('')}</div></section>
-      <p class="xs muted">Ranks update every time you rate a product in your check-in or on your shelf.</p>`;
+    body = myPageEditor();
   } else {
     const days = Array.from({ length: 30 }, (_, i) => i + 1);
     const partial = [3, 7, 11, 16, 18, 23];
@@ -1231,7 +1446,7 @@ function profilePage() {
         <div class="row"><span class="private">🔒 Private</span><span class="xs muted grow">Only you can see this check-in</span><button class="btn" data-act="toast" data-msg="Attached to your TXA pad review">Attach to a review</button></div>
       </section>
       <h2 class="h3">My reviews</h2>
-      <div class="grid-2">${[['boj_glow', 'buy', 'Week 3', 'Glass-skin glow by week 3, and it sits fine under my Bioré.'], ['anua_txa', 'buy', 'Week 6', 'My dark spots from summer are noticeably lighter.'], ['anua_guasha', 'skip', 'None by week 4', 'Stung on retinol nights and pilled under my lotion.']].map(([id, v, w, t]) => `
+      <div class="grid-2">${[['anua_txa', 'buy', 'Week 6', 'My dark spots from summer are noticeably lighter.'], ['boj_glow', 'buy', 'Week 3', 'Glass-skin glow by week 3, and it sits fine under my Bioré.'], ['anua_guasha', 'skip', 'None by week 4', 'Stung on retinol nights and pilled under my lotion.']].map(([id, v, w, t]) => `
         <div class="card stack" style="padding:16px"><div class="row between"><span class="btn sm ${v === 'buy' ? 'dark' : ''}" style="cursor:default;${v === 'buy' ? '' : 'background:var(--olive);border-color:var(--olive);color:#fff'}">${v === 'buy' ? '✓ Buy' : '✕ Don’t buy'}</span>${ring(state.ratings[id], true)}</div>
           <div class="row">${thumb(id, 28, 36)}<div><div class="mono">${esc(P(id).brand)}</div><div class="small">${esc(P(id).name)}</div></div></div>
           <span class="mono">Results seen: ${w}</span><p class="small">“${t}”</p><span class="xs muted">Public: helped 48 people like you</span></div>`).join('')}</div>`;
@@ -1567,7 +1782,7 @@ function view() {
   if (a === 'order-placed') return { tab: '', ...orderPlaced() };
   if (a === 'sample') return { tab: 'picked', ...(b === 'placed' ? samplePlaced() : b === 'verdict' ? sampleVerdict() : sampleCheckout()) };
   if (a === 'check-in') return { tab: '', ...checkinPage() };
-  if (a === 'profile') return { tab: '', ...profilePage() };
+  if (a === 'profile') return { tab: '', ...(b === 'public' ? myPublicPage() : profilePage()) };
   if (a === 'search') return { tab: '', ...searchPage() };
   if (a === 'product' && b) return { tab: '', ...productPage(b) };
   return { tab: 'for-you', ...forYou() };
@@ -1703,6 +1918,12 @@ const actions = {
   'ci-verdict': (d) => set({ checkin: { ...state.checkin, verdict: d.v } }),
   'ci-submit': () => { set({ checkin: { ...state.checkin, submitted: true } }); earn(60, 'Weekly check-in submitted'); },
   'profile-tab': (d) => set({ profileTab: d.v }),
+  'page-tab': (d) => set({ pageTab: { ...state.pageTab, [d.key]: d.v } }),
+  'page-shelf': (d) => set({ pageShelfOpen: { ...state.pageShelfOpen, [d.key]: state.pageShelfOpen?.[d.key] === d.id ? null : d.id } }),
+  'cr-more': (d) => { const f = state.cr?.[d.key] ?? {}; set({ cr: { ...state.cr, [d.key]: { ...f, limit: (f.limit ?? 5) + 5 } } }); },
+  'cr-clear': (d) => set({ cr: { ...state.cr, [d.key]: {} } }),
+  'edit-note': (d) => set({ editNote: d.id, profileTab: 'rankings' }),
+  'page-theme': (d) => set({ myPage: { ...state.myPage, theme: d.v } }),
   'demo-points': () => set({ points: REWARD_PTS, rewardDismissed: false }),
   'reward-open': () => set({ rewardDismissed: false }),
   'reward-later': () => set({ rewardDismissed: true }),
@@ -1759,6 +1980,9 @@ document.addEventListener('submit', (e) => {
   e.preventDefault();
   const fd = new FormData(form);
   const q = fd.get('q') || '';
+  if (form.dataset.form === 'cr-search') { const k = form.dataset.key; set({ cr: { ...state.cr, [k]: { ...(state.cr?.[k] ?? {}), q, limit: 5 } } }); return; }
+  if (form.dataset.form === 'rec-note') { const note = String(fd.get('note') || '').trim(); set({ editNote: null, myPage: { ...state.myPage, notes: { ...state.myPage?.notes, [form.dataset.id]: note } } }); toast('Note saved to your public page'); return; }
+  if (form.dataset.form === 'page-announce') { set({ myPage: { ...state.myPage, announcement: String(fd.get('text') || '').trim() } }); toast('Announcement posted'); return; }
   if (form.dataset.form === 'search') {
     const id = pickedSuggestion() ?? productFromQuery(q);
     closeSuggest();
@@ -1813,6 +2037,8 @@ document.addEventListener('change', (e) => {
   if (e.target.closest('[data-form="location"]')) lookUpClimate(e.target.value);
   const key = { 'rv-product': 'product', 'rv-rating': 'rating', 'rv-sort': 'sort' }[e.target.dataset.change];
   if (key) set({ rv: { ...state.rv, [key]: e.target.value, limit: 20 } });
+  if (e.target.dataset.change === 'cr-filter') { const k = e.target.dataset.key; set({ cr: { ...state.cr, [k]: { ...(state.cr?.[k] ?? {}), [e.target.dataset.f]: e.target.value, limit: 5 } } }); }
+  if (e.target.dataset.input === 'page-blurb') { state.myPage = { ...state.myPage, blurb: e.target.value }; save(); render(); }
 });
 
 document.addEventListener('input', (e) => {
@@ -1918,6 +2144,8 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('hashchange', () => {
   // Each product page starts filtered to your skin type, showing the first 10 reviews.
   if (route().startsWith('product/')) state = { ...state, reviewSkin: undefined, reviewLimit: 10 };
+  // A creator page (or your public page) always opens on All products with nothing selected.
+  if (/^(creators\/|profile\/public)/.test(route())) state = { ...state, pageTab: {}, pageShelfOpen: {}, cr: {} };
   // Keep a notice that sent you to sign-up or log-in (e.g. "create an account to save products").
   state = { ...state, authError: '', authNotice: ['signup', 'login'].includes(route()) ? state.authNotice : '' };
   render();
