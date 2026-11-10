@@ -311,6 +311,12 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 9, 2026: 10 more creators**
+
+- Creators like you now lists 16 creators instead of 6. The 10 new ones (Maya, Jun, Sofia, Dev, Hana, Amara, Elena, Kai, Priyanka, Zoe) cover more skin types and climates, including dry, sensitive, eczema-prone and redness-prone skin.
+- Each has a location, age range, skin tags, top 3 products, a holy grail and a shelf built from catalog products, with portraits in `assets/img/people/`.
+- Cache versions bumped: `js/app.js?v=35`, `data.js?v=7`.
+
 **November 9, 2026: shelf panel fills the screen height**
 
 - The left column's panel (skin check-in, My Shelf, Running low) now runs the full height of the screen on every page.

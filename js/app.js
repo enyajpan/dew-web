@@ -1,7 +1,7 @@
 import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
-} from './data.js?v=6';
+} from './data.js?v=7';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
 import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
