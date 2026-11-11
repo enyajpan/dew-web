@@ -316,7 +316,7 @@ Newest first. Every major change gets an entry here.
 - Explore says "Welcome back, Mia!". In "People you follow who use this" the similarity is a chip, creators you follow are mixed in with friends, and a bug that could show negative weeks or low scores is fixed. Mia follows three creators by default (Hana, Ari, Noor).
 - Profile: View as public is gone. Update skin profile, Edit your page and Share profile sit in a row under the stats. My rankings shows your page as others see it.
 - Edit your page (#/profile/edit) is the A2 layout: the editor beside a live preview with your real top recommendations and diary. The background can be a preset, your own color, or a gradient between two colors you pick.
-- Compare shelves is wider so nothing is cut off. Share a moment uses the dewdrop character. Riley's routine has 8 products, so Make it yours adds 4.
+- Compare shelves is wider and keeps its header in view: each column scrolls on its own and their products sit in two columns, so nothing is cut off. Share a moment uses the dewdrop character. Riley's routine has 8 products, so Make it yours adds 4.
 
 **November 11, 2026: Hi-fi v8 comments (Find people, Kara's shelf, Make it yours)**
 

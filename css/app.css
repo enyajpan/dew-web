@@ -761,3 +761,12 @@ a.suggest-item { text-decoration: none; }
 .cmp-col .stack { gap: 6px !important; }
 .cmp-item { padding: 8px 10px; gap: 10px; align-items: center; }
 .cmp-item .thumb { width: 34px !important; height: 38px !important; }
+/* Compare shelves: header stays put, each column scrolls on its own, their products in two columns */
+.modal.cmp-modal { height: calc(100vh - 32px); overflow: hidden; }
+.cmp-modal .cmp-grid { flex: 1; min-height: 0; align-items: stretch; }
+.cmp-modal .cmp-col { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.cmp-col.theirs > .stack { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; align-content: start; }
+.cmp-col.theirs .cmp-item { align-items: flex-start; }
+@media (max-width: 1100px) { .modal.cmp-modal { height: auto; overflow-y: auto; } .cmp-col.theirs > .stack { grid-template-columns: 1fr; } }
+.cmp-modal .cmp-grid { grid-template-columns: 1.8fr 0.9fr 1fr; }
+.cmp-col.theirs .cmp-item .row.wrap { flex-wrap: nowrap; }
