@@ -1,7 +1,7 @@
 import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES, MEMBERS, PEER_ROUTINES,
-} from './data.js?v=10';
+} from './data.js?v=11';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
 import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
@@ -37,7 +37,7 @@ const defaultState = () => ({
   filterOpen: false,
   filters: { skin: ['Combination', 'Acne-prone'], env: ['Humid'], sort: 'Most similar to me' },
   helpful: {},
-  following: {},
+  following: { hana: true, ari: true, noor: true }, // creators Mia follows in the demo
   profileTab: 'progress',
   askOpen: false,
   chat: [
@@ -52,6 +52,7 @@ let state = load();
 function migrate(s) {
   // Pop-ups (Compare shelves, Why this?, Share a moment) never reopen on reload.
   s = { ...s, compare: null, why: null, moment: null };
+  if (!s.followSeeded) s = { ...s, followSeeded: true, following: { hana: true, ari: true, noor: true, ...(s.following ?? {}) } };
   // Hi-fi v7 #128: the Anua TXA pad is now Mia's top product (was 9.1).
   if (s.ratings?.anua_txa === 9.1) s = { ...s, ratings: { ...s.ratings, anua_txa: 9.5 } };
   const diet = s.answers?.diet;
@@ -540,7 +541,7 @@ function forYou() {
   const tags = profileTags();
   const missing = 4 - state.setupStep;
   const main = `
-    <h1 class="h2 page-title">Explore</h1>
+    <h1 class="h2 page-title">Welcome back, ${esc((currentUser() && firstName()) || 'Mia')}!</h1>
     <div class="row wrap" style="gap:8px"><span class="mono faint">Matched to you</span>${tags.map((t) => `<span class="tag">${t}</span>`).join('')}${done ? '<a class="edit-link" href="#/setup/1">Edit profile</a>' : `<a class="edit-link" href="#/setup/${state.setupStep + 1}">${missing} step${missing === 1 ? '' : 's'} missing →</a>`}</div>
     <section class="hero hero-pick">
       <div class="hero-text">
@@ -724,6 +725,11 @@ const PAGE_THEMES = {
   sand: 'linear-gradient(110deg, #f6eee2 0%, #f8f3ea 100%)',
   white: '#ffffff',
 };
+// Your own background: one color, or a gradient between two (Hi-fi v8 comment).
+const DEFAULT_CUSTOM = { a: '#fde2e4', b: '#cde8f6', gradient: true };
+const themeBg = (theme, custom) => (theme === 'custom'
+  ? ((c) => (c.gradient ? `linear-gradient(110deg, ${c.a} 0%, ${c.b} 100%)` : c.a))({ ...DEFAULT_CUSTOM, ...(custom ?? {}) })
+  : PAGE_THEMES[theme] ?? PAGE_THEMES.sky);
 const BEST_FOR_STEP = { Cleanse: 'Best for gentle cleansing', Tone: 'Best for prep', Treat: 'Best for targeted care', Moisturize: 'Best for hydration', Protect: 'Best for daily SPF', Eye: 'Best for eyes', Mask: 'Best for a reset', Lip: 'Best for lips' };
 const bestForStep = (id) => BEST_FOR_STEP[String(P(id).step).split(' ')[0]] ?? 'Best for everyday';
 const AGO = ['2 weeks ago', '3 weeks ago', '1 month ago', '5 weeks ago', '6 weeks ago', '2 months ago', '3 months ago'];
@@ -766,7 +772,7 @@ const bestChip = (t) => `<span class="best-chip">${esc(t)}</span>`;
 function pageBanner(m, edit) {
   const ann = m.announcement;
   return `
-    <section class="page-banner stack" style="background:${PAGE_THEMES[m.theme] ?? PAGE_THEMES.sky}">
+    <section class="page-banner stack" style="background:${themeBg(m.theme, m.custom)}">
       <div class="row between"><span class="mono" style="color:#c2412d">From ${esc(m.first)}</span><span class="theme-chip"><i style="background:#f6c9d1"></i><i style="background:#fbe6c4"></i>${esc(m.first)}’s page theme</span></div>
       <p class="page-blurb">${esc(m.blurb)}</p>
       ${ann ? `<div class="announce row"><span class="announce-tag">Announcement</span><div class="grow"><div class="small">${esc(ann[0])}</div><div class="xs faint">${esc(ann[1])}  ·  ${esc(ann[2])}</div></div><button class="link mono" data-act="toast" data-msg="${esc(m.first)}’s latest shelf changes are highlighted below">See changes →</button></div>` : ''}
@@ -918,7 +924,7 @@ function myModel() {
   return {
     key: 'me', first: name.split(' ')[0], name, avatar: 'assets/img/progress/w5.jpg', handle: '@miatan', followers: '38', match: 0,
     tags: profileTags([state.answers.musts?.[0]]).slice(0, 5),
-    blurb: pg.blurb ?? MY_BLURB, theme: pg.theme ?? 'sky',
+    blurb: pg.blurb ?? MY_BLURB, theme: pg.theme ?? 'sky', custom: pg.custom,
     announcement: pg.announcement === '' ? null : [pg.announcement ?? 'Week 6 check-in: redness is down and my chin finally cleared. The retinol night cream is staying.', 'Posted today', 'Shelf updated today'],
     stats: [[shelf.length, 'products'], [4, 'reviews'], [6, 'weeks tracked']],
     holy: { id: recs[0]?.id ?? ranked[0]?.[0], score: recs[0]?.score ?? 9, note: recs[0]?.note ?? '' },
@@ -1326,14 +1332,14 @@ function profilePage() {
         <div class="row"><h1 class="h2">${esc(currentUser() ? firstName() || 'You' : 'Mia Tan')}</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
         <div class="row wrap" style="gap:6px">${profileTags([state.answers.musts?.[0], state.answers.budget?.[0]]).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
+        <div class="row wrap profile-actions"><a class="btn dark" href="#/setup/1">Update skin profile</a><a class="btn lime" href="#/profile/edit">Edit your page</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
       </div>
-      <div class="stack"><a class="btn dark" href="#/setup/1">Update skin profile</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button><a class="btn view-public" href="#/profile/public">View as public →</a>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
     </section>
     <div class="notice">Moved, changed your diet or started a new medication? Update your skin profile and we’ll re-rank your picks.</div>
     <span class="seg" style="align-self:flex-start">${[['rankings', 'My rankings'], ['progress', 'My progress']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="profile-tab" data-v="${k}">${l}</button>`).join('')}</span>`;
   let body;
   if (tab === 'rankings') {
-    return { layout: 'layout-wide', left: leftCol('', downloadApp()), main: header + myPageSplit() };
+    body = myPageView();
   } else {
     const days = Array.from({ length: 30 }, (_, i) => i + 1);
     const partial = [3, 7, 11, 16, 18, 23];
@@ -1896,10 +1902,14 @@ function followedPeople() {
 }
 function followersUsing(id) {
   const pool = followedPeople();
+  const friends = pool.filter((p) => p.kind === 'friend'), creators = pool.filter((p) => p.kind === 'creator');
   const h = hashOf(id);
-  const real = pool.filter((p) => personProducts(p).includes(id));
-  const picks = real.length ? real : [pool[h % pool.length], pool[(h >> 4) % pool.length]].filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 1 + (h % 2));
-  return picks.slice(0, 3).map((p, i) => ({ p, score: p.top3?.find(([x]) => x === id)?.[1] ?? 8.3 + ((h >> (i + 2)) % 13) / 10, weeks: 3 + ((h >> (i + 5)) % 9), note: FOLLOW_NOTES[(h + i) % FOLLOW_NOTES.length] }));
+  const picks = pool.filter((p) => personProducts(p).includes(id)).slice(0, 2);
+  const add = (list, k) => { const p = list[(h >>> k) % list.length]; if (p && !picks.includes(p)) picks.push(p); };
+  if (creators.length && !picks.some((p) => p.kind === 'creator')) add(creators, 3);
+  if (friends.length && !picks.some((p) => p.kind === 'friend')) add(friends, 7);
+  if (picks.length < 3 && h % 2) add(h % 4 === 1 ? creators : friends, 11);
+  return picks.slice(0, 3).map((p, i) => ({ p, score: p.top3?.find(([x]) => x === id)?.[1] ?? 8.3 + ((h >>> (i + 2)) % 13) / 10, weeks: 3 + ((h >>> (i + 5)) % 9), note: FOLLOW_NOTES[(h + i) % FOLLOW_NOTES.length] }));
 }
 function followUse(id) {
   const people = followersUsing(id);
@@ -1910,7 +1920,7 @@ function followUse(id) {
       ${people.map(({ p, score, weeks, note }) => `
         <div class="row" style="gap:10px">
           <a href="#/people/${p.id}"><img class="avatar" style="width:28px;height:28px" src="${p.avatar}" alt=""></a>
-          <div class="grow row wrap" style="gap:6px;min-width:0"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}<span class="xs muted">${p.match}% like you  ·  used ${weeks} weeks</span><span class="small muted" style="flex-basis:100%">“${esc(note)}”</span></div>
+          <div class="grow row wrap" style="gap:6px;min-width:0"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}${match(p.match)}<span class="xs muted">used ${weeks} weeks</span><span class="small muted" style="flex-basis:100%">“${esc(note)}”</span></div>
           ${ring(score, true)}
         </div>`).join('')}
     </div>`;
@@ -2051,39 +2061,73 @@ function routineMine(id) {
 
 /* ---- My page: edit beside a live preview (other explorations A2) ---- */
 
-function myPageSplit() {
+// My rankings tab: your page as it looks, with Edit your page in the header.
+function myPageView() {
+  const m = myModel();
+  return `
+    ${pageBanner(m)}
+    ${holyBanner(m, m.first)}
+    <div class="row between"><div><h2 class="h3">My top recommendations</h2><p class="xs muted">Your five favorites, with a note on each. Ranked by your scores.</p></div><a class="btn" href="#/profile/edit">Edit your page</a></div>
+    ${recList(m)}
+    ${pageShelf(m, { edit: true })}
+    <p class="xs muted">Only your blurb, recommendations, shelf, diary posts and public reviews are shown to others.</p>`;
+}
+
+// Edit your page (Hi-fi v8 comment: the A2 layout, hi-fi for Mia): the editor beside a live preview.
+function bgPicker(m) {
+  const c = { ...DEFAULT_CUSTOM, ...(m.custom ?? {}) };
+  return `
+    <div class="stack" style="gap:8px"><span class="mono faint">Background</span>
+      <div class="row theme-pick">${Object.keys(PAGE_THEMES).map((k) => `<button class="swatch ${m.theme === k ? 'on' : ''}" style="background:${PAGE_THEMES[k]}" data-act="page-theme" data-v="${k}" aria-label="${k} background"></button>`).join('')}<span class="swatch custom-swatch ${m.theme === 'custom' ? 'on' : ''}" style="background:${themeBg('custom', c)}" aria-label="Your own colors"></span><button class="link xs" data-act="toast" data-msg="Photo backgrounds come with the Dew app">+ Photo</button></div>
+      <div class="custom-row ${m.theme === 'custom' ? 'on' : ''}">
+        <span class="xs muted">Your own</span>
+        <label class="color-pick" title="Color 1"><input type="color" data-input="theme-a" value="${c.a}" aria-label="Color 1"></label>
+        ${c.gradient ? `<span class="xs muted">to</span><label class="color-pick" title="Color 2"><input type="color" data-input="theme-b" value="${c.b}" aria-label="Color 2"></label>` : ''}
+        <span class="seg sm">${[['solid', 'Solid'], ['gradient', 'Gradient']].map(([k, l]) => `<button class="${(c.gradient ? 'gradient' : 'solid') === k ? 'on' : ''}" data-act="theme-mode" data-v="${k}">${l}</button>`).join('')}</span>
+      </div>
+    </div>`;
+}
+function myPageEditScreen() {
   const m = myModel();
   const pg = state.myPage ?? {};
   const as = state.previewAs ?? 'public';
+  const viewer = as === 'follower' ? 'follower' : 'public';
   const editor = `
     <section class="card stack page-editor">
-      <div class="row between"><h2 class="h4" style="font-size:16px">Edit your page</h2><span class="saved-tag">Saved</span></div>
+      <div class="row between"><a class="mono" href="#/profile" style="text-decoration:none">← Profile</a><span class="saved-tag">Saved</span></div>
+      <h1 class="h2">Edit your page</h1>
       <label class="stack" style="gap:6px"><span class="mono faint">Blurb</span>
         <span class="blurb-box"><textarea data-input="page-blurb" maxlength="200" rows="4">${esc(m.blurb)}</textarea><span class="blurb-count mono">${m.blurb.length} / 200</span></span></label>
-      <div class="stack" style="gap:6px"><span class="mono faint">Background</span><div class="row theme-pick">${Object.keys(PAGE_THEMES).map((k) => `<button class="swatch ${m.theme === k ? 'on' : ''}" style="background:${PAGE_THEMES[k]}" data-act="page-theme" data-v="${k}" aria-label="${k} background"></button>`).join('')}<button class="link xs" data-act="toast" data-msg="Photo backgrounds come with the Dew app">+ Photo</button></div></div>
+      ${bgPicker(m)}
       <form class="stack" data-form="page-announce" style="gap:6px"><span class="mono faint">Announcement</span><div class="row" style="gap:6px"><input class="shelf-input grow" name="text" value="${esc(pg.announcement ?? m.announcement?.[0] ?? '')}" placeholder="Share an update with your followers"><button class="btn sm dark">Post</button></div></form>
-      <div class="row between"><span class="mono faint">Top recommendations</span><a class="link mono" href="#/search">+ Add</a></div>
+      <div class="row between"><span class="mono faint">Top recommendations</span><span class="xs faint">Drag to reorder</span></div>
       ${recList(m, { edit: true })}
+      <a class="dashed-btn" href="#/search">+ Add a recommendation</a>
     </section>`;
-  const viewer = as === 'follower' ? 'follower' : 'public';
   const preview = `
     <div class="stack page-preview">
-      <div class="row between wrap" style="gap:8px"><div class="row" style="gap:8px"><h2 class="h4" style="font-size:16px">Live preview</h2><span class="xs muted">Updates as you type</span></div>
-        <div class="row" style="gap:8px"><span class="xs muted">Viewing as</span><span class="seg">${[['public', 'Public'], ['follower', 'Follower'], ['matched', 'Matched visitor']].map(([k, l]) => `<button class="${as === k ? 'on' : ''}" data-act="preview-as" data-v="${k}">${l}</button>`).join('')}</span></div></div>
-      <div class="preview-frame stack">
-        <div class="row" style="gap:12px"><img class="avatar" style="width:52px;height:52px" src="${m.avatar}" alt=""><div class="grow"><div class="h3">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${m.followers} followers</div></div>${as === 'matched' ? '<span class="pill gap">94% skin match with you</span>' : ''}<span class="btn sm dark" aria-hidden="true">Follow</span></div>
-        <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-        ${pageBanner(m)}
-        ${holyBanner(m, m.first)}
-        <div><h3 class="h4">Top recommendations</h3></div>
-        ${recList(m)}
-        <div><h3 class="h4">Diary</h3><p class="xs muted">${viewer === 'follower' ? 'Followers see posts shared with everyone and with followers.' : 'The public sees posts shared with everyone.'}</p></div>
-        ${diaryTimeline(myDiary(), viewer)}
+      <div class="row between wrap" style="gap:8px"><div class="row" style="gap:8px"><h2 class="h3">Live preview</h2><span class="xs muted">Updates as you type</span></div>
+        <div class="row" style="gap:8px"><span class="xs muted">Viewing as</span><span class="seg">${[['public', 'Public'], ['follower', 'Follower'], ['matched', 'Matched visitor · 94%']].map(([k, l]) => `<button class="${as === k ? 'on' : ''}" data-act="preview-as" data-v="${k}">${l}</button>`).join('')}</span></div></div>
+      <div class="preview-frame preview-page">
+        <aside class="stack preview-side">
+          <img class="avatar" style="width:64px;height:64px" src="${m.avatar}" alt="">
+          <div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${m.followers} followers</div></div>
+          ${as === 'matched' ? '<span class="pill gap" style="align-self:flex-start">94% skin match with you</span>' : ''}
+          <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+          <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h3">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
+          <span class="btn dark" aria-hidden="true" style="align-self:flex-start">Follow</span>
+        </aside>
+        <div class="stack preview-main">
+          ${pageBanner(m)}
+          ${holyBanner(m, m.first)}
+          <div><h3 class="h3">Top recommendations</h3><p class="xs muted">${esc(m.first)}’s five favorites, with notes on each.</p></div>
+          ${recList(m)}
+          <div><h3 class="h3">Diary</h3><p class="xs muted">${viewer === 'follower' ? 'Followers see posts shared with everyone and with followers.' : 'The public sees posts shared with everyone.'}</p></div>
+          ${diaryTimeline(myDiary(), viewer)}
+        </div>
       </div>
     </div>`;
-  return `<div class="split-edit">${editor}${preview}</div>
-    ${pageShelf(m, { edit: true })}
-    <p class="xs muted">Your scores update every time you rate a product in your check-in. Only your blurb, recommendations, shelf, diary posts and public reviews are shown to others.</p>`;
+  return { layout: 'layout-solo', main: `<div class="edit-screen">${editor}${preview}</div>` };
 }
 
 /* ---- Share a moment when a challenge is finished (other explorations B2) ---- */
@@ -2104,7 +2148,7 @@ function momentModal() {
   return `
     <div class="scrim" data-act="moment-close">
       <section class="modal" role="dialog" aria-label="Share a moment" data-stop>
-        <div class="row" style="gap:14px"><span class="moment-badge">${svg('star', 30)}</span><div class="grow"><span class="mono" style="color:var(--olive)">Challenge complete</span><h2 class="h2" style="font-size:28px">${esc(t)}  ·  +${ch?.[4] ?? 0} pts</h2></div><button class="link mono" data-act="moment-close">✕</button></div>
+        <div class="row" style="gap:14px"><span class="moment-badge">${svg('hydrate', 40)}</span><div class="grow"><span class="mono" style="color:var(--olive)">Challenge complete</span><h2 class="h2" style="font-size:28px">${esc(t)}  ·  +${ch?.[4] ?? 0} pts</h2></div><button class="link mono" data-act="moment-close">✕</button></div>
         <hr class="divider">
         <h3 class="h3">Share it on your page?</h3>
         <p class="xs muted">We drafted this from your check-ins. Edit it or post as is.</p>
@@ -2142,7 +2186,7 @@ function view() {
   if (a === 'order-placed') return { tab: '', ...orderPlaced() };
   if (a === 'sample') return { tab: 'picked', ...(b === 'placed' ? samplePlaced() : b === 'verdict' ? sampleVerdict() : sampleCheckout()) };
   if (a === 'check-in') return { tab: '', ...checkinPage() };
-  if (a === 'profile') return { tab: '', ...(b === 'public' ? myPublicPage() : profilePage()) };
+  if (a === 'profile') return { tab: '', ...(b === 'public' ? myPublicPage() : b === 'edit' ? myPageEditScreen() : profilePage()) };
   if (a === 'search') return { tab: '', ...searchPage() };
   if (a === 'product' && b) return { tab: '', ...productPage(b) };
   return { tab: 'for-you', ...forYou() };
@@ -2302,6 +2346,7 @@ const actions = {
   'peer-goal': (d) => set({ peerGoal: d.v }),
   'routine-mine-cart': (d) => { d.ids.split(',').filter(Boolean).forEach((id) => addToCart(id, 'pick', 'From a routine like yours')); go('cart'); },
   'preview-as': (d) => set({ previewAs: d.v }),
+  'theme-mode': (d) => set({ myPage: { ...state.myPage, theme: 'custom', custom: { ...DEFAULT_CUSTOM, ...(state.myPage?.custom ?? {}), gradient: d.v === 'gradient' } } }),
   'chal-log': (d) => {
     const ch = CHALLENGES.find(([t]) => t === d.t);
     const n = Math.min(ch[3], (state.chal?.[d.t] ?? ch[2]) + 1);
@@ -2428,11 +2473,17 @@ document.addEventListener('change', (e) => {
   if (key) set({ rv: { ...state.rv, [key]: e.target.value, limit: 20 } });
   if (e.target.dataset.change === 'cr-filter') { const k = e.target.dataset.key; set({ cr: { ...state.cr, [k]: { ...(state.cr?.[k] ?? {}), [e.target.dataset.f]: e.target.value, limit: 5 } } }); }
   if (e.target.dataset.input === 'page-blurb') { state.myPage = { ...state.myPage, blurb: e.target.value }; save(); }
+  if (e.target.dataset.input === 'theme-a' || e.target.dataset.input === 'theme-b') render();
 });
 
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }
   if (e.target.dataset.input === 'moment-text') { state.momentText = e.target.value; save(); }
+  if (e.target.dataset.input === 'theme-a' || e.target.dataset.input === 'theme-b') {
+    const c = { ...DEFAULT_CUSTOM, ...(state.myPage?.custom ?? {}), [e.target.dataset.input === 'theme-a' ? 'a' : 'b']: e.target.value };
+    state.myPage = { ...state.myPage, theme: 'custom', custom: c }; save();
+    document.querySelectorAll('.page-preview .page-banner, .custom-swatch').forEach((el) => { el.style.background = themeBg('custom', c); });
+  }
   if (e.target.dataset.input === 'page-blurb') {
     state.myPage = { ...state.myPage, blurb: e.target.value }; save();
     document.querySelectorAll('.page-preview .page-blurb').forEach((el) => { el.textContent = e.target.value; });
@@ -2540,7 +2591,7 @@ window.addEventListener('hashchange', () => {
   // Each product page starts filtered to your skin type, showing the first 10 reviews.
   if (route().startsWith('product/')) state = { ...state, reviewSkin: undefined, reviewLimit: 10 };
   // A creator page (or your public page) always opens on All products with nothing selected.
-  if (/^(creators\/|people\/|profile\/public)/.test(route())) state = { ...state, pageTab: {}, pageShelfOpen: {}, cr: {} };
+  if (/^(creators\/|people\/|profile\/(public|edit))/.test(route())) state = { ...state, pageTab: {}, pageShelfOpen: {}, cr: {} };
   state = { ...state, compare: null, why: null };
   // Keep a notice that sent you to sign-up or log-in (e.g. "create an account to save products").
   state = { ...state, authError: '', authNotice: ['signup', 'login'].includes(route()) ? state.authNotice : '' };
