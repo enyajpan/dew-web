@@ -734,3 +734,9 @@ a.suggest-item { text-decoration: none; }
 /* Share a moment */
 .moment-badge { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-md); background: var(--lime); flex: none; }
 .moment-text { width: 100%; box-sizing: border-box; border: 1.5px solid var(--forest); border-radius: var(--radius-md); padding: 12px 14px; font: inherit; font-size: 14px; line-height: 1.45; resize: vertical; }
+/* Make it yours: the box on the side (Hi-fi v8 comment) */
+.mine-box { background: var(--forest); border-color: var(--forest); gap: 12px; }
+.mine-box-items { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px; border-radius: var(--radius-md); background: rgb(255 255 255 / 8%); border: 1px dashed rgb(203 233 66 / 45%); min-height: 76px; align-items: center; }
+.mine-box-thumb { width: 56px; height: 56px; border-radius: var(--radius-sm); background: #fff; display: grid; place-items: center; }
+.mine-box-thumb img { max-width: 46px; max-height: 50px; object-fit: contain; }
+.mine-box-rule { border: 0; border-top: 1px solid rgb(203 233 66 / 30%); margin: 2px 0; }

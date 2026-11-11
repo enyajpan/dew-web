@@ -1,7 +1,7 @@
 import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES, MEMBERS, PEER_ROUTINES,
-} from './data.js?v=9';
+} from './data.js?v=10';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
 import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
@@ -1704,7 +1704,7 @@ function personCard(c) {
     <div class="row top3-row ${i === 0 ? 'holy' : ''}"><span class="top3-n">${i + 1}</span>${thumb(pid, 30, 36)}<div class="grow" style="min-width:0">${i === 0 ? '<div class="mono forest">★ Holy grail</div>' : `<div class="mono faint">${esc(P(pid).brand)}</div>`}<div class="small top3-name">${esc(P(pid).name)}</div></div>${ring(s, true)}</div>`).join('');
   return `
     <article class="card stack creator-card">
-      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><span class="h4">${esc(c.name)}</span>${c.kind === 'creator' ? '' : kindTag(c.kind)}</div><div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${esc(c.handle)}  ${c.followers} followers</div>${c.location ? `<div class="xs muted">${esc(c.location)}  ·  Age ${c.age}</div>` : ''}${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
+      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><span class="h4">${esc(c.name)}</span>${kindTag(c.kind)}</div><div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${esc(c.handle)}  ${c.followers} followers</div>${c.location ? `<div class="xs muted">${esc(c.location)}  ·  Age ${c.age}</div>` : ''}${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
       <div class="stack" style="gap:8px">
         <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Skin type</span>${(c.skin ?? c.tags.slice(0, 2)).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Environment</span><span class="tag">${c.environment ?? c.tags[2]}</span></div>
@@ -2033,14 +2033,20 @@ function routineMine(id) {
       ${col(`Close enough (${close.length})`, 'close', close.map(([x, m]) => row(x, `Your ${esc(P(m).name)} covers ${esc(P(x).step.toLowerCase())}`, `<button class="link mono" style="align-self:flex-start" data-act="add" data-id="${x}">${state.added[x] ? 'In cart ✓' : 'Swap it in anyway'}</button>`)).join(''))}
       ${col(`Add to your box (${add.length})`, 'add', add.map((x) => row(x, `${P(x).step}  ·  ${money(P(x).price)}`)).join(''))}
     </div>
-    <section class="card row wrap box-summary">
-      <div class="stack" style="gap:2px"><span class="mono faint">New products</span><span class="h4">${add.length}</span></div>
-      <div class="stack" style="gap:2px"><span class="mono faint">Est. total</span><span class="h4">${money(total)}</span></div>
-      <div class="stack" style="gap:2px"><span class="mono faint">Based on</span><span class="h4">${r.common ? `${r.users} people` : esc(personById(r.who).name)}</span></div>
-      <span class="grow"></span>
-      ${add.length ? `<button class="btn" data-act="save-many" data-ids="${add.join(',')}">Save to Want to try</button><button class="btn dark" data-act="routine-mine-cart" data-ids="${add.join(',')}">Add ${add.length} to cart</button>` : '<span class="small muted">You already have everything in this routine.</span>'}
+`;
+  const based = r.common ? `${r.users} people like you` : `${esc(personById(r.who).name)}  ·  ${personById(r.who).match}% match`;
+  const right = `
+    <section class="card stack mine-box" style="margin-bottom:56px">
+      <span class="mono lime">Your box</span>
+      <div class="mine-box-items">${add.length ? add.map((x) => `<span class="mine-box-thumb"><img src="${P(x).img}" alt=""></span>`).join('') : '<span class="small" style="color:#dfe9df">Nothing to add</span>'}</div>
+      ${add.map((x) => `<div class="row between small" style="color:#fff;gap:10px"><span>${esc(P(x).name)}</span><span class="mono lime">${money(P(x).price)}</span></div>`).join('')}
+      ${close.length ? `<span class="xs" style="color:#c8dcc9">Kept from your shelf: ${close.map(([, m]) => esc(P(m).name)).join(', ')}</span>` : ''}
+      <hr class="mine-box-rule">
+      <div class="row between"><span class="small" style="color:#fff">${add.length} product${add.length === 1 ? '' : 's'}</span><span class="h3" style="color:var(--lime)">${money(total)}</span></div>
+      ${add.length ? `<button class="btn lime block" data-act="routine-mine-cart" data-ids="${add.join(',')}">Add ${add.length} to cart</button><button class="btn ghost-light block" data-act="save-many" data-ids="${add.join(',')}">Save to Want to try</button>` : '<span class="small" style="color:#dfe9df">You already have everything in this routine.</span>'}
+      <span class="xs" style="color:#c8dcc9">Based on: ${based}</span>
     </section>`;
-  return { layout: 'layout-wide', left: leftCol(), main };
+  return { layout: '', left: leftCol(), main, right };
 }
 
 /* ---- My page: edit beside a live preview (other explorations A2) ---- */

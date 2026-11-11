@@ -311,6 +311,12 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 11, 2026: Hi-fi v8 comments (Find people, Kara's shelf, Make it yours)**
+
+- Find people: creator cards now show the Creator kind tag next to the name, like members and friends of friends.
+- Kara's shelf has 20 products (two full rows of 10) instead of 14.
+- Make it yours: the summary moved into a "Your box" card on the right (what goes in the box, total, Add to cart, Save to Want to try, whose routine it's based on), matching the R3·3 wireframe.
+
 **November 11, 2026: Kind tag colors from the design system**
 
 - Kind tags now use the Dew design system colors: Creator #f9d28b, Friend #eaf5b6, Member #c3e9fc, Friend of a friend #ebeb88, all with dark text. The "Only they use" column in Compare shelves is #eaf5b6.
