@@ -664,9 +664,10 @@ a.suggest-item { text-decoration: none; }
 .shelf-pop .btn.lime { background: var(--lime); border-color: var(--lime); color: var(--ink); }
 
 /* ===== Hi-fi v8 ===== */
-.kind-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: var(--radius-sm); font-size: 11px; background: var(--surface-soft); color: var(--ink); }
-.kind-tag.creator { background: var(--forest); color: var(--lime); }
-.kind-tag.friend { background: var(--lime); }
+/* Kind tag colors from the Dew design system (Patterns > Kind tag) */
+.kind-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: var(--radius-sm); font-size: 11px; background: #c3e9fc; color: var(--ink); }
+.kind-tag.creator { background: #f9d28b; }
+.kind-tag.friend { background: #eaf5b6; }
 .kind-tag.fof { background: var(--r2); }
 .creator-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1200px) { .creator-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -694,7 +695,7 @@ a.suggest-item { text-decoration: none; }
 .cmp-faces .avatar + .avatar { margin-left: -12px; }
 .cmp-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; align-items: start; }
 .cmp-col { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--radius-md); }
-.cmp-col.theirs { background: #f9f6c9; }
+.cmp-col.theirs { background: #eaf5b6; }
 .cmp-col.both { background: #e6f1fa; }
 .cmp-col.mine { background: var(--canvas); border: 1px solid var(--line); }
 .cmp-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: var(--radius-sm); background: #fff; }

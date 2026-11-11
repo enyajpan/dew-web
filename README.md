@@ -311,6 +311,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 11, 2026: Kind tag colors from the design system**
+
+- Kind tags now use the Dew design system colors: Creator #f9d28b, Friend #eaf5b6, Member #c3e9fc, Friend of a friend #ebeb88, all with dark text. The "Only they use" column in Compare shelves is #eaf5b6.
+
 **November 11, 2026: Hi-fi v8 from the "other explorations" comments**
 
 - People tab: Creators and Community are one tab with one feed of friends, creators and members (Everyone, Friends, Creators), the original filter + sort, Want to try in the right rail and a "People like you" card with "Find more people like you".
