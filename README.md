@@ -311,6 +311,17 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 11, 2026: Hi-fi v8 from the "other explorations" comments**
+
+- People tab: Creators and Community are one tab with one feed of friends, creators and members (Everyone, Friends, Creators), the original filter + sort, Want to try in the right rail and a "People like you" card with "Find more people like you".
+- Find people like you: Creators, Members and Friends of friends tabs in a 4-column grid, every card in the Creators like you layout (holy grail, top 3, skin type, environment). Members and friends of friends are new demo data (`MEMBERS` in data.js).
+- Every person page (creators and members) has a Diary tab, a timeline of check-ins, challenges, milestones and profile changes, and a Compare shelves pop-up: only they use, both of you, only you use, with Want to try and Add to cart on everything they have that you don't.
+- Explore: each of the top 3 picks shows the people you follow who use it, and a "Why this?" pop-up that explains the pick and lets you correct it (I already own it, Not interested, Show fewer like this).
+- Picked for you: choose "Picked by Dew" (the v7 routine) or "From people like you": routines that worked for matched people, each with their weekly check-ins, what they'd change and a "Make it yours" step that merges the routine with your shelf (`PEER_ROUTINES` in data.js).
+- My rankings is now an editor beside a live preview (view as Public, Follower or Matched visitor). The blurb's character count sits inside the text box.
+- Share a moment: finishing a challenge (Log today + on My progress) opens a drafted post for your page diary, with an optional progress photo and a choice of who sees it.
+- Old #/creators and #/community links still work and open the People pages.
+
 **November 10, 2026: Hi-fi v7 creator page and my page**
 
 - "View full shelf" now opens the v7 creator page: a themed blurb and announcement from the creator, a holy grail banner, top 5 recommendations with a "Best for" chip and a note on each, one shelf with every product in two rows (tap a product to see its rank, score, how long they've used it and reviews inline), and "You share X of their products".

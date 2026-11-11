@@ -1,7 +1,7 @@
 import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
-  ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES,
-} from './data.js?v=8';
+  ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES, MEMBERS, PEER_ROUTINES,
+} from './data.js?v=9';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
 import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
@@ -50,6 +50,8 @@ const defaultState = () => ({
 let state = load();
 // "Drinks 2L+ water" used to be a Diet option; it now lives under Hydration.
 function migrate(s) {
+  // Pop-ups (Compare shelves, Why this?, Share a moment) never reopen on reload.
+  s = { ...s, compare: null, why: null, moment: null };
   // Hi-fi v7 #128: the Anua TXA pad is now Mia's top product (was 9.1).
   if (s.ratings?.anua_txa === 9.1) s = { ...s, ratings: { ...s.ratings, anua_txa: 9.5 } };
   const diet = s.answers?.diet;
@@ -213,7 +215,7 @@ function nav(active) {
     <a class="tab" href="#/login">Log in</a>
     <a class="btn dark" href="#/signup">Create account</a>`;
   }
-  const tabs = [['for-you', 'Explore'], ['creators', 'Creators'], ['community', 'Community'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
+  const tabs = [['for-you', 'Explore'], ['people', 'People'], ['reviews', 'Public reviews'], ['picked', 'Picked for you']];
   const n = cartCount();
   return `
     <a href="#/for-you" aria-label="Dew home"><img class="logo" src="assets/svg/logo.svg" alt="Dew"></a>
@@ -364,7 +366,7 @@ function rightRail() {
   return `
     <section class="card stack want-rail" style="margin-bottom:56px">
       <div class="row between"><h2 class="h4">Want to try</h2><span class="mono forest">${saved.length} saved</span></div>
-      <p class="xs faint">Save picks from Explore, Creators and Community. Buy them, or sample them with points.</p>
+      <p class="xs faint">Save picks from Explore, People and Picked for you. Buy them, or sample them with points.</p>
       ${saved.length ? shown.map((id) => `
         <div class="row" style="align-items:flex-start;gap:10px">
           ${thumb(id, 40, 44)}
@@ -442,9 +444,9 @@ function peopleLikeYou() {
   return `
     <section class="card stack">
       <h3 class="h4">What people like you are saying</h3>
-      <p class="xs muted">${reviews.length ? `The newest reviews from people with ${skin ? `${esc(skin.toLowerCase())} skin` : 'skin like yours'}, collected from brand sites.` : 'Public reviews from people with your skin, from Sephora, Reddit and YesStyle.'} Your friends are on the Community tab.</p>
+      <p class="xs muted">${reviews.length ? `The newest reviews from people with ${skin ? `${esc(skin.toLowerCase())} skin` : 'skin like yours'}, collected from brand sites.` : 'Public reviews from people with your skin, from Sephora, Reddit and YesStyle.'} Your friends and creators are on the People tab.</p>
       ${body}
-      <a class="btn" href="#/community" style="align-self:flex-start">Show more reviews</a>
+      <a class="btn" href="#/people" style="align-self:flex-start">Show more reviews</a>
     </section>`;
 }
 
@@ -455,12 +457,12 @@ const shelfIds = () => [...baseShelf().map((x) => x.id), ...(state.shelfAdds ?? 
 function recommendationsCard() {
   const a = state.answers;
   const owned = [...new Set(shelfIds().map((id) => P(id).step).filter(Boolean))];
-  const params = new URLSearchParams({ owned: owned.join(','), exclude: shelfIds().join(',') });
+  const params = new URLSearchParams({ owned: owned.join(','), exclude: [...shelfIds(), ...(state.hiddenPicks ?? [])].join(',') });
   if (a.skinType?.[0]) params.set('skin_type', a.skinType[0]);
   if (a.concerns?.length) params.set('concerns', a.concerns.join(','));
   const recs = useJson(`/api/recommendations?${params}`);
   if (recs.status === 'error' || (recs.status === 'ok' && !recs.data.picks?.length)) {
-    return `<section class="card"><h3 class="h4">Picked for your routine</h3>${PICKS.gaps.slice(0, 3).map(pickRow).join('')}</section>`;
+    return `<section class="card"><h3 class="h4">Picked for your routine</h3>${PICKS.gaps.slice(0, 3).map((p, i) => pickRow(p, i) + followUse(p.id)).join('')}</section>`;
   }
   const picks = recs.data?.picks ?? [];
   const pick = (r, i) => {
@@ -496,7 +498,10 @@ function recommendationsCard() {
           <a class="btn" href="#/product/${pr.id}">See all reviews + ratings</a>
           ${pr.price_usd ? `<button class="btn dark" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
           <button class="btn" data-act="save" data-id="${pr.id}">${(state.saved ?? []).includes(pr.id) ? '✓ Saved' : '+ Want to try'}</button>
+          <span class="grow"></span>
+          <button class="link mono why-link" data-act="why-open" data-id="${pr.id}" data-step="${esc(r.step ?? '')}" data-gap="${r.gap ? 1 : 0}" data-pct="${pl.pct_positive}" data-n="${pl.reviews}">Why this?</button>
         </div>
+        ${followUse(pr.id)}
       </article>`;
   };
   return `
@@ -705,33 +710,6 @@ function creatorShelfProducts(c) {
   return c.products;
 }
 
-function creatorsPage() {
-  // Card layout follows Kara Lim's card on Hi-fi v7 (04 Creators like you).
-  const cards = CREATORS.map((c) => {
-    const following = state.following[c.id];
-    const top3 = c.top3 ?? [[c.holyGrail, 9]];
-    const rows = top3.map(([pid, s], i) => `
-      <div class="row top3-row ${i === 0 ? 'holy' : ''}"><span class="top3-n">${i + 1}</span>${thumb(pid, 30, 36)}<div class="grow" style="min-width:0">${i === 0 ? '<div class="mono forest">★ Holy grail</div>' : `<div class="mono faint">${esc(P(pid).brand)}</div>`}<div class="small top3-name">${esc(P(pid).name)}</div></div>${ring(s, true)}</div>`).join('');
-    return `
-      <article class="card stack creator-card">
-        <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:8px"><span class="h4">${c.name}</span><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${c.handle}  ${c.followers} followers</div>${c.location ? `<div class="xs muted">${c.location}  ·  Age ${c.age}</div>` : ''}</div></div>
-        <div class="stack" style="gap:8px">
-          <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Skin type</span>${(c.skin ?? c.tags.slice(0, 2)).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-          <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Environment</span><span class="tag">${c.environment ?? c.tags[2]}</span></div>
-        </div>
-        <div class="creator-top3 stack" style="gap:4px"><span class="mono" style="color:var(--ink);margin-bottom:4px">Top 3 products</span>${rows}</div>
-        <div class="row"><button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><a class="btn" href="#/creators/${c.id}">View full shelf →</a></div>
-      </article>`;
-  }).join('');
-  const main = `
-    <div class="stack" style="max-width:1392px;width:100%;margin:0 auto;gap:16px">
-      <h1 class="h2">Creators like you</h1>
-      <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${profileTags().slice(0, 4).map((t) => `<span class="tag">${t}</span>`).join('')}<span class="xs faint">Creators with your skin, climate and age match yours. Sponsored posts are always labeled.</span></div>
-      <div class="creator-grid">${cards}</div>
-    </div>`;
-  return { layout: 'layout-solo', main };
-}
-
 function rankCard(title, ids, scores, holy) {
   return `<div class="card stack" style="padding:16px"><h4 class="h4" style="font-size:14px">${title}</h4>${ids.map((id, i) => `
     <div class="row"><span style="font-size:18px;color:var(--ink-3);width:12px">${i + 1}</span>${thumb(id, 32, 38)}<div class="grow">${holy === id ? '<div class="mono forest">★ Holy grail</div>' : ''}<div class="mono">${esc(P(id).brand)}</div><div class="small">${esc(P(id).name)}</div></div>${ring(scores[id] ?? 8, true)}</div>`).join('')}</div>`;
@@ -769,7 +747,7 @@ function creatorModel(c) {
   const reviews = [...(c.publicReviews ?? []), ...(c.moreReviews ?? [])].map(([id, src, when, txt]) => ({ id, src, when, txt, score: score[id] ?? 8 }));
   if (!reviews.length) recs.forEach((r, i) => reviews.push({ id: r.id, src: SOURCES[i % 4], when: AGO[i % AGO.length], txt: r.note, score: r.score }));
   return {
-    key: c.id, first, name: c.name, avatar: c.avatar, handle: c.handle, followers: c.followers, match: c.match, tags: c.tags,
+    key: c.id, kind: c.kind ?? 'creator', first, name: c.name, avatar: c.avatar, handle: c.handle, followers: c.followers, match: c.match, tags: c.tags,
     matchNote: `Matched on ${[...(c.skin ?? []), c.environment].filter(Boolean).join(', ').toLowerCase()} climate, age ${c.age ?? '25–29'} and ${((n) => `${n} shared product${n === 1 ? '' : 's'}`)(ids.filter((p) => SHELF.some((s) => s.id === p)).length)}.`,
     blurb: c.blurb ?? `Hi, I’m ${first}. ${(c.skin ?? c.tags.slice(0, 2)).join(', ')} skin${c.location ? ` in ${c.location.split(',')[0]}` : ''}. ${c.quote} Everything here is something I’ve used for at least a month.`,
     announcement: c.announcement, theme: c.theme ?? ['sky', 'lime', 'sand', 'blush'][c.id.length % 4],
@@ -892,12 +870,12 @@ function pageReviews(m) {
 
 function pageMain(m, { who, top } = {}) {
   const tab = state.pageTab?.[m.key] ?? 'products';
-  const toggle = `<span class="seg">${[['products', 'All products'], ['reviews', 'All reviews']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="page-tab" data-key="${m.key}" data-v="${k}">${l}</button>`).join('')}</span>`;
+  const toggle = `<span class="seg">${[['products', 'All products'], ['diary', 'Diary'], ['reviews', 'All reviews']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="page-tab" data-key="${m.key}" data-v="${k}">${l}</button>`).join('')}</span>`;
   const shared = m.ranked.map(([id]) => id).filter((id) => SHELF.some((s) => s.id === id));
   const gaps = m.ranked.map(([id]) => id).filter((id) => !shared.includes(id)).slice(0, 3);
   return `${top ?? ''}${pageBanner(m)}
-    <div class="row between"><h1 class="h2">${esc(who)}’s ${tab === 'reviews' ? 'reviews' : 'products'}</h1>${toggle}</div>
-    ${tab === 'reviews' ? pageReviews(m) : `
+    <div class="row between"><h1 class="h2">${esc(who)}’s ${tab === 'reviews' ? 'reviews' : tab === 'diary' ? 'diary' : 'products'}</h1>${toggle}</div>
+    ${tab === 'diary' ? diaryTimeline(diaryFor(m), m.key === 'me' ? 'public' : state.following[m.key] || m.kind === 'friend' ? 'follower' : 'public') : tab === 'reviews' ? pageReviews(m) : `
       ${holyBanner(m, who)}
       <div><h2 class="h3">Top recommendations</h2><p class="xs muted">${esc(who)}’s five favorites, with notes on each.</p></div>
       ${recList(m)}
@@ -909,7 +887,7 @@ function pageSide(m, { back, actions, note }) {
   return `
     <section class="card stack">
       ${back}
-      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${esc(m.followers)} followers</div></div></div>
+      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${esc(m.followers)} followers</div>${m.kind && m.kind !== 'creator' ? `<div style="margin-top:4px">${kindTag(m.kind)}</div>` : ''}</div></div>
       ${m.match ? `<div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${m.match}% like you</span><p class="xs" style="margin-top:6px">${esc(m.matchNote)}</p></div>` : (m.sideNote ?? '')}
       <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h2">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
@@ -983,62 +961,6 @@ function myPublicPage() {
   return { layout: 'layout-wide', left, main: pageMain(m, { who: m.first, top }) };
 }
 
-function creatorPage(id) {
-  const c = CREATORS.find((x) => x.id === id) || CREATORS[0];
-  const m = creatorModel(c);
-  const following = state.following[c.id];
-  const shared = m.ranked.filter(([p]) => SHELF.some((s) => s.id === p)).length;
-  const left = pageSide(m, {
-    back: '<a class="mono" href="#/creators" style="text-decoration:none">← Creators like you</a>',
-    actions: `<button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><button class="btn" data-act="toast" data-msg="You share ${shared} of ${m.first}’s ${m.ranked.length} products">Compare with my shelf</button>`,
-    note: `${esc(m.first)}’s scores count the same as anyone’s. Sponsored products are labeled on the shelf.`,
-  });
-  return { layout: 'layout-wide', left, main: pageMain(m, { who: m.first }) };
-}
-
-/* ================= community ================= */
-
-function communityPage() {
-  const sortFns = {
-    'Most similar to me': (a, b) => b.similar - a.similar,
-    'Newest first': () => 0,
-    'Highest rated': (a, b) => b.score - a.score,
-    'Lowest rated': (a, b) => a.score - b.score,
-  };
-  const feed = COMMUNITY.filter((r) => (state.audience === 'Friends' ? r.rel === 'Friend' : r.rel === 'Following')).sort(sortFns[state.filters.sort]);
-  const f = state.filters;
-  const fchip = (group, v, single) => `<button class="chip ${(single ? f[group] === v : f[group].includes(v)) ? 'on' : ''}" data-act="filter" data-group="${group}" data-v="${v}" data-single="${single ? 1 : ''}">${v}</button>`;
-  const panel = state.filterOpen ? `
-    <section class="card stack" style="box-shadow:0 6px 20px rgb(0 0 0 / 8%)">
-      <div class="row wrap" style="gap:6px"><span class="mono">Skin</span>${['Combination', 'Acne-prone', 'Oily', 'Dry', 'Sensitive'].map((v) => fchip('skin', v)).join('')}<span class="mono">Environment</span>${['Humid', 'Dry climate', 'Cold winters', 'High UV'].map((v) => fchip('env', v)).join('')}</div>
-      <div class="row wrap" style="gap:6px"><span class="mono">Sort</span>${Object.keys(sortFns).map((v) => fchip('sort', v, true)).join('')}</div>
-      <div class="row"><button class="btn" data-act="filters-clear">Clear all</button><button class="btn dark" data-act="filters-toggle">Show ${feed.length} reviews</button></div>
-    </section>` : '';
-  const active = f.skin.length + f.env.length + 1;
-  const main = `
-    <div class="row between">
-      <h1 class="h2">Community</h1>
-      <span class="seg">${['Friends', 'Following'].map((a) => `<button class="${state.audience === a ? 'on' : ''}" data-act="audience" data-v="${a}">${a}</button>`).join('')}</span>
-      <button class="btn ${state.filterOpen ? 'dark' : ''}" data-act="filters-toggle">${state.filterOpen ? '✕' : '⚲'}  Filter + sort  ${active}</button>
-    </div>
-    ${panel}
-    <div class="notice match-banner"><span class="forest">●</span><span class="grow">Ranked by similarity to you: ${profileTags().join(' ')}</span><a href="#/setup/2" class="edit-link">Edit skin profile</a></div>
-    ${feed.map((r, i) => `
-      <article class="card stack review-card">
-        <div class="row"><img class="avatar" src="${r.avatar}" alt=""><div class="grow"><div class="row"><span class="h4">${esc(r.name)}</span><span class="src">${r.rel}</span></div><div class="xs muted">${r.rel}  ${r.when}</div></div>${match(r.similar)}</div>
-        <div class="row" style="gap:12px">${thumb(r.product, 56, 56)}<div class="grow"><div class="mono faint">${esc(P(r.product).brand)}</div><div class="h4">${esc(P(r.product).name)}</div><div class="xs muted">${r.usage}</div></div>${ring(r.score)}</div>
-        <p style="font-size:13px">${esc(r.text)}</p>
-        <div class="row wrap" style="gap:6px">${r.tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Tracked progress: ${r.photos.length} check-ins via <span class="nc">Dew</span> tracker</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="assets/img/progress/${p}.jpg" alt=""><span class="mono">Week ${[1, 2, 4, 6][j]}</span></div>`).join('')}</div></div>` : ''}
-        <div class="row small muted review-actions" style="gap:18px">
-          <button class="link" style="text-decoration:none;${state.helpful[r.name + i] ? 'color:var(--forest);font-weight:500' : ''}" data-act="helpful" data-k="${esc(r.name + i)}">▲ Helpful  ${r.helpful + (state.helpful[r.name + i] ? 1 : 0)}</button>
-          <span>◌ ${r.comments} comments</span><button class="link" style="text-decoration:none" data-act="toast" data-msg="Link copied">↗ Share</button><span class="grow"></span>
-          ${r.score >= 6 ? `<button class="btn" data-act="save" data-id="${r.product}">${(state.saved ?? []).includes(r.product) ? 'Saved ✓' : 'Save'}</button>` : '<button class="btn" data-act="toast" data-msg="Hidden from your picks">Hide product</button>'}
-        </div>
-      </article>`).join('') || '<div class="empty">No reviews match these filters.</div>'}`;
-  return { layout: '', left: leftCol(), main, right: rightRail() };
-}
-
 /* ================= Picked for you (full size + sample it first) ================= */
 
 function modeToggle() {
@@ -1085,6 +1007,7 @@ function playBoxReveal(fresh) {
 }
 
 function pickedPage() {
+  if ((state.pickedSource ?? 'dew') === 'people') return peerRoutinesPage();
   const sample = state.pickedMode === 'sample';
   const hero = `
     <section class="hero picked-hero">
@@ -1095,7 +1018,7 @@ function pickedPage() {
       </div>
       ${boxReveal()}
     </section>`;
-  if (sample) return { layout: 'layout-wide', left: leftCol(), main: hero + modeToggle() + sampleBuilder() };
+  if (sample) return { layout: 'layout-wide', left: leftCol(), main: sourceToggle() + hero + modeToggle() + sampleBuilder() };
   const f = state.pickFilters ?? { budget: '$30–$60', keep: true, fragrance: false, vegan: false };
   const fchip = (on, label, k, v) => `<button class="chip ${on ? 'on' : ''}" data-act="pick-filter" data-k="${k}"${v ? ` data-v="${v}"` : ''}>${label}</button>`;
   const filters = `
@@ -1114,7 +1037,7 @@ function pickedPage() {
       </div>`;
   }).join('');
   const stat = (k, v) => `<div class="stack" style="gap:2px"><span class="mono faint">${k}</span><span class="h4">${v}</span></div>`;
-  const main = `${hero}${modeToggle()}${filters}
+  const main = `${sourceToggle()}${hero}${modeToggle()}${filters}
     <div class="grid-2" style="grid-template-columns:repeat(4,minmax(0,1fr))">${cards}</div>
     <section class="card row wrap box-summary">
       ${stat('New products', ROUTINE.filter((r) => r.owned !== routineIds()[ROUTINE.indexOf(r)]).length)}${stat('Est. total', money(routineTotal()))}${stat('Expected results', '3–4 weeks')}${stat('Backed by', '1,486 people  212 tracked routines')}
@@ -1410,7 +1333,7 @@ function profilePage() {
     <span class="seg" style="align-self:flex-start">${[['rankings', 'My rankings'], ['progress', 'My progress']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="profile-tab" data-v="${k}">${l}</button>`).join('')}</span>`;
   let body;
   if (tab === 'rankings') {
-    body = myPageEditor();
+    return { layout: 'layout-wide', left: leftCol('', downloadApp()), main: header + myPageSplit() };
   } else {
     const days = Array.from({ length: 30 }, (_, i) => i + 1);
     const partial = [3, 7, 11, 16, 18, 23];
@@ -1427,7 +1350,7 @@ function profilePage() {
             <span class="xs muted">Week 8 is in progress. Best week so far: week 7 at 95%.</span></div>
         </div>
         <div class="grid-2">
-          <div class="card stack"><div class="row between"><h3 class="h4">Challenges</h3><span class="mono forest">Earn points</span></div>${CHALLENGES.map(([t, d, n, of, pts], i) => `<div class="row" style="gap:12px;align-items:flex-start"><span class="challenge-icon">${svg(['hydrate', 'protect', 'cleanse', 'treat'][i % 4], 26)}</span><div class="stack grow" style="gap:4px"><div class="row between"><span class="small" style="font-weight:500">${t}</span><span class="mono forest">+${pts} pts</span></div><span class="xs muted">${d}</span><div class="buybar" style="width:100%"><span style="width:${(n / of) * 100}%;background:var(--lime)"></span></div><span class="mono">${n} / ${of}</span></div></div>`).join('')}</div>
+          <div class="card stack"><div class="row between"><h3 class="h4">Challenges</h3><span class="mono forest">Earn points</span></div>${CHALLENGES.map(([t, d, n0, of, pts], i) => { const n = Math.min(of, state.chal?.[t] ?? n0); return `<div class="row" style="gap:12px;align-items:flex-start"><span class="challenge-icon">${svg(['hydrate', 'protect', 'cleanse', 'treat'][i % 4], 26)}</span><div class="stack grow" style="gap:4px"><div class="row between"><span class="small" style="font-weight:500">${t}</span><span class="mono forest">${n >= of ? 'Done ✓' : `+${pts} pts`}</span></div><span class="xs muted">${d}</span><div class="buybar" style="width:100%"><span style="width:${(n / of) * 100}%;background:var(--lime)"></span></div><div class="row between"><span class="mono">${n} / ${of}</span>${n < of ? `<button class="link mono forest" data-act="chal-log" data-t="${t}">Log today +</button>` : ''}</div></div></div>`; }).join('')}</div>
           <div class="card stack"><h3 class="h4">Milestones</h3>${MILESTONES.map(([t, d, ok]) => `<div class="row card ${ok ? '' : 'soft'}" style="padding:10px;${ok ? 'background:var(--fill-muted);border-color:transparent' : ''}">${ok ? '<span class="ring sm" style="background:var(--forest);border-color:var(--forest);color:#fff">✓</span>' : `<span class="ring sm" style="border-color:transparent;background:#fff">${svg(t.includes('Shelf') ? 'star' : 'flame', 16)}</span>`}<div><div class="small" style="font-weight:500">${ok ? '' : 'NEW: '}${t}</div><div class="xs muted">${d}</div></div></div>`).join('')}</div>
         </div>
       </section>
@@ -1762,6 +1685,435 @@ function rewardModal() {
     </div>`;
 }
 
+/* ================= Hi-fi v8: People (Creators + Community in one tab) ================= */
+
+const KIND_NAME = { creator: 'Creator', friend: 'Friend', member: 'Member', fof: 'Friend of a friend' };
+const kindTag = (k) => (k ? `<span class="kind-tag ${k}">${KIND_NAME[k]}</span>` : '');
+const personById = (id) => {
+  const c = CREATORS.find((x) => x.id === id);
+  return c ? { ...c, kind: 'creator' } : MEMBERS.find((m) => m.id === id);
+};
+const personProducts = (p) => (p.shelf ? creatorShelfProducts(p) : [...new Set([...(p.top3 ?? []).map(([id]) => id), ...(p.products ?? [])])]);
+const hashOf = (s) => [...String(s)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+
+// Card for anyone on Find people: the Creators like you card (Hi-fi v7 04) for every kind of person.
+function personCard(c) {
+  const following = state.following[c.id];
+  const top3 = c.top3 ?? [[c.holyGrail, 9]];
+  const rows = top3.map(([pid, s], i) => `
+    <div class="row top3-row ${i === 0 ? 'holy' : ''}"><span class="top3-n">${i + 1}</span>${thumb(pid, 30, 36)}<div class="grow" style="min-width:0">${i === 0 ? '<div class="mono forest">★ Holy grail</div>' : `<div class="mono faint">${esc(P(pid).brand)}</div>`}<div class="small top3-name">${esc(P(pid).name)}</div></div>${ring(s, true)}</div>`).join('');
+  return `
+    <article class="card stack creator-card">
+      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><span class="h4">${esc(c.name)}</span>${c.kind === 'creator' ? '' : kindTag(c.kind)}</div><div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${esc(c.handle)}  ${c.followers} followers</div>${c.location ? `<div class="xs muted">${esc(c.location)}  ·  Age ${c.age}</div>` : ''}${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
+      <div class="stack" style="gap:8px">
+        <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Skin type</span>${(c.skin ?? c.tags.slice(0, 2)).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Environment</span><span class="tag">${c.environment ?? c.tags[2]}</span></div>
+      </div>
+      <div class="creator-top3 stack" style="gap:4px"><span class="mono" style="color:var(--ink);margin-bottom:4px">Top 3 products</span>${rows}</div>
+      <div class="row wrap"><button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><a class="btn" href="#/people/${c.id}">View full shelf →</a></div>
+    </article>`;
+}
+
+const FIND_TABS = [['creators', 'Creators', 'Creators like you', 'Creators whose skin, climate and age match yours. Sponsored posts are always labeled.'], ['members', 'Members', 'Members like you', 'Dew members matched to you on skin type, climate and age, ranked by how similar they are.'], ['fof', 'Friends of friends', 'Friends of friends', 'People your friends follow, with skin like yours.']];
+function findPeoplePage(tab = state.findTab ?? 'creators') {
+  const [, , title, sub] = FIND_TABS.find(([k]) => k === tab) ?? FIND_TABS[0];
+  const list = tab === 'creators' ? CREATORS.map((c) => ({ ...c, kind: 'creator' })) : MEMBERS.filter((m) => (tab === 'fof' ? m.kind === 'fof' : m.kind === 'member')).sort((a, b) => b.match - a.match);
+  const main = `
+    <div class="stack" style="max-width:1392px;width:100%;margin:0 auto;gap:16px">
+      <a class="mono" href="#/people" style="text-decoration:none">← People</a>
+      <div class="row between wrap" style="gap:12px"><h1 class="h2">${title}</h1><span class="seg">${FIND_TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="find-tab" data-v="${k}">${l}</button>`).join('')}</span></div>
+      <div class="row wrap" style="gap:8px"><span class="mono">Matched to you</span>${profileTags().slice(0, 4).map((t) => `<span class="tag">${t}</span>`).join('')}<span class="xs faint">${sub}</span></div>
+      <div class="creator-grid four">${list.map(personCard).join('')}</div>
+    </div>`;
+  return { layout: 'layout-solo', main };
+}
+
+// Creator posts in the People feed: each creator's latest update or their holy-grail note.
+function creatorPosts() {
+  return [...CREATORS].sort((a, b) => b.match - a.match).slice(0, 4).map((c, i) => ({
+    pid: c.id, name: c.name, avatar: c.avatar, rel: 'Creator', when: ['3 days ago', '4 days ago', '1 week ago', '2 weeks ago'][i], product: c.holyGrail,
+    usage: `Holy grail  ${c.location ?? ''}`, score: c.top3?.find(([p]) => p === c.holyGrail)?.[1] ?? 9, similar: c.match, tags: c.tags.slice(0, 3),
+    text: c.announcement?.[0] ?? c.quote, helpful: 64 + i * 37, comments: 6 + i * 3,
+  }));
+}
+
+function peopleRail() {
+  const sug = ['riley', 'hana', 'lu'].map(personById).filter(Boolean);
+  const why = (p) => p.moved ?? p.via ?? `${p.environment} · ${(p.skin ?? []).join(', ')}`;
+  return `${rightRail().replace('margin-bottom:56px', '')}
+    <section class="card stack" style="margin-bottom:56px">
+      <h2 class="h4">People like you</h2>
+      ${sug.map((p) => `
+        <div class="row" style="gap:10px;align-items:flex-start">
+          <a href="#/people/${p.id}"><img class="avatar" style="width:36px;height:36px" src="${p.avatar}" alt=""></a>
+          <div class="grow stack" style="gap:3px;min-width:0"><div class="row wrap" style="gap:6px"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}</div><span class="xs muted">${p.match}% like you  ·  ${esc(why(p))}</span></div>
+          <button class="btn sm ${state.following[p.id] ? '' : 'dark'}" data-act="follow" data-id="${p.id}">${state.following[p.id] ? '✓' : 'Follow'}</button>
+        </div>`).join('')}
+      <a class="btn block" href="#/people/find">Find more people like you</a>
+    </section>`;
+}
+
+function peoplePage() {
+  const sortFns = {
+    'Most similar to me': (a, b) => b.similar - a.similar,
+    'Newest first': () => 0,
+    'Highest rated': (a, b) => b.score - a.score,
+    'Lowest rated': (a, b) => a.score - b.score,
+  };
+  const aud = state.peopleAudience ?? 'Everyone';
+  const all = [...COMMUNITY.map((r) => ({ ...r, rel: r.rel === 'Friend' ? 'Friend' : 'Member' })), ...creatorPosts()];
+  const feed = all.filter((r) => aud === 'Everyone' || (aud === 'Friends' ? r.rel === 'Friend' : r.rel === 'Creator')).sort(sortFns[state.filters.sort]);
+  const f = state.filters;
+  const fchip = (group, v, single) => `<button class="chip ${(single ? f[group] === v : f[group].includes(v)) ? 'on' : ''}" data-act="filter" data-group="${group}" data-v="${v}" data-single="${single ? 1 : ''}">${v}</button>`;
+  const panel = state.filterOpen ? `
+    <section class="card stack" style="box-shadow:0 6px 20px rgb(0 0 0 / 8%)">
+      <div class="row wrap" style="gap:6px"><span class="mono">Skin</span>${['Combination', 'Acne-prone', 'Oily', 'Dry', 'Sensitive'].map((v) => fchip('skin', v)).join('')}<span class="mono">Environment</span>${['Humid', 'Dry climate', 'Cold winters', 'High UV'].map((v) => fchip('env', v)).join('')}</div>
+      <div class="row wrap" style="gap:6px"><span class="mono">Sort</span>${Object.keys(sortFns).map((v) => fchip('sort', v, true)).join('')}</div>
+      <div class="row"><button class="btn" data-act="filters-clear">Clear all</button><button class="btn dark" data-act="filters-toggle">Show ${feed.length} posts</button></div>
+    </section>` : '';
+  const active = f.skin.length + f.env.length + 1;
+  const kindOf = { Friend: 'friend', Member: 'member', Creator: 'creator' };
+  const main = `
+    <div class="row between">
+      <h1 class="h2">People</h1>
+      <span class="seg">${['Everyone', 'Friends', 'Creators'].map((a) => `<button class="${aud === a ? 'on' : ''}" data-act="people-audience" data-v="${a}">${a}</button>`).join('')}</span>
+      <button class="btn ${state.filterOpen ? 'dark' : ''}" data-act="filters-toggle">${state.filterOpen ? '✕' : '⚲'}  Filter + sort  ${active}</button>
+    </div>
+    ${panel}
+    <div class="notice match-banner"><span class="forest">●</span><span class="grow">Friends, creators and members, ranked by similarity to you: ${profileTags().join(' ')}</span><a href="#/setup/2" class="edit-link">Edit skin profile</a></div>
+    ${feed.map((r, i) => `
+      <article class="card stack review-card">
+        <div class="row"><a href="#/people/${r.pid}"><img class="avatar" src="${r.avatar}" alt=""></a><div class="grow"><div class="row"><a class="h4 plink" href="#/people/${r.pid}">${esc(r.name)}</a>${kindTag(kindOf[r.rel])}</div><div class="xs muted">${r.when}</div></div>${match(r.similar)}</div>
+        <div class="row" style="gap:12px">${thumb(r.product, 56, 56)}<div class="grow"><div class="mono faint">${esc(P(r.product).brand)}</div><div class="h4">${esc(P(r.product).name)}</div><div class="xs muted">${r.usage}</div></div>${ring(r.score)}</div>
+        <p style="font-size:13px">${esc(r.text)}</p>
+        <div class="row wrap" style="gap:6px">${r.tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
+        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Tracked progress: ${r.photos.length} check-ins via <span class="nc">Dew</span> tracker</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="assets/img/progress/${p}.jpg" alt=""><span class="mono">Week ${[1, 2, 4, 6][j]}</span></div>`).join('')}</div></div>` : ''}
+        <div class="row small muted review-actions" style="gap:18px">
+          <button class="link" style="text-decoration:none;${state.helpful[r.name + i] ? 'color:var(--forest);font-weight:500' : ''}" data-act="helpful" data-k="${esc(r.name + i)}">▲ Helpful  ${r.helpful + (state.helpful[r.name + i] ? 1 : 0)}</button>
+          <span>◌ ${r.comments} comments</span><button class="link" style="text-decoration:none" data-act="toast" data-msg="Link copied">↗ Share</button><span class="grow"></span>
+          ${r.score >= 6 ? `<button class="btn" data-act="save" data-id="${r.product}">${(state.saved ?? []).includes(r.product) ? 'Saved ✓' : 'Save'}</button>` : '<button class="btn" data-act="toast" data-msg="Hidden from your picks">Hide product</button>'}
+        </div>
+      </article>`).join('') || '<div class="empty">No posts match these filters.</div>'}`;
+  return { layout: '', left: leftCol(), main, right: peopleRail() };
+}
+
+function personPage(id) {
+  const c = personById(id) || { ...CREATORS[0], kind: 'creator' };
+  const m = creatorModel(c);
+  const following = state.following[c.id];
+  const left = pageSide(m, {
+    back: '<a class="mono" href="#/people" style="text-decoration:none">← People</a>',
+    actions: `<button class="btn ${following ? '' : 'dark'}" data-act="follow" data-id="${c.id}">${following ? 'Following ✓' : 'Follow'}</button><button class="btn" data-act="compare-open" data-id="${c.id}">Compare shelves</button>`,
+    note: c.kind === 'creator' ? `${esc(m.first)}’s scores count the same as anyone’s. Sponsored products are labeled on the shelf.` : `${esc(m.first)} is a Dew member. Only their public shelf, ratings and diary posts are shown.`,
+  });
+  return { layout: 'layout-wide', left, main: pageMain(m, { who: m.first }) };
+}
+
+/* ---- Diary: a timeline of check-ins, challenges and profile changes (other explorations B3) ---- */
+
+function myDiary() {
+  const place = state.answers.climate?.place?.split(',')[0];
+  const moved = place && place !== 'Miami' ? [{ when: 'Today', kind: 'Profile change', title: `Moved to ${place}`, text: 'Skin profile updated. Picks re-ranked for the new climate.', aud: 'Everyone' }] : [];
+  return [...(state.diary ?? []), ...moved,
+    { when: 'Nov 9', kind: 'Check-in', title: 'Week 6 check-in', text: 'Redness is down and my chin finally cleared. The retinol night cream is staying.', aud: 'Everyone', product: 'anua_night' },
+    { when: 'Nov 2', kind: 'Milestone', title: '10 reviews written', text: 'Ten products reviewed after 4+ weeks each.', aud: 'Followers' },
+    { when: 'Oct 31', kind: 'Milestone', title: 'First month tracked', text: 'Tracked 30 days in a row.', aud: 'Only me' }];
+}
+
+function diaryFor(m) {
+  if (m.key === 'me') return myDiary();
+  const h = m.holy.id;
+  const next = m.recs.find((r) => r.id !== h);
+  return [
+    m.announcement ? { when: 'Today', kind: 'Update', title: 'Shelf update', text: m.announcement[0], aud: 'Everyone' } : { when: '3 days ago', kind: 'Check-in', title: `Week ${m.stats[2][0]} check-in`, text: `Still reaching for the ${P(h).name} every day. “${m.holy.note}”`, aud: 'Everyone', product: h },
+    { when: '1 week ago', kind: 'Challenge', title: 'SPF Every Day complete', text: '14 days of sunscreen in a row. Spots are noticeably lighter.', aud: 'Followers' },
+    next && { when: '3 weeks ago', kind: 'Product added', title: `Added ${P(next.id).name}`, text: next.note, aud: 'Everyone', product: next.id },
+    { when: '2 months ago', kind: 'Milestone', title: 'First month tracked', text: 'Tracked 30 days in a row.', aud: 'Everyone' },
+  ].filter(Boolean);
+}
+
+// viewer: 'owner' sees everything; 'follower' sees Everyone + Followers; 'public' sees Everyone.
+function diaryTimeline(entries, viewer = 'public') {
+  const shown = entries.filter((e) => viewer === 'owner' || e.aud === 'Everyone' || (viewer === 'follower' && e.aud === 'Followers'));
+  if (!shown.length) return '<div class="empty">No public diary posts yet.</div>';
+  const slug = (k) => k.toLowerCase().replace(/[^a-z]+/g, '-');
+  return `<div class="diary">${shown.map((e) => `
+    <div class="diary-row">
+      <div class="diary-date"><span class="mono">${esc(e.when)}</span><i></i></div>
+      <article class="card stack diary-card ${e.aud === 'Only me' ? 'private' : ''}">
+        <div class="row wrap" style="gap:8px"><span class="kind-chip ${slug(e.kind)}">${esc(e.kind)}</span><span class="small" style="font-weight:500">${esc(e.title)}</span><span class="grow"></span><span class="aud-pill ${e.aud === 'Only me' ? 'private' : ''}">${e.aud === 'Only me' ? '🔒 ' : ''}${esc(e.aud)}</span></div>
+        <div class="row" style="gap:12px;align-items:flex-start"><p class="small muted grow">${esc(e.text)}</p>${e.photo ? `<span class="diary-photo"><img src="${e.photo}" alt="Progress photo"></span>` : ''}${e.product ? thumb(e.product, 40, 44) : ''}</div>
+      </article>
+    </div>`).join('')}</div>`;
+}
+
+/* ---- Compare shelves (other explorations F2·3), on anyone's page ---- */
+
+function compareModal() {
+  if (!state.compare) return '';
+  const c = personById(state.compare);
+  if (!c) return '';
+  const m = creatorModel(c);
+  const mine = [...new Set(shelfIds())];
+  const theirs = m.ranked.map(([id]) => id);
+  const only = theirs.filter((id) => !mine.includes(id));
+  const both = theirs.filter((id) => mine.includes(id));
+  const onlyMe = mine.filter((id) => !theirs.includes(id));
+  const saved = state.saved ?? [];
+  const item = (id, sub, extra = '') => `
+    <div class="cmp-item">
+      ${thumb(id, 40, 46)}
+      <div class="grow stack" style="gap:3px;min-width:0"><span class="mono faint">${esc(P(id).brand)}</span>${productLink(id, `<span class="small">${esc(P(id).name)}</span>`)}<span class="xs muted">${sub}</span>${extra}</div>
+    </div>`;
+  const col = (title, cls, ids, render, foot = '') => `
+    <section class="cmp-col ${cls}"><div class="row between"><span class="mono" style="color:var(--ink)">${title}</span><span class="mono faint">${ids.length}</span></div>
+      <div class="stack" style="gap:8px">${ids.map(render).join('') || '<div class="xs muted" style="padding:12px 0">Nothing here.</div>'}</div>${foot}</section>`;
+  return `
+    <div class="scrim" data-act="compare-close">
+      <section class="modal cmp-modal" role="dialog" aria-label="Compare shelves with ${esc(m.name)}" data-stop>
+        <div class="row" style="gap:14px">
+          <span class="cmp-faces"><img class="avatar" src="assets/img/progress/w5.jpg" alt=""><img class="avatar" src="${m.avatar}" alt=""></span>
+          <div class="grow"><div class="mono faint">Compare shelves</div><h2 class="h2" style="font-size:28px">You and ${esc(m.name)}</h2></div>
+          ${m.match ? `<span class="pill gap">${m.match}% skin match</span>` : ''}
+          <button class="link mono" data-act="compare-close">Close ✕</button>
+        </div>
+        <div class="cmp-grid">
+          ${col(`Only ${esc(m.first)} uses`, 'theirs', only, (id) => item(id, `${esc(m.first)} rates it ${m.score[id].toFixed(1)}  ·  ${esc(m.bestFor(id))}`, `
+            <div class="row wrap" style="gap:6px;margin-top:4px"><button class="btn sm ${saved.includes(id) ? '' : ''}" data-act="save" data-id="${id}">${saved.includes(id) ? 'Saved ✓' : '+ Want to try'}</button><button class="btn sm dark" data-act="add" data-id="${id}">${state.added[id] ? 'In cart ✓' : 'Add to cart'}</button></div>`),
+            only.length ? `<div class="row wrap" style="gap:8px"><button class="btn dark" data-act="add-many" data-ids="${only.join(',')}">Add all ${only.length} to cart</button><button class="btn" data-act="save-many" data-ids="${only.join(',')}">Save all to Want to try</button></div>` : '')}
+          ${col('Both of you', 'both', both, (id) => item(id, `You ${(state.ratings[id] ?? 8).toFixed(1)}  ·  ${esc(m.first)} ${m.score[id].toFixed(1)}`))}
+          ${col('Only you use', 'mine', onlyMe, (id) => item(id, `You rate it ${(state.ratings[id] ?? 8).toFixed(1)}`))}
+        </div>
+      </section>
+    </div>`;
+}
+
+/* ---- Explore: who you follow uses each pick, and "Why this?" (other explorations F2, E1) ---- */
+
+const FOLLOW_NOTES = ['Holy grail territory for me.', 'Took a few weeks, but it’s staying.', 'Gentle enough to use every day.', 'Repurchased twice already.', 'Works best with sunscreen every morning.', 'My skin calmed down within a couple of weeks.'];
+function followedPeople() {
+  return [...MEMBERS.filter((m) => m.kind === 'friend'), ...CREATORS.filter((c) => state.following[c.id]).map((c) => ({ ...c, kind: 'creator' }))];
+}
+function followersUsing(id) {
+  const pool = followedPeople();
+  const h = hashOf(id);
+  const real = pool.filter((p) => personProducts(p).includes(id));
+  const picks = real.length ? real : [pool[h % pool.length], pool[(h >> 4) % pool.length]].filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 1 + (h % 2));
+  return picks.slice(0, 3).map((p, i) => ({ p, score: p.top3?.find(([x]) => x === id)?.[1] ?? 8.3 + ((h >> (i + 2)) % 13) / 10, weeks: 3 + ((h >> (i + 5)) % 9), note: FOLLOW_NOTES[(h + i) % FOLLOW_NOTES.length] }));
+}
+function followUse(id) {
+  const people = followersUsing(id);
+  if (!people.length) return '';
+  return `
+    <div class="follow-use">
+      <span class="mono forest">People you follow who use this</span>
+      ${people.map(({ p, score, weeks, note }) => `
+        <div class="row" style="gap:10px">
+          <a href="#/people/${p.id}"><img class="avatar" style="width:28px;height:28px" src="${p.avatar}" alt=""></a>
+          <div class="grow row wrap" style="gap:6px;min-width:0"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}<span class="xs muted">${p.match}% like you  ·  used ${weeks} weeks</span><span class="small muted" style="flex-basis:100%">“${esc(note)}”</span></div>
+          ${ring(score, true)}
+        </div>`).join('')}
+    </div>`;
+}
+
+function whyModal() {
+  const w = state.why;
+  if (!w) return '';
+  const skin = (state.answers.skinType?.[0] ?? 'combination').toLowerCase();
+  const friend = followersUsing(w.id)[0];
+  const n = +w.n || 0;
+  const reasons = [
+    [3, w.gap === '1' ? `Your routine has no ${esc(String(w.step || 'treatment').toLowerCase())} step yet, and this is the top-rated one for people with ${skin} skin.` : `It’s rated higher by people like you than the ${esc(String(w.step || 'product').toLowerCase())} you use now.`],
+    [2, `${w.pct}% of ${n.toLocaleString()} people with ${skin} skin rated it 4★ or more.`],
+    friend && [1, `${esc(friend.p.name)}, ${friend.p.kind === 'creator' ? 'a creator you follow' : 'a friend'} with ${friend.p.match}% similar skin, rates it ${friend.score.toFixed(1)}.`],
+  ].filter(Boolean);
+  const dots = (k) => '●'.repeat(k) + '○'.repeat(3 - k);
+  return `
+    <div class="scrim" data-act="why-close">
+      <section class="modal" role="dialog" aria-label="Why this pick" data-stop>
+        <div class="row between"><span class="mono forest">Why this?</span><button class="link mono" data-act="why-close">Close ✕</button></div>
+        <div class="row" style="gap:14px">${thumb(w.id, 56, 56)}<div><div class="mono faint">${esc(P(w.id).brand)}</div><h2 class="h3">${esc(P(w.id).name)}</h2></div></div>
+        <span class="mono faint">Because</span>
+        ${reasons.map(([k, t]) => `<div class="row" style="gap:12px;align-items:flex-start"><span class="mono forest" style="width:34px;flex:none">${dots(k)}</span><p class="small">${t}</p></div>`).join('')}
+        <div class="notice row" style="gap:8px"><span class="mono" style="color:var(--ink)">${n > 200 ? 'High' : 'Medium'} confidence</span><span class="xs muted">Based on ${n.toLocaleString()} reviews from people with ${skin} skin, your shelf and your profile.</span></div>
+        <div class="row wrap" style="gap:8px"><button class="btn" data-act="why-own" data-id="${w.id}">I already own it</button><button class="btn" data-act="why-hide" data-id="${w.id}">Not interested</button><button class="btn" data-act="why-fewer">Show fewer like this</button></div>
+      </section>
+    </div>`;
+}
+
+/* ---- Picked for you: Dew's routine or one from someone like you (other explorations R3) ---- */
+
+function sourceToggle() {
+  const src = state.pickedSource ?? 'dew';
+  return `<span class="seg source-seg" style="align-self:flex-start">${[['dew', 'Picked by Dew', 'One product per step, from 1,486 people like you'], ['people', 'From people like you', 'Start from a real routine that worked']].map(([k, l, s]) => `<button class="${src === k ? 'on' : ''}" data-act="picked-source" data-v="${k}">${l}<small>${s}</small></button>`).join('')}</span>`;
+}
+const routineIdsOf = (r) => r.products.map((x) => (Array.isArray(x) ? x[0] : x));
+
+function peerRoutinesPage() {
+  const goal = state.peerGoal ?? 'Fade dark spots';
+  const list = PEER_ROUTINES.filter((r) => r.goal === goal);
+  const common = list.find((r) => r.common);
+  const people = list.filter((r) => !r.common);
+  const goals = [...new Set(PEER_ROUTINES.map((r) => r.goal))];
+  const cards = people.map((r) => {
+    const p = personById(r.who);
+    return `
+      <article class="card stack peer-card">
+        <div class="row" style="gap:10px"><a href="#/people/${p.id}"><img class="avatar" style="width:40px;height:40px" src="${p.avatar}" alt=""></a><div class="grow stack" style="gap:2px;min-width:0"><div class="row wrap" style="gap:6px"><span class="small" style="font-weight:500">${esc(p.name)}</span>${kindTag(p.kind)}</div><span class="xs muted">${p.match}% match  ·  ${esc((p.skin ?? []).join(', '))}  ·  ${esc(p.environment)}  ·  ${p.age}</span></div></div>
+        <span class="xs muted">Started with: ${esc(r.start)}</span>
+        <div class="peer-result">${esc(r.result)}</div>
+        <div class="row" style="gap:6px">${routineIdsOf(r).map((id) => thumb(id, 40, 44)).join('')}</div>
+        <div class="row between"><span class="xs faint">${r.users} people like you used it  ·  ${r.kept}% kept it</span><a class="btn sm" href="#/picked/routine/${r.id}">See routine</a></div>
+      </article>`;
+  }).join('');
+  const main = `${sourceToggle()}
+    <div class="stack" style="gap:4px"><h1 class="h2">Routines that worked for people like you</h1><p class="small muted">Real routines from people matched to you who reached the same goal, with their weekly check-ins. Pick one to start from.</p></div>
+    <div class="row wrap" style="gap:6px"><span class="mono faint">Goal</span>${goals.map((g) => `<button class="chip ${g === goal ? 'on' : ''}" data-act="peer-goal" data-v="${g}">${g}</button>`).join('')}</div>
+    ${common ? `
+    <section class="peer-common row">
+      <div class="grow stack" style="gap:6px"><span class="mono lime">Most common routine  ·  ${common.users} people like you</span><span class="h3" style="color:#fff">${common.products.length} products, ${common.kept}% kept it after 8 weeks</span><span class="small" style="color:#dfe9df">Median ${common.weeks} weeks to results for “${esc(goal.toLowerCase())}”.</span></div>
+      <div class="row" style="gap:8px">${common.products.map((id) => `<span class="peer-thumb">${thumb(id, 52, 52)}</span>`).join('')}</div>
+      <a class="btn lime" href="#/picked/routine/${common.id}/mine">Use this routine</a>
+    </section>` : ''}
+    <div class="peer-grid">${cards}</div>
+    <div class="notice"><span class="mono forest">How this works</span> Each routine comes from someone with skin like yours who tracked it on Dew. Members can stay anonymous; only skin details, products and results are shown.</div>`;
+  return { layout: 'layout-wide', left: leftCol(), main };
+}
+
+function routineDetail(id) {
+  const r = PEER_ROUTINES.find((x) => x.id === id && !x.common) ?? PEER_ROUTINES.find((x) => !x.common);
+  const p = personById(r.who);
+  const max = Math.max(...r.trend);
+  const left = `
+    <section class="card stack">
+      <a class="mono" href="#/picked" style="text-decoration:none">← Routines like yours</a>
+      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${p.avatar}" alt=""><div><div class="h2" style="font-size:24px">${esc(p.name)}</div>${kindTag(p.kind)}</div></div>
+      <div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${p.match}% like you</span><p class="xs" style="margin-top:6px">${esc(p.moved ?? `${(p.skin ?? []).join(', ')} skin, ${p.environment.toLowerCase()} climate, ${p.age}.`)}</p></div>
+      <div class="row wrap" style="gap:6px">${p.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+      <span class="xs muted">Tracked ${r.tracked} weeks  ·  ${r.tracked} check-ins</span>
+      <div class="row wrap" style="gap:8px"><button class="btn ${state.following[p.id] ? '' : 'dark'}" data-act="follow" data-id="${p.id}">${state.following[p.id] ? 'Following ✓' : 'Follow'}</button><a class="btn" href="#/people/${p.id}">View profile</a></div>
+    </section>`;
+  const main = `
+    <div class="stack" style="gap:4px"><span class="mono faint">Goal: ${esc(r.goal.toLowerCase())}  ·  started with ${esc(r.start.toLowerCase())}</span><h1 class="h2">${esc(r.result)}</h1></div>
+    <div class="routine-grid">
+      <div class="stack" style="gap:16px">
+        <section class="card stack"><div class="row between"><h2 class="h4">Weekly check-ins</h2><span class="xs muted">Lower is better</span></div>
+          <div class="bars trend">${r.trend.map((v, i) => `<div><span class="mono" style="color:var(--ink)">${v}</span><i class="${i === r.trend.length - 1 ? 'cur' : ''}" style="height:${(v / max) * 100}%"></i><span class="mono">W${i + 1}</span></div>`).join('')}</div>
+          ${r.dip ? `<span class="xs muted">${esc(r.dip)}</span>` : ''}</section>
+        <section class="card stack"><h2 class="h4">Their routine</h2>
+          ${r.products.map(([pid, when, note]) => `<div class="row" style="gap:12px">${thumb(pid, 44, 50)}<div class="grow stack" style="gap:2px;min-width:0"><span class="mono faint">${esc(P(pid).brand)}  ·  ${esc(P(pid).step)}</span>${productLink(pid, `<span class="small">${esc(P(pid).name)}</span>`)}<span class="xs muted">“${esc(note)}”</span></div><span class="tag">${esc(when)}</span></div>`).join('')}
+        </section>
+      </div>
+      <div class="stack" style="gap:16px">
+        <section class="card stack" style="background:#f9f6c9;border-color:transparent"><span class="mono" style="color:var(--ink)">What I’d change</span><p>“${esc(r.change)}”</p></section>
+        <section class="card stack"><span class="h4">${r.users} people like you used this routine</span><span class="small muted">${r.kept}% kept it after 8 weeks</span></section>
+        <a class="btn dark block" href="#/picked/routine/${r.id}/mine">Make it mine →</a>
+      </div>
+    </div>`;
+  return { layout: 'layout-wide', left, main };
+}
+
+function routineMine(id) {
+  const r = PEER_ROUTINES.find((x) => x.id === id) ?? PEER_ROUTINES[0];
+  const ids = routineIdsOf(r);
+  const mine = [...new Set(shelfIds())];
+  const have = ids.filter((x) => mine.includes(x));
+  // Cleansers and sunscreens are close enough to swap for what you own; treatments and moisturizers aren't.
+  const close = ids.filter((x) => !mine.includes(x) && ['Cleanse', 'Protect'].includes(P(x).step)).map((x) => [x, mine.find((m) => P(m).step === P(x).step)]).filter(([, m]) => m);
+  const add = ids.filter((x) => !mine.includes(x) && !close.some(([c]) => c === x));
+  const total = add.reduce((a, x) => a + (P(x).price || 0), 0);
+  const who = r.common ? `the most common routine (${r.users} people like you)` : `${personById(r.who).name}’s routine`;
+  const col = (title, cls, body) => `<section class="card stack mine-col ${cls}"><span class="mono" style="color:var(--ink)">${title}</span>${body || '<div class="xs muted">Nothing here.</div>'}</section>`;
+  const row = (x, sub, extra = '') => `<div class="mine-item">${thumb(x, 44, 50)}<div class="grow stack" style="gap:2px;min-width:0"><span class="mono faint">${esc(P(x).brand)}</span><span class="small">${esc(P(x).name)}</span><span class="xs muted">${sub}</span>${extra}</div></div>`;
+  const main = `
+    <a class="mono" href="${r.common ? '#/picked' : `#/picked/routine/${r.id}`}" style="text-decoration:none">← Back</a>
+    <div class="stack" style="gap:4px"><h1 class="h2">Make it yours</h1><p class="small muted">Starting from ${esc(who)}, merged with your shelf. You only buy what you don’t already have.</p></div>
+    <div class="mine-grid">
+      ${col(`You already have (${have.length})`, 'have', have.map((x) => row(x, `${P(x).step}  ·  on your shelf`)).join(''))}
+      ${col(`Close enough (${close.length})`, 'close', close.map(([x, m]) => row(x, `Your ${esc(P(m).name)} covers ${esc(P(x).step.toLowerCase())}`, `<button class="link mono" style="align-self:flex-start" data-act="add" data-id="${x}">${state.added[x] ? 'In cart ✓' : 'Swap it in anyway'}</button>`)).join(''))}
+      ${col(`Add to your box (${add.length})`, 'add', add.map((x) => row(x, `${P(x).step}  ·  ${money(P(x).price)}`)).join(''))}
+    </div>
+    <section class="card row wrap box-summary">
+      <div class="stack" style="gap:2px"><span class="mono faint">New products</span><span class="h4">${add.length}</span></div>
+      <div class="stack" style="gap:2px"><span class="mono faint">Est. total</span><span class="h4">${money(total)}</span></div>
+      <div class="stack" style="gap:2px"><span class="mono faint">Based on</span><span class="h4">${r.common ? `${r.users} people` : esc(personById(r.who).name)}</span></div>
+      <span class="grow"></span>
+      ${add.length ? `<button class="btn" data-act="save-many" data-ids="${add.join(',')}">Save to Want to try</button><button class="btn dark" data-act="routine-mine-cart" data-ids="${add.join(',')}">Add ${add.length} to cart</button>` : '<span class="small muted">You already have everything in this routine.</span>'}
+    </section>`;
+  return { layout: 'layout-wide', left: leftCol(), main };
+}
+
+/* ---- My page: edit beside a live preview (other explorations A2) ---- */
+
+function myPageSplit() {
+  const m = myModel();
+  const pg = state.myPage ?? {};
+  const as = state.previewAs ?? 'public';
+  const editor = `
+    <section class="card stack page-editor">
+      <div class="row between"><h2 class="h4" style="font-size:16px">Edit your page</h2><span class="saved-tag">Saved</span></div>
+      <label class="stack" style="gap:6px"><span class="mono faint">Blurb</span>
+        <span class="blurb-box"><textarea data-input="page-blurb" maxlength="200" rows="4">${esc(m.blurb)}</textarea><span class="blurb-count mono">${m.blurb.length} / 200</span></span></label>
+      <div class="stack" style="gap:6px"><span class="mono faint">Background</span><div class="row theme-pick">${Object.keys(PAGE_THEMES).map((k) => `<button class="swatch ${m.theme === k ? 'on' : ''}" style="background:${PAGE_THEMES[k]}" data-act="page-theme" data-v="${k}" aria-label="${k} background"></button>`).join('')}<button class="link xs" data-act="toast" data-msg="Photo backgrounds come with the Dew app">+ Photo</button></div></div>
+      <form class="stack" data-form="page-announce" style="gap:6px"><span class="mono faint">Announcement</span><div class="row" style="gap:6px"><input class="shelf-input grow" name="text" value="${esc(pg.announcement ?? m.announcement?.[0] ?? '')}" placeholder="Share an update with your followers"><button class="btn sm dark">Post</button></div></form>
+      <div class="row between"><span class="mono faint">Top recommendations</span><a class="link mono" href="#/search">+ Add</a></div>
+      ${recList(m, { edit: true })}
+    </section>`;
+  const viewer = as === 'follower' ? 'follower' : 'public';
+  const preview = `
+    <div class="stack page-preview">
+      <div class="row between wrap" style="gap:8px"><div class="row" style="gap:8px"><h2 class="h4" style="font-size:16px">Live preview</h2><span class="xs muted">Updates as you type</span></div>
+        <div class="row" style="gap:8px"><span class="xs muted">Viewing as</span><span class="seg">${[['public', 'Public'], ['follower', 'Follower'], ['matched', 'Matched visitor']].map(([k, l]) => `<button class="${as === k ? 'on' : ''}" data-act="preview-as" data-v="${k}">${l}</button>`).join('')}</span></div></div>
+      <div class="preview-frame stack">
+        <div class="row" style="gap:12px"><img class="avatar" style="width:52px;height:52px" src="${m.avatar}" alt=""><div class="grow"><div class="h3">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${m.followers} followers</div></div>${as === 'matched' ? '<span class="pill gap">94% skin match with you</span>' : ''}<span class="btn sm dark" aria-hidden="true">Follow</span></div>
+        <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        ${pageBanner(m)}
+        ${holyBanner(m, m.first)}
+        <div><h3 class="h4">Top recommendations</h3></div>
+        ${recList(m)}
+        <div><h3 class="h4">Diary</h3><p class="xs muted">${viewer === 'follower' ? 'Followers see posts shared with everyone and with followers.' : 'The public sees posts shared with everyone.'}</p></div>
+        ${diaryTimeline(myDiary(), viewer)}
+      </div>
+    </div>`;
+  return `<div class="split-edit">${editor}${preview}</div>
+    ${pageShelf(m, { edit: true })}
+    <p class="xs muted">Your scores update every time you rate a product in your check-in. Only your blurb, recommendations, shelf, diary posts and public reviews are shown to others.</p>`;
+}
+
+/* ---- Share a moment when a challenge is finished (other explorations B2) ---- */
+
+const MOMENT_TEXT = {
+  'Hydrate Hero': 'Seven days of AM + PM moisturizer and my skin feels so much calmer. The retinol night cream is staying.',
+  'SPF Every Day': 'Two weeks of sunscreen every single day. My dark spots are noticeably lighter.',
+  'Photo Friday': 'Four weeks of progress photos in a row. Seeing them side by side is wild.',
+  'Honest Reviewer': 'Ranked three products I’ve used for 4+ weeks. Honest takes only.',
+};
+const MOMENT_PRODUCTS = { 'Hydrate Hero': ['anua_night', 'cerave_int'], 'SPF Every Day': ['biore'], 'Photo Friday': [], 'Honest Reviewer': ['anua_txa', 'boj_glow'] };
+function momentModal() {
+  const t = state.moment;
+  if (!t) return '';
+  const ch = CHALLENGES.find(([x]) => x === t);
+  const aud = state.momentAud ?? 'Everyone';
+  const photo = state.momentPhoto;
+  return `
+    <div class="scrim" data-act="moment-close">
+      <section class="modal" role="dialog" aria-label="Share a moment" data-stop>
+        <div class="row" style="gap:14px"><span class="moment-badge">${svg('star', 30)}</span><div class="grow"><span class="mono" style="color:var(--olive)">Challenge complete</span><h2 class="h2" style="font-size:28px">${esc(t)}  ·  +${ch?.[4] ?? 0} pts</h2></div><button class="link mono" data-act="moment-close">✕</button></div>
+        <hr class="divider">
+        <h3 class="h3">Share it on your page?</h3>
+        <p class="xs muted">We drafted this from your check-ins. Edit it or post as is.</p>
+        <textarea class="moment-text" data-input="moment-text" rows="3">${esc(state.momentText ?? MOMENT_TEXT[t] ?? '')}</textarea>
+        <div class="row" style="gap:12px">
+          <span class="diary-photo lg ${photo ? 'on' : ''}"><img src="assets/img/progress/w5.jpg" alt="This week’s progress photo"></span>
+          <div class="stack grow" style="gap:6px"><span class="private" style="align-self:flex-start">🔒 Private unless you add it</span><button class="btn sm" style="align-self:flex-start" data-act="moment-photo">${photo ? 'Added to post ✓' : 'Add this week’s photo'}</button></div>
+        </div>
+        ${(MOMENT_PRODUCTS[t] ?? []).length ? `<div class="row wrap" style="gap:6px"><span class="mono faint">Products</span>${MOMENT_PRODUCTS[t].map((id) => `<span class="tag">${esc(P(id).name)}</span>`).join('')}</div>` : ''}
+        <div class="row" style="gap:10px"><span class="xs muted">Who sees it</span><span class="seg">${['Everyone', 'Followers', 'Only me'].map((a) => `<button class="${aud === a ? 'on' : ''}" data-act="moment-aud" data-v="${a}">${a}</button>`).join('')}</span></div>
+        <div class="row"><button class="btn dark" data-act="moment-post">Post to my page</button><button class="btn" data-act="moment-close">Not now</button></div>
+      </section>
+    </div>`;
+}
+
 /* ================= render ================= */
 
 // Pages anyone can see; everything else needs an account once accounts are on.
@@ -1775,9 +2127,11 @@ function view() {
   if (a === 'login') return { tab: '', ...loginPage() };
   if (a === 'reviews') return { tab: 'reviews', ...reviewsPage() };
   if (a === 'setup') return { tab: '', ...setupPage(b === 'done' ? 'done' : Math.min(4, Math.max(1, +b || 1))) };
-  if (a === 'creators') return b ? { tab: 'creators', ...creatorPage(b) } : { tab: 'creators', ...creatorsPage() };
-  if (a === 'community') return { tab: 'community', ...communityPage() };
-  if (a === 'picked') return { tab: 'picked', ...pickedPage() };
+  const c3 = r.split('/')[2], c4 = r.split('/')[3];
+  if (a === 'people') return { tab: 'people', ...(b === 'find' ? findPeoplePage() : b ? personPage(b) : peoplePage()) };
+  if (a === 'creators') return { tab: 'people', ...(b ? personPage(b) : findPeoplePage('creators')) };
+  if (a === 'community') return { tab: 'people', ...peoplePage() };
+  if (a === 'picked') return { tab: 'picked', ...(b === 'routine' ? (c4 === 'mine' ? routineMine(c3) : PEER_ROUTINES.find((x) => x.id === c3)?.common ? routineMine(c3) : routineDetail(c3)) : pickedPage()) };
   if (a === 'cart') return { tab: '', ...cartPage() };
   if (a === 'order-placed') return { tab: '', ...orderPlaced() };
   if (a === 'sample') return { tab: 'picked', ...(b === 'placed' ? samplePlaced() : b === 'verdict' ? sampleVerdict() : sampleCheckout()) };
@@ -1808,11 +2162,11 @@ function render() {
   [...app.querySelectorAll('.col')].forEach((c, i) => { if (scrolls[i]) c.scrollTop = scrolls[i]; });
   playBoxReveal(lastRoute !== r);
   // Ask Dew is pinned to the bottom right on every page, signed in or not.
-  document.getElementById('overlay').innerHTML = `${askDew()}${rewardModal()}`;
+  document.getElementById('overlay').innerHTML = `${askDew()}${rewardModal()}${compareModal()}${whyModal()}${momentModal()}`;
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;
-  document.title = `Dew  ${({ 'for-you': 'Explore', creators: 'Creators', community: 'Community', picked: 'Picked for you' })[v.tab] || 'Skincare picked by people like you'}`;
+  document.title = `Dew  ${({ 'for-you': 'Explore', people: 'People', picked: 'Picked for you' })[v.tab] || 'Skincare picked by people like you'}`;
 }
 
 /* ================= events ================= */
@@ -1928,6 +2282,35 @@ const actions = {
   'reward-open': () => set({ rewardDismissed: false }),
   'reward-later': () => set({ rewardDismissed: true }),
   'reward-build': () => { set({ pickedMode: 'sample', rewardDismissed: true }); go('picked'); },
+  'find-tab': (d) => set({ findTab: d.v }),
+  'people-audience': (d) => set({ peopleAudience: d.v }),
+  'compare-open': (d) => set({ compare: d.id }),
+  'compare-close': () => set({ compare: null }),
+  'save-many': (d) => { const ids = d.ids.split(',').filter(Boolean); set({ saved: [...new Set([...ids, ...(state.saved ?? [])])] }); toast(`Saved ${ids.length} to Want to try`); },
+  'why-open': (d) => set({ why: { id: d.id, step: d.step, gap: d.gap, pct: d.pct, n: d.n } }),
+  'why-close': () => set({ why: null }),
+  'why-own': (d) => { set({ why: null }); addToShelf(d.id); },
+  'why-hide': (d) => { set({ why: null, hiddenPicks: [...new Set([...(state.hiddenPicks ?? []), d.id])] }); toast('Got it. We won’t pick this for you again.'); },
+  'why-fewer': () => { set({ why: null }); toast('We’ll show fewer picks like this'); },
+  'picked-source': (d) => set({ pickedSource: d.v }),
+  'peer-goal': (d) => set({ peerGoal: d.v }),
+  'routine-mine-cart': (d) => { d.ids.split(',').filter(Boolean).forEach((id) => addToCart(id, 'pick', 'From a routine like yours')); go('cart'); },
+  'preview-as': (d) => set({ previewAs: d.v }),
+  'chal-log': (d) => {
+    const ch = CHALLENGES.find(([t]) => t === d.t);
+    const n = Math.min(ch[3], (state.chal?.[d.t] ?? ch[2]) + 1);
+    set({ chal: { ...state.chal, [d.t]: n } });
+    if (n >= ch[3]) { set({ moment: d.t, momentText: null, momentPhoto: false, momentAud: 'Everyone' }); earn(ch[4], `${d.t} complete`); } else toast(`Logged. ${ch[3] - n} to go`);
+  },
+  'moment-close': () => set({ moment: null }),
+  'moment-aud': (d) => set({ momentAud: d.v }),
+  'moment-photo': () => set({ momentPhoto: !state.momentPhoto }),
+  'moment-post': () => {
+    const t = state.moment;
+    const entry = { when: 'Today', kind: 'Challenge', title: `${t} complete`, text: state.momentText ?? MOMENT_TEXT[t] ?? '', aud: state.momentAud ?? 'Everyone', photo: state.momentPhoto ? 'assets/img/progress/w5.jpg' : null, product: (MOMENT_PRODUCTS[t] ?? [])[0] };
+    set({ moment: null, diary: [entry, ...(state.diary ?? [])] });
+    toast(entry.aud === 'Only me' ? 'Saved to your diary' : 'Posted to your page diary');
+  },
   reset: () => { try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ } state = defaultState(); go('for-you'); render(); toast('Demo data reset'); },
 };
 
@@ -1967,7 +2350,7 @@ async function askDewSend(q) {
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) return;
-  if (el.dataset.act === 'reward-later' && e.target.closest('[data-stop]') && el.classList.contains('scrim')) return;
+  if (el.classList.contains('scrim') && e.target.closest('[data-stop]')) return;
   const fn = actions[el.dataset.act];
   if (!fn) return;
   if (el.tagName === 'A' && el.dataset.act === 'toast') e.preventDefault();
@@ -2038,11 +2421,17 @@ document.addEventListener('change', (e) => {
   const key = { 'rv-product': 'product', 'rv-rating': 'rating', 'rv-sort': 'sort' }[e.target.dataset.change];
   if (key) set({ rv: { ...state.rv, [key]: e.target.value, limit: 20 } });
   if (e.target.dataset.change === 'cr-filter') { const k = e.target.dataset.key; set({ cr: { ...state.cr, [k]: { ...(state.cr?.[k] ?? {}), [e.target.dataset.f]: e.target.value, limit: 5 } } }); }
-  if (e.target.dataset.input === 'page-blurb') { state.myPage = { ...state.myPage, blurb: e.target.value }; save(); render(); }
+  if (e.target.dataset.input === 'page-blurb') { state.myPage = { ...state.myPage, blurb: e.target.value }; save(); }
 });
 
 document.addEventListener('input', (e) => {
   if (e.target.dataset.input === 'ci-note') { state.checkin.note = e.target.value; save(); }
+  if (e.target.dataset.input === 'moment-text') { state.momentText = e.target.value; save(); }
+  if (e.target.dataset.input === 'page-blurb') {
+    state.myPage = { ...state.myPage, blurb: e.target.value }; save();
+    document.querySelectorAll('.page-preview .page-blurb').forEach((el) => { el.textContent = e.target.value; });
+    const c = e.target.parentElement.querySelector('.blurb-count'); if (c) c.textContent = `${e.target.value.length} / 200`;
+  }
   if (e.target.matches('[data-suggest]')) suggestFor(e.target);
 });
 
@@ -2138,14 +2527,15 @@ document.addEventListener('focusout', (e) => { if (e.target.matches?.('[data-sug
 document.addEventListener('focusin', (e) => { if (e.target.matches?.('[data-suggest]') && e.target.value.trim().length >= 2) suggestFor(e.target); });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if (state.askOpen) set({ askOpen: false }); else if (state.shelfOpen) set({ shelfOpen: null }); }
+  if (e.key === 'Escape') { if (state.compare || state.why || state.moment) set({ compare: null, why: null, moment: null }); else if (state.askOpen) set({ askOpen: false }); else if (state.shelfOpen) set({ shelfOpen: null }); }
 });
 
 window.addEventListener('hashchange', () => {
   // Each product page starts filtered to your skin type, showing the first 10 reviews.
   if (route().startsWith('product/')) state = { ...state, reviewSkin: undefined, reviewLimit: 10 };
   // A creator page (or your public page) always opens on All products with nothing selected.
-  if (/^(creators\/|profile\/public)/.test(route())) state = { ...state, pageTab: {}, pageShelfOpen: {}, cr: {} };
+  if (/^(creators\/|people\/|profile\/public)/.test(route())) state = { ...state, pageTab: {}, pageShelfOpen: {}, cr: {} };
+  state = { ...state, compare: null, why: null };
   // Keep a notice that sent you to sign-up or log-in (e.g. "create an account to save products").
   state = { ...state, authError: '', authNotice: ['signup', 'login'].includes(route()) ? state.authNotice : '' };
   render();

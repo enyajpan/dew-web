@@ -101,13 +101,13 @@ export const PUBLIC_REVIEWS = [
 ];
 
 export const COMMUNITY = [
-  { name: 'Priya Nair', avatar: PERSON('women_44'), rel: 'Friend', when: '2 days ago', product: 'anua_toner', usage: 'AM + PM  6 weeks  Miami, FL', score: 9.3, similar: 96, tags: ['Combination', 'Acne-prone', 'Humid'], text: 'Redness around my nose calmed down by week 2 and my chin breakouts are way down. Ranked it above every toner I’ve tried.', helpful: 42, comments: 8, photos: ['w0', 'w1', 'w3', 'w5'] },
-  { name: 'jessrivers', avatar: PERSON('women_12'), rel: 'Following', when: '5 days ago', product: 'inn_cream', usage: 'Normalized from 4/5 stars  Houston, TX', score: 8.4, similar: 89, tags: ['Oily', 'Humid'], text: 'Light enough for Houston summers and doesn’t pill under SPF. A bit too light once it got cold.', helpful: 118, comments: 12 },
-  { name: 'Maya Chen', avatar: PERSON('women_68'), rel: 'Friend', when: '1 week ago', product: 'cerave', usage: 'PM  3 weeks  Miami, FL', score: 4.2, similar: 92, tags: ['Combination', 'Humid'], text: 'Pilled under sunscreen and felt heavy in this humidity. Fine on my body, but it’s at the bottom of my face shelf.', helpful: 27, comments: 4 },
-  { name: 'Sam Okafor', avatar: PERSON('men_75'), rel: 'Following', when: '1 week ago', product: 'boj_sun', usage: 'Daily  8 weeks  Austin, TX', score: 9.6, similar: 84, tags: ['Oily', 'High UV'], text: 'No white cast, no stinging, and it sits well under makeup. Eight weeks in, my dark spots are lighter.', helpful: 203, comments: 21 },
-  { name: 'Jordan Lee', avatar: PERSON('men_11'), rel: 'Friend', when: '2 weeks ago', product: 'cosrx_patch', usage: 'Overnight  as needed  Miami, FL', score: 8.8, similar: 90, tags: ['Acne-prone', 'Humid'], text: 'Flattens a whitehead overnight. Thin enough that I wear one on Zoom calls.', helpful: 35, comments: 3 },
-  { name: 'Leo Park', avatar: PERSON('men_32'), rel: 'Friend', when: '1 month ago', product: 'snail', usage: 'AM + PM  10 weeks  Seattle, WA', score: 9.0, similar: 93, tags: ['Combination', 'Dry climate'], text: 'Helped my barrier after over-exfoliating, and the post-acne marks faded faster.', helpful: 88, comments: 9 },
-  { name: 'nina.r', avatar: PERSON('women_57'), rel: 'Following', when: '2 months ago', product: 'inn_micellar', usage: 'PM  4 weeks  Tampa, FL', score: 3.6, similar: 58, tags: ['Dry'], text: 'Leaves a film, so I need a second cleanse anyway. Doesn’t really move waterproof mascara.', helpful: 12, comments: 1 },
+  { pid: 'priya', name: 'Priya Nair', avatar: PERSON('women_44'), rel: 'Friend', when: '2 days ago', product: 'anua_toner', usage: 'AM + PM  6 weeks  Miami, FL', score: 9.3, similar: 96, tags: ['Combination', 'Acne-prone', 'Humid'], text: 'Redness around my nose calmed down by week 2 and my chin breakouts are way down. Ranked it above every toner I’ve tried.', helpful: 42, comments: 8, photos: ['w0', 'w1', 'w3', 'w5'] },
+  { pid: 'jess', name: 'jessrivers', avatar: PERSON('women_12'), rel: 'Following', when: '5 days ago', product: 'inn_cream', usage: 'Normalized from 4/5 stars  Houston, TX', score: 8.4, similar: 89, tags: ['Oily', 'Humid'], text: 'Light enough for Houston summers and doesn’t pill under SPF. A bit too light once it got cold.', helpful: 118, comments: 12 },
+  { pid: 'mayac', name: 'Maya Chen', avatar: PERSON('women_68'), rel: 'Friend', when: '1 week ago', product: 'cerave', usage: 'PM  3 weeks  Miami, FL', score: 4.2, similar: 92, tags: ['Combination', 'Humid'], text: 'Pilled under sunscreen and felt heavy in this humidity. Fine on my body, but it’s at the bottom of my face shelf.', helpful: 27, comments: 4 },
+  { pid: 'sam', name: 'Sam Okafor', avatar: PERSON('men_75'), rel: 'Following', when: '1 week ago', product: 'boj_sun', usage: 'Daily  8 weeks  Austin, TX', score: 9.6, similar: 84, tags: ['Oily', 'High UV'], text: 'No white cast, no stinging, and it sits well under makeup. Eight weeks in, my dark spots are lighter.', helpful: 203, comments: 21 },
+  { pid: 'jordan', name: 'Jordan Lee', avatar: PERSON('men_11'), rel: 'Friend', when: '2 weeks ago', product: 'cosrx_patch', usage: 'Overnight  as needed  Miami, FL', score: 8.8, similar: 90, tags: ['Acne-prone', 'Humid'], text: 'Flattens a whitehead overnight. Thin enough that I wear one on Zoom calls.', helpful: 35, comments: 3 },
+  { pid: 'leo', name: 'Leo Park', avatar: PERSON('men_32'), rel: 'Friend', when: '1 month ago', product: 'snail', usage: 'AM + PM  10 weeks  Seattle, WA', score: 9.0, similar: 93, tags: ['Combination', 'Dry climate'], text: 'Helped my barrier after over-exfoliating, and the post-acne marks faded faster.', helpful: 88, comments: 9 },
+  { pid: 'nina', name: 'nina.r', avatar: PERSON('women_57'), rel: 'Following', when: '2 months ago', product: 'inn_micellar', usage: 'PM  4 weeks  Tampa, FL', score: 3.6, similar: 58, tags: ['Dry'], text: 'Leaves a film, so I need a second cleanse anyway. Doesn’t really move waterproof mascara.', helpful: 12, comments: 1 },
 ];
 
 export const CREATORS = [
@@ -181,7 +181,7 @@ export const SAMPLE_SLOTS = [
 ];
 
 export const CHALLENGES = [
-  ['Hydrate Hero', 'Moisturize AM + PM for 7 days', 5, 7, 150],
+  ['Hydrate Hero', 'Moisturize AM + PM for 7 days', 6, 7, 150],
   ['SPF Every Day', '14-day sunscreen streak', 11, 14, 200],
   ['Photo Friday', 'Weekly progress photo, 4 weeks in a row', 3, 4, 100],
   ['Honest Reviewer', 'Rank 3 products you’ve used 4+ weeks', 1, 3, 90],
@@ -201,4 +201,56 @@ export const ASK_DEW_REPLIES = [
   [/retinol|night/i, 'Keep your Anua Retinol 3 Peptide cream to PM only and add Cicaplast Baume B5+ on dry patches. 428 people like you did this.'],
   [/winter|dry|cold/i, 'Swap your Bioré for something richer only if you feel tight by noon. Farmacy Honey Halo is the top winter upgrade for your match pool.'],
   [/sample|try/i, 'At 1,500 pts you unlock a free sample box: minis of your top cleanser, toner and moisturizer for a 2-week trial.'],
+];
+
+// Hi-fi v8: everyone who isn't a creator. Same shape as CREATORS so People pages, cards and
+// Compare shelves treat them alike. kind: friend (in your circle), member (matched to you),
+// fof (a friend of a friend). Members without a stock photo get an initials avatar.
+const INITIALS = (t, bg) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="${bg}"/><text x="40" y="49" font-family="Geist, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#113916">${t}</text></svg>`)}`;
+const M = (id, kind, name, avatar, match, location, age, skin, environment, top3, products, quote, extra = {}) => ({
+  id, kind, name, handle: '@' + name.toLowerCase().replace(/[^a-z]/g, ''), followers: String(40 + (match * 7) % 300), avatar, match, location, age, skin, environment,
+  tags: [...skin, environment], top3, holyGrail: top3[0][0], quote, products: [...new Set([...top3.map(([p]) => p), ...products])], ...extra,
+});
+export const MEMBERS = [
+  M('priya', 'friend', 'Priya Nair', PERSON('women_44'), 96, 'Miami, FL', '25–29', ['Combination', 'Acne-prone'], 'Humid', [['anua_toner', 9.3], ['anua_txa', 9.1], ['biore', 9.0]], ['inn_cleanser', 'snail', 'cosrx_patch', 'laneige_lsm', 'torriden_mask'], 'Redness around my nose calmed down by week 2.'),
+  M('mayac', 'friend', 'Maya Chen', PERSON('women_68'), 92, 'Miami, FL', '25–29', ['Combination'], 'Humid', [['boj_sun', 9.2], ['boj_glow', 8.9], ['gmcleanser', 8.6]], ['cerave', 'anua_toner', 'lbb'], 'Lightweight everything, it’s too humid for anything else.'),
+  M('jordan', 'friend', 'Jordan Lee', PERSON('men_11'), 90, 'Miami, FL', '25–29', ['Acne-prone'], 'Humid', [['cosrx_patch', 8.8], ['bha', 8.7], ['levelup', 8.5]], ['gmcleanser', 'biore'], 'Patches on, Zoom on.'),
+  M('leo', 'friend', 'Leo Park', PERSON('men_32'), 93, 'Seattle, WA', '25–29', ['Combination'], 'Dry climate', [['snail', 9.0], ['lrp_cica', 8.9], ['boj_sun', 8.8]], ['gmcleanser', 'anua_toner', 'anua_txa'], 'Barrier first, then everything else.'),
+  M('jess', 'member', 'Jess Rivers', PERSON('women_12'), 89, 'Houston, TX', '25–29', ['Oily'], 'Humid', [['inn_cream', 8.4], ['boj_sun', 8.6], ['bha', 8.2]], ['gmcleanser', 'numbuzin_pad'], 'Light enough for Houston summers.'),
+  M('sam', 'member', 'Sam Okafor', PERSON('men_75'), 84, 'Austin, TX', '30–34', ['Oily'], 'High UV', [['boj_sun', 9.6], ['gmcleanser', 8.5], ['slamdunk', 8.2]], ['bha', 'cosrx_patch'], 'No white cast, no stinging.'),
+  M('nina', 'member', 'Nina Ruiz', PERSON('women_57'), 58, 'Tampa, FL', '30–34', ['Dry'], 'Humid', [['farmacy_halo', 8.6], ['lrp_cica', 8.4], ['farmacy_gc', 8.0]], ['inn_micellar', 'laneige_lsm'], 'Rich creams only.'),
+  M('riley', 'member', 'Riley Torres', INITIALS('RT', '#cbe942'), 96, 'Denver, CO', '25–29', ['Combination', 'Redness'], 'Dry climate', [['anua_txa', 9.4], ['lrp_cica', 9.1], ['boj_sun', 9.0]], ['inn_cleanser', 'anua_toner', 'laneige_lsm'], 'This is the one that did it.', { moved: 'Moved from Miami to Denver this year' }),
+  M('grace', 'member', 'Grace Kim', INITIALS('GK', '#cbdbea'), 91, 'Atlanta, GA', '30–34', ['Oily', 'Post-acne marks'], 'Humid', [['numbuzin_pad', 9.2], ['levelup', 8.9], ['biore', 8.8]], ['gmcleanser', 'cosrx_patch'], 'Marks fade if you’re patient.'),
+  M('dani', 'member', 'Dani Brooks', INITIALS('DB', '#f9d28b'), 88, 'Phoenix, AZ', '25–29', ['Combination'], 'Dry climate', [['slamdunk', 9.0], ['snail', 8.8], ['boj_sun', 8.7]], ['gmcleanser', 'lbb'], 'Dry heat needs layers.'),
+  M('omar', 'member', 'Omar Farouk', INITIALS('OF', '#ebeb88'), 86, 'Orlando, FL', '25–29', ['Acne-prone'], 'Humid', [['bha', 9.1], ['cosrx_patch', 8.8], ['levelup', 8.4]], ['gmcleanser', 'biore'], 'BHA twice a week, no more.'),
+  M('tess', 'member', 'Tess Walker', INITIALS('TW', '#facac1'), 85, 'Denver, CO', '30–34', ['Dry', 'Sensitive'], 'Dry climate', [['farmacy_halo', 9.3], ['lrp_cica', 9.0], ['inn_micellar', 8.5]], ['laneige_lsm', 'sana_eye'], 'Ceramides or bust in Denver.'),
+  M('ben', 'member', 'Ben Hughes', INITIALS('BH', '#cbdbea'), 82, 'Miami, FL', '35–44', ['Combination'], 'High UV', [['shiseido_stick', 9.0], ['gmcleanser', 8.6], ['levelup', 8.3]], ['bha'], 'A stick SPF I actually reapply.'),
+  M('lu', 'fof', 'Lu Tran', INITIALS('LT', '#cbe942'), 89, 'Miami, FL', '25–29', ['Combination', 'Redness'], 'Humid', [['anua_toner', 9.2], ['t28_sos', 8.9], ['biore', 8.8]], ['inn_cleanser', 'snail'], 'Calm first, glow later.', { via: 'Friend of Priya Nair' }),
+  M('iris', 'fof', 'Iris Lam', INITIALS('IL', '#f9d28b'), 87, 'Fort Lauderdale, FL', '25–29', ['Combination'], 'Humid', [['boj_glow', 9.1], ['anua_txa', 8.9], ['boj_sun', 8.8]], ['gmcleanser', 'torriden_mask'], 'Glow serum every single morning.', { via: 'Friend of Maya Chen' }),
+  M('nate', 'fof', 'Nate Osei', INITIALS('NO', '#ebeb88'), 83, 'Seattle, WA', '30–34', ['Oily'], 'Dry climate', [['levelup', 8.9], ['bha', 8.7], ['boj_sun', 8.5]], ['gmcleanser'], 'Simple and boring, and it works.', { via: 'Friend of Leo Park' }),
+  M('camille', 'fof', 'Camille Dubois', INITIALS('CD', '#facac1'), 80, 'Miami, FL', '30–34', ['Sensitive'], 'Humid', [['lrp_cica', 9.2], ['inn_micellar', 8.7], ['biore', 8.6]], ['anua_toner'], 'Fewer products, calmer skin.', { via: 'Friend of Jordan Lee' }),
+];
+
+// Hi-fi v8 "Routines that worked for people like you" (Picked for you > From people like you).
+// Each routine: whose it is, what they started with, their result and the weekly check-in trend
+// (higher = more of the concern), and when each product was added, with their note.
+export const PEER_ROUTINES = [
+  { id: 'common-spots', goal: 'Fade dark spots', common: true, users: 212, kept: 81, weeks: 6, products: ['gmcleanser', 'anua_txa', 'slamdunk', 'biore'] },
+  { id: 'riley', who: 'riley', goal: 'Fade dark spots', start: 'Spots + redness', result: 'Dark spots 7 → 3 in 6 weeks', tracked: 9, users: 74, kept: 79, trend: [7, 7, 7.5, 6, 5, 4, 3, 3, 3],
+    dip: 'Week 3 stung a little, then settled.', change: 'Start the TXA pad every other day. Week 3 stung.',
+    products: [['inn_cleanser', 'From week 1', 'Gentle, nothing to report.'], ['anua_txa', 'Added week 2', 'This is the one that did it.'], ['lrp_cica', 'Added week 4', 'Switched to this after moving. No more flaking.'], ['boj_sun', 'From week 1', 'Spots come back without it.']] },
+  { id: 'kara', who: 'kara', creator: true, goal: 'Fade dark spots', start: 'Summer spots', result: 'Dark spots 6 → 2 in 8 weeks', tracked: 12, users: 128, kept: 84, trend: [6, 6, 5.5, 5, 4, 3.5, 3, 2.5, 2],
+    change: 'Patch-test the retinol cream for a week before going nightly.',
+    products: [['anua_toner', 'From week 1', 'The only toner I’ve repurchased six times.'], ['anua_night', 'Added week 3', 'Texture and spots both moved.'], ['biodance_mask', 'Added week 5', 'Sunday reset.'], ['biore', 'From week 1', 'Non-negotiable.']] },
+  { id: 'grace', who: 'grace', goal: 'Fade dark spots', start: 'Post-acne marks', result: 'Marks 8 → 4 in 7 weeks', tracked: 10, users: 61, kept: 77, trend: [8, 8, 7, 6.5, 6, 5, 4.5, 4],
+    change: 'I’d have started SPF every day sooner.',
+    products: [['gmcleanser', 'From week 1', 'Low pH, no tightness.'], ['numbuzin_pad', 'Added week 2', 'The pads made the difference.'], ['levelup', 'From week 1', 'Light, never pills.'], ['biore', 'Added week 3', 'Marks fade faster with it.']] },
+  { id: 'common-redness', goal: 'Calm redness', common: true, users: 188, kept: 83, weeks: 4, products: ['inn_cleanser', 'anua_toner', 'lrp_cica', 'biore'] },
+  { id: 'leo', who: 'leo', goal: 'Calm redness', start: 'Redness after over-exfoliating', result: 'Redness 7 → 3 in 5 weeks', tracked: 10, users: 55, kept: 82, trend: [7, 6.5, 6, 5, 4, 3, 3],
+    change: 'Stop exfoliating completely for the first two weeks.',
+    products: [['gmcleanser', 'From week 1', 'Nothing fancy.'], ['snail', 'From week 1', 'Barrier came back fast.'], ['lrp_cica', 'Added week 2', 'Calms everything.'], ['boj_sun', 'From week 1', 'No sting.']] },
+  { id: 'common-breakouts', goal: 'Clear breakouts', common: true, users: 240, kept: 76, weeks: 8, products: ['gmcleanser', 'bha', 'levelup', 'biore'] },
+  { id: 'omar', who: 'omar', goal: 'Clear breakouts', start: 'Chin breakouts', result: 'Breakouts 6 → 2 in 8 weeks', tracked: 11, users: 90, kept: 74, trend: [6, 6, 5.5, 5, 4, 3, 2.5, 2],
+    change: 'BHA twice a week is plenty.',
+    products: [['gmcleanser', 'From week 1', 'Doesn’t strip.'], ['bha', 'Added week 2', 'Twice a week, no more.'], ['cosrx_patch', 'As needed', 'Overnight fix.'], ['levelup', 'From week 1', 'No clogged pores.']] },
 ];
