@@ -83,7 +83,7 @@ const defaultState = () => ({
     { me: true, text: 'Can I use my TXA pads on retinol nights?' },
     { me: false, text: 'Yes, if you swipe them in the morning. 41 people with your skin who split them saw less irritation by week 2.' },
   ],
-  checkin: { feel: { Hydration: 'Better', Breakouts: 'Much better', Redness: 'Much better', Texture: 'Same', Oiliness: 'Same' }, extra: ['Stressed', 'Lots of sun'], verdict: 'buy', submitted: false, note: '' },
+  checkin: { feel: { Hydration: null, Breakouts: null, Redness: null, Texture: null, Oiliness: null }, extra: [], verdict: null, rated: {}, status: {}, submitted: false, note: '' }, // Hi-fi v10: the weekly check-in opens untouched
 });
 
 let state = load();
@@ -97,6 +97,7 @@ function migrate(s) {
   if (s.sample?.picks?.treat === 'eadem_mark' && !s.v9treat) s = { ...s, v9treat: true, sample: { ...s.sample, picks: { ...s.sample.picks, treat: 'biodance_serum' }, verdicts: {} } };
   if (s.routinePick && !s.v9routine) s = { ...s, v9routine: true, routinePick: Object.fromEntries(ROUTINE.map((r) => [r.step, 0])) };
   if (!s.v10 && s.shelfDemo !== false) s = { ...s, v10: true, setupStep: Math.max(s.setupStep ?? 0, 4), saved: ['biodance_mask', 'farmacy_halo', 'laneige_lsm'] };
+  if (!s.v10ci) s = { ...s, v10ci: true, checkin: { feel: { Hydration: null, Breakouts: null, Redness: null, Texture: null, Oiliness: null }, extra: [], verdict: null, rated: {}, status: {}, submitted: false, note: '' } };
   if (!s.followSeeded) s = { ...s, followSeeded: true, following: { hana: true, ari: true, noor: true, ...(s.following ?? {}) } };
   // Hi-fi v7 #128: the Anua TXA pad is now Mia's top product (was 9.1).
   if (s.ratings?.anua_txa === 9.1) s = { ...s, ratings: { ...s.ratings, anua_txa: 9.5 } };
@@ -331,7 +332,7 @@ function myShelf() {
   return `
     <section class="stack my-shelf" aria-label="My shelf" style="position:relative">
       <div class="row between">
-        <div><h2 class="h2 shelf-title">My Shelf</h2>${state.shelfOpen ? `<div class="xs muted">${base.length + added.length} products ranked by you</div>` : ''}</div>
+        <div><h2 class="h2 shelf-title">My Shelf</h2></div>
         <a class="btn" href="#/search">+ Add</a>
       </div>
       ${items.length ? shelfRows(items, { open: state.shelfOpen }) : '<div class="empty" style="padding:20px 8px">Your shelf is empty. Tap “+ Add” to add the products you use.</div>'}
@@ -1225,7 +1226,7 @@ function cartPage() {
       <hr class="divider">
       <div class="row between"><span style="font-size:18px;font-weight:500">Total</span><span style="font-size:18px;font-weight:500">${money2(t.total)}</span></div>
       <span class="xs muted">Arrives Thu, Nov 12 to Miami, FL 33131</span>
-      <button class="btn dark block" data-act="checkout" ${state.cart.length ? '' : 'disabled'}>Checkout  ${money2(t.total)}</button>
+      <button class="btn dark block" data-act="checkout" ${state.cart.length ? '' : 'disabled'}>Checkout — ${money2(t.total)}</button>
       <button class="btn block" data-act="checkout" ${state.cart.length ? '' : 'disabled'}>Apple Pay</button>
       <p class="xs muted">Your new products land on your shelf as “arriving”. Tracking starts on day 1, so your week-4 check-in knows what changed.</p>
     </section>`;
@@ -1356,7 +1357,7 @@ function checkinParts() {
   const c = state.checkin;
   const scale = ['Much worse', 'Worse', 'Same', 'Better', 'Much better'];
   const rate = [['goodal_toner', 'Week 6  AM'], ['anua_guasha', 'Week 4  PM'], ['boj_glow', 'Week 6  AM + PM'], ['cerave_int', 'Week 3  PM']];
-  const status = (id) => state.stars[`st_${id}`] || (state.ratings[id] >= 6 ? 'Working' : 'Not working');
+  const status = (id) => c.status?.[id];
   // Hi-fi v10: the score card sits beside the feel ratings; no photo, no part tags.
   return `
     <section class="card stack ci-part" style="gap:16px">
@@ -1378,9 +1379,9 @@ function checkinParts() {
     </section>
     <section class="card stack ci-part">
       <h2 class="h4" style="font-size:16px">Rate your products</h2>
-      ${rate.map(([id, when]) => { const st = Math.round(state.ratings[id] / 2); return `
+      ${rate.map(([id, when]) => { const st = c.rated?.[id] ?? 0; return `
         <div class="row ci-rate">${thumb(id, 38, 46)}<div class="grow"><div class="small">${esc(P(id).brand)} ${esc(P(id).name)}</div><div class="xs muted">${when}</div></div>
-          <span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= st ? 'on' : ''}" data-act="rate-shelf" data-id="${id}" data-v="${i}" aria-label="${i} stars">${i <= st ? '★' : '☆'}</button>`).join('')}</span>
+          <span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= st ? 'on' : ''}" data-act="ci-rate" data-id="${id}" data-v="${i}" aria-label="${i} stars">${i <= st ? '★' : '☆'}</button>`).join('')}</span>
           ${['Working', 'Not sure', 'Not working'].map((v) => `<button class="chip sm ${status(id) === v ? 'on' : ''}" data-act="ci-status" data-id="${id}" data-v="${v}">${v}</button>`).join('')}
         </div>`; }).join('')}
     </section>
@@ -1562,7 +1563,7 @@ function reviewsPage() {
       : reviews.length ? `<div class="stack" style="gap:12px">${reviews.map((r) => liveReview(r, true)).join('')}</div>`
       : '<div class="empty">No reviews match. Try fewer words or another product.</div>'}
     ${reviews.length < total ? '<button class="btn" data-act="rv-more" style="align-self:center">Show more reviews</button>' : ''}`;
-  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: peopleRail() };
 }
 
 /* ================= welcome + accounts ================= */
@@ -1777,7 +1778,7 @@ function productPage(id) {
       ${reviews.length < total ? '<button class="btn" data-act="reviews-more" style="align-self:flex-start">Show more reviews</button>' : ''}
       ${statsLine() ? `<p class="xs faint live-count">Dew has collected ${statsLine()} so far.</p>` : ''}
     </section>`;
-  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: peopleRail() };
 }
 
 /* ================= search ================= */
@@ -1800,7 +1801,7 @@ function searchPage() {
         ${signedOut() ? '' : `<button class="btn sm" data-act="shelf-add" data-id="${id}">${shelfIds().includes(id) ? 'On shelf ✓' : '+ Shelf'}</button>`}
         <button class="add-btn ${state.added[id] ? 'added' : ''}" data-act="add" data-id="${id}" aria-label="Add">${state.added[id] ? '✓' : '+'}</button></div>`).join('') || (pages.some((p) => p.status === 'loading') ? '<div class="empty">Searching…</div>' : '<div class="empty">Nothing found. Try “toner” or “SPF”.</div>')}</section>
     ${total > remote.length ? `<button class="btn" data-act="search-more" style="align-self:flex-start">Show more (${(total - remote.length).toLocaleString()} left)</button>` : ''}`;
-  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: rightRail() };
+  return signedOut() ? { layout: 'layout-solo', main: `<div class="public-page stack">${main}</div>` } : { layout: '', left: leftCol(), main, right: peopleRail() };
 }
 
 /* ================= reward modal ================= */
@@ -2578,7 +2579,8 @@ const actions = {
   },
   'ci-feel': (d) => set({ checkin: { ...state.checkin, feel: { ...state.checkin.feel, [d.k]: d.v } } }),
   'ci-extra': (d) => { const e = state.checkin.extra; set({ checkin: { ...state.checkin, extra: e.includes(d.v) ? e.filter((x) => x !== d.v) : [...e, d.v] } }); },
-  'ci-status': (d) => set({ stars: { ...state.stars, [`st_${d.id}`]: d.v } }),
+  'ci-status': (d) => set({ checkin: { ...state.checkin, status: { ...(state.checkin.status ?? {}), [d.id]: d.v } } }),
+  'ci-rate': (d) => set({ ratings: { ...state.ratings, [d.id]: +d.v * 2 }, checkin: { ...state.checkin, rated: { ...(state.checkin.rated ?? {}), [d.id]: +d.v } } }),
   'ci-verdict': (d) => set({ checkin: { ...state.checkin, verdict: d.v } }),
   'ci-submit': () => { set({ checkin: { ...state.checkin, submitted: true }, weeklyDue: false, quickDone: true }); earn(60, 'Weekly check-in submitted'); },
   'weekly-submit': () => { set({ checkin: { ...state.checkin, submitted: true }, weeklyDue: false, quickDone: true }); earn(60, 'Weekly check-in submitted. Today’s check-in is done.'); },

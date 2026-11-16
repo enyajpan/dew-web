@@ -316,6 +316,10 @@ Newest first. Every major change gets an entry here.
 - Tapping a product on someone's shelf (or your own) opens its details in a light-blue panel with dark text, matching Hi-fi v10 05b, instead of the dark green one.
 - At desktop widths the Explore hero title is 30px and the profile-complete heading 38.4px, matching v10, instead of scaling with the window.
 - Fixed: after typing in a field, tapping a chip no longer jumps the page back up to that field.
+- The cart's Checkout button reads "Checkout — $80.25".
+- The weekly check-in pop-up is 1040 × 660 and centered like v10 02a (it scrolls inside), and it opens untouched: nothing is selected until you answer.
+- Clicking a product on My Shelf no longer shows "N products ranked by you" above the shelf.
+- Public reviews, product pages and search results show People like you under Want to try in the right panel, like Explore.
 
 **November 16, 2026: Location and follow counts on profiles**
 
