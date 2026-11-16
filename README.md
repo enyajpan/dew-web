@@ -311,6 +311,18 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 16, 2026: Location and follow counts on profiles**
+
+- Every profile shows its location under the name: your profile header, your public page and its live preview, creator, member and friend-of-a-friend pages, and the cards on Find people.
+- Your location comes from your skin profile, so moving from Miami, Florida to Denver, Colorado changes it from "Miami, FL" to "Denver, CO".
+- Your profile also shows your followers and how many people you follow.
+
+**November 16, 2026: Diary entries, saving profile edits, steadier typing**
+
+- My page > Diary has "+ Add an entry": write a post, add this week's photo, pick who sees it, and post it to your diary.
+- Editing a finished skin profile shows "Save changes" (back to your profile, picks re-ranked), and Edit your page has a Save button.
+- Typing in a search box or note no longer gets wiped when review data arrives in the background, and picking a shelf suggestion clears the search box.
+
 **November 15, 2026: ABC Diatype fonts**
 
 - Type is ABC Diatype Edu Regular and Medium, with ABC Diatype Mono Edu Regular and Medium for the mono labels and buttons, in place of Geist. They're self-hosted WOFF2 files in `assets/fonts/` under Dinamo's educational licence. That folder is gitignored because the licence doesn't allow the fonts in a public repository, so copy the four WOFF2 files there on a new checkout; without them the app falls back to Geist.

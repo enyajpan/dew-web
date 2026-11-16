@@ -709,7 +709,10 @@ function setupPage(n) {
         <div class="notice">We use your shelf to find what your routine is missing, what’s running low and what to replace.</div>
       </section>`;
   const back = n > 1 ? `<a class="btn" href="#/setup/${n - 1}">← Back</a>` : '<a class="btn" href="#/for-you">Skip for now</a>';
-  const next = n < 4 ? `<button class="btn dark" data-act="setup-next" data-n="${n}">Continue to ${SETUP[n].name.toLowerCase()} →</button>` : '<button class="btn dark" data-act="setup-next" data-n="4">Finish my profile →</button>';
+  const editing = state.setupStep >= 4;
+  const next = editing
+    ? `<div class="row" style="gap:8px">${n < 4 ? `<button class="btn" data-act="setup-next" data-n="${n}">Next: ${SETUP[n].name.toLowerCase()} →</button>` : ''}<button class="btn dark" data-act="setup-save">Save changes</button></div>`
+    : n < 4 ? `<button class="btn dark" data-act="setup-next" data-n="${n}">Continue to ${SETUP[n].name.toLowerCase()} →</button>` : '<button class="btn dark" data-act="setup-next" data-n="4">Finish my profile →</button>';
   const main = `${bar}<span class="mono" style="margin-top:12px">Step ${n} of 4</span><h1 class="h1">${s.title}</h1><p class="muted">${s.sub}</p>${body}<div class="row between setup-nav">${back}${next}</div>`;
   return { layout: 'layout-focus', main, right: strengthCard() };
 }
@@ -969,7 +972,7 @@ function pageSide(m, { back, actions, note }) {
   return `
     <section class="card stack">
       ${back}
-      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${esc(m.followers)} followers</div>${m.kind && m.kind !== 'creator' ? `<div style="margin-top:4px">${kindTag(m.kind)}</div>` : ''}</div></div>
+      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div>${m.location ? `<div class="small">${esc(m.location)}</div>` : ''}<div class="xs muted">${esc(m.handle)}  ·  ${followLine(m)}</div>${m.kind && m.kind !== 'creator' ? `<div style="margin-top:4px">${kindTag(m.kind)}</div>` : ''}</div></div>
       ${m.match ? `<div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${m.match}% like you</span><p class="xs" style="margin-top:6px">${esc(m.matchNote)}</p></div>` : (m.sideNote ?? '')}
       <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h2">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
@@ -1006,7 +1009,7 @@ function myModel() {
   const recs = MY_RECS.filter(([id]) => shelf.includes(id)).map(([id, best, note]) => ({ id, best, note: notes[id] ?? note, score: score[id] })).sort((a, b) => pos(a.id) - pos(b.id) || b.score - a.score);
   const name = currentUser() ? firstName() || 'You' : 'Mia Tan';
   return {
-    key: 'me', first: name.split(' ')[0], name, avatar: 'assets/img/progress/w5.jpg', handle: '@miatan', followers: '38', match: 0,
+    key: 'me', first: name.split(' ')[0], name, avatar: 'assets/img/progress/w5.jpg', handle: '@miatan', followers: '38', following: myFollowing(), location: myLocation(), match: 0,
     tags: profileTags([state.answers.musts?.[0]]).slice(0, 5),
     blurb: pg.blurb ?? MY_BLURB, theme: pg.theme ?? 'sky', custom: pg.custom,
     announcement: pg.announcement === '' ? null : [pg.announcement ?? 'Week 6 check-in: redness is down and my chin finally cleared. The retinol night cream is staying.', 'Posted today', 'Shelf updated today'],
@@ -1440,6 +1443,13 @@ function trackerRail() {
     ${downloadApp()}`;
 }
 
+// "Miami, Florida" -> "Miami, FL" for profile headers.
+const US_STATES = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY', 'District of Columbia': 'DC', 'Puerto Rico': 'PR' };
+const shortPlace = (place) => { if (!place) return ''; const [city, region] = String(place).split(',').map((x) => x.trim()); return region && US_STATES[region] ? `${city}, ${US_STATES[region]}` : String(place); };
+const myLocation = () => shortPlace(state.answers.climate?.place ?? state.answers.location?.[0]);
+const myFollowing = () => MEMBERS.filter((m) => m.kind === 'friend').length + Object.values(state.following ?? {}).filter(Boolean).length;
+const followLine = (m) => `<b style="font-weight:500">${esc(m.followers)}</b> <span class="muted">followers</span>${m.following != null ? `  ·  <b style="font-weight:500">${m.following}</b> <span class="muted">following</span>` : ''}`;
+
 function profilePage() {
   const tab = state.profileTab;
   const header = `
@@ -1447,6 +1457,7 @@ function profilePage() {
       <img class="avatar" style="width:88px;height:88px" src="assets/img/progress/w5.jpg" alt="">
       <div class="grow stack">
         <div class="row"><h1 class="h2">${esc(currentUser() ? firstName() || 'You' : 'Mia Tan')}</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
+        <div class="stack profile-id" style="gap:2px">${myLocation() ? `<span class="small">${esc(myLocation())}</span>` : ''}<span class="small"><b style="font-weight:500">38</b> <span class="muted">followers</span>  ·  <b style="font-weight:500">${myFollowing()}</b> <span class="muted">following</span></span></div>
         <div class="row wrap" style="gap:6px">${profileTags([state.answers.musts?.[0], state.answers.budget?.[0]]).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
         <div class="row wrap profile-actions"><a class="btn dark" href="#/setup/1">Update skin profile</a><a class="btn" href="#/profile/edit">Edit your page</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
@@ -1836,7 +1847,7 @@ function personCard(c) {
     <div class="row top3-row ${i === 0 ? 'holy' : ''}"><span class="top3-n">${i + 1}</span>${thumb(pid, 30, 36)}<div class="grow" style="min-width:0">${i === 0 ? '<div class="mono forest">★ Holy grail</div>' : `<div class="mono faint">${esc(P(pid).brand)}</div>`}<div class="small top3-name">${esc(P(pid).name)}</div></div>${ring(s, true)}</div>`).join('');
   return `
     <article class="card stack creator-card">
-      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><a class="h4 plink" href="#/people/${c.id}">${esc(c.name)}</a>${kindTag(c.kind)}</div><div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${esc(c.handle)}  ${c.followers} followers</div>${c.location ? `<div class="xs muted">${esc(c.location)}  ·  Age ${c.age}</div>` : ''}${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
+      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><a class="h4 plink" href="#/people/${c.id}">${esc(c.name)}</a>${kindTag(c.kind)}</div>${c.location ? `<div class="small">${esc(c.location)}  ·  Age ${c.age}</div>` : ''}<div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${esc(c.handle)}  ${c.followers} followers</div>${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
       <div class="stack" style="gap:8px">
         <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Skin type</span>${(c.skin ?? c.tags.slice(0, 2)).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Environment</span><span class="tag">${c.environment ?? c.tags[2]}</span></div>
@@ -2281,7 +2292,7 @@ function myPageView() {
   const tab = state.pageTab?.me ?? 'products';
   const toggle = `<span class="seg">${[['products', 'All products'], ['diary', 'Diary'], ['reviews', 'All reviews']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="page-tab" data-key="me" data-v="${k}">${l}</button>`).join('')}</span>`;
   const body = tab === 'diary'
-    ? `<p class="xs muted">Your public journey: the diary posts you shared with everyone. Followers-only and private posts stay off this view.</p>${diaryTimeline(myDiary(), 'public')}`
+    ? `<div class="row between" style="gap:12px"><p class="xs muted">Your public journey: the diary posts you shared with everyone. Followers-only and private posts stay off this view.</p><button class="btn dark sm" data-act="diary-new" style="flex:none">+ Add an entry</button></div>${diaryTimeline(myDiary(), 'public')}`
     : tab === 'reviews' ? pageReviews(m) : `
     ${holyBanner(m, m.first)}
     <div class="row between"><div><h2 class="h3">My top recommendations</h2><p class="xs muted">Your five favorites, with a note on each.</p></div><a class="btn" href="#/profile/edit">Edit your page</a></div>
@@ -2316,7 +2327,7 @@ function myPageEditScreen() {
   const viewer = as === 'follower' ? 'follower' : 'public';
   const editor = `
     <section class="card stack page-editor">
-      <div class="row between"><a class="mono" href="#/profile" style="text-decoration:none">← Profile</a><span class="saved-tag">Saved</span></div>
+      <div class="row between"><a class="mono" href="#/profile" style="text-decoration:none">← Profile</a><button class="btn dark sm" data-act="page-save">Save</button></div>
       <h1 class="h2">Edit your page</h1>
       <label class="stack" style="gap:6px"><span class="mono faint">Blurb</span>
         <span class="blurb-box"><textarea data-input="page-blurb" maxlength="200" rows="4">${esc(m.blurb)}</textarea><span class="blurb-count mono">${m.blurb.length} / 200</span></span></label>
@@ -2333,7 +2344,7 @@ function myPageEditScreen() {
       <div class="preview-frame preview-page">
         <aside class="stack preview-side">
           <img class="avatar" style="width:64px;height:64px" src="${m.avatar}" alt="">
-          <div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="xs muted">${esc(m.handle)}  ${m.followers} followers</div></div>
+          <div><div class="h2" style="font-size:26px">${esc(m.name)}</div>${m.location ? `<div class="small">${esc(m.location)}</div>` : ''}<div class="xs muted">${esc(m.handle)}  ·  ${followLine(m)}</div></div>
           ${as === 'matched' ? '<span class="pill gap" style="align-self:flex-start">94% skin match with you</span>' : ''}
           <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
           <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h3">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
@@ -2363,24 +2374,24 @@ const MOMENT_PRODUCTS = { 'Hydrate Hero': ['anua_night', 'cerave_int'], 'SPF Eve
 function momentModal() {
   const t = state.moment;
   if (!t) return '';
+  const entry = t === '__entry';
   const ch = CHALLENGES.find(([x]) => x === t);
   const aud = state.momentAud ?? 'Everyone';
   const photo = state.momentPhoto;
   return `
     <div class="scrim" data-act="moment-close">
       <section class="modal" role="dialog" aria-label="Share a moment" data-stop>
-        <div class="row" style="gap:14px"><span class="moment-badge">${svg('hydrate', 40)}</span><div class="grow"><span class="mono" style="color:var(--olive)">Challenge complete</span><h2 class="h2" style="font-size:28px">${esc(t)}  ·  +${ch?.[4] ?? 0} pts</h2></div><button class="link mono" data-act="moment-close">✕</button></div>
+        ${entry ? '<div class="stack" style="gap:4px"><span class="mono forest">My diary</span><h2 class="h2" style="font-size:28px">New diary entry</h2></div>' : `<div class="row" style="gap:14px"><span class="moment-badge">${svg('hydrate', 40)}</span><div class="grow"><span class="mono" style="color:var(--olive)">Challenge complete</span><h2 class="h2" style="font-size:28px">${esc(t)}  ·  +${ch?.[4] ?? 0} pts</h2></div><button class="link mono" data-act="moment-close">✕</button></div>`}
         <hr class="divider">
-        <h3 class="h3">Share it on your page?</h3>
-        <p class="xs muted">We drafted this from your check-ins. Edit it or post as is.</p>
-        <textarea class="moment-text" data-input="moment-text" rows="3">${esc(state.momentText ?? MOMENT_TEXT[t] ?? '')}</textarea>
+        ${entry ? '<p class="xs muted">Share how your skin is doing, a product note or a win. You choose who sees it.</p>' : '<h3 class="h3">Share it on your page?</h3>\n        <p class="xs muted">We drafted this from your check-ins. Edit it or post as is.</p>'}
+        <textarea class="moment-text" data-input="moment-text" rows="3" placeholder="What changed this week?">${esc(state.momentText ?? MOMENT_TEXT[t] ?? '')}</textarea>
         <div class="row" style="gap:12px">
           <span class="diary-photo lg ${photo ? 'on' : ''}"><img src="assets/img/progress/w5.jpg" alt="This week’s progress photo"></span>
           <div class="stack grow" style="gap:6px"><span class="private" style="align-self:flex-start">🔒 Private unless you add it</span><button class="btn sm" style="align-self:flex-start" data-act="moment-photo">${photo ? 'Added to post ✓' : 'Add this week’s photo'}</button></div>
         </div>
         ${(MOMENT_PRODUCTS[t] ?? []).length ? `<div class="row wrap" style="gap:6px"><span class="mono faint">Products</span>${MOMENT_PRODUCTS[t].map((id) => `<span class="tag">${esc(P(id).name)}</span>`).join('')}</div>` : ''}
         <div class="row" style="gap:10px"><span class="xs muted">Who sees it</span><span class="seg">${['Everyone', 'Followers', 'Only me'].map((a) => `<button class="${aud === a ? 'on' : ''}" data-act="moment-aud" data-v="${a}">${a}</button>`).join('')}</span></div>
-        <div class="row"><button class="btn dark" data-act="moment-post">Post to my page</button><button class="btn" data-act="moment-close">Not now</button></div>
+        <div class="row"><button class="btn dark" data-act="moment-post">${entry ? 'Post to my diary' : 'Post to my page'}</button><button class="btn" data-act="moment-close">Not now</button></div>
       </section>
     </div>`;
 }
@@ -2423,6 +2434,14 @@ function render() {
   const r = route();
   const app = document.getElementById('app');
   const scrolls = lastRoute === r ? [...app.querySelectorAll('.col')].map((c) => c.scrollTop) : [];
+  // A re-render (e.g. when review data arrives) must not wipe what someone is typing: keep the focused
+  // field's text, cursor and open suggestions.
+  const typing = document.activeElement?.matches?.('input:not([type=checkbox]):not([type=radio]), textarea') ? document.activeElement : null;
+  const keep = typing && lastRoute === r ? {
+    sel: typing.dataset.suggest ? `[data-suggest="${typing.dataset.suggest}"]` : typing.dataset.input ? `[data-input="${typing.dataset.input}"]` : typing.name && typing.form?.dataset.form ? `[data-form="${typing.form.dataset.form}"] [name="${typing.name}"]` : null,
+    value: typing.value, start: typing.selectionStart, end: typing.selectionEnd,
+    box: typing.closest('form')?.querySelector('.suggest-box')?.innerHTML,
+  } : null;
   document.getElementById('topnav').innerHTML = nav(v.tab);
   app.className = `app ${v.layout || 'layout-3'}`;
   const cols = [];
@@ -2431,6 +2450,15 @@ function render() {
   if (v.right) cols.push(`<aside class="col rail" aria-label="Side panel">${v.right}</aside>`);
   app.innerHTML = cols.join('');
   [...app.querySelectorAll('.col')].forEach((c, i) => { if (scrolls[i]) c.scrollTop = scrolls[i]; });
+  if (keep?.sel) {
+    const el = document.querySelector(keep.sel);
+    if (el) {
+      el.value = keep.value; el.focus();
+      try { el.setSelectionRange(keep.start, keep.end); } catch (e) { /* not a text field */ }
+      const box = el.closest('form')?.querySelector('.suggest-box');
+      if (box && keep.box) { box.innerHTML = keep.box; box.classList.add('open'); el.setAttribute('aria-expanded', 'true'); }
+    }
+  }
   playBoxReveal(lastRoute !== r);
   // Ask Dew is pinned to the bottom right on every page, signed in or not.
   document.getElementById('overlay').innerHTML = `${askDew()}${weeklyModal()}${rewardModal()}${compareModal()}${whyModal()}${momentModal()}`;
@@ -2464,7 +2492,12 @@ const actions = {
     toast(has ? 'Removed from Want to try' : `Saved ${P(d.id).name} to Want to try`);
   },
   'saved-all': () => set({ savedAll: !state.savedAll }),
-  'shelf-add': (d) => addToShelf(d.id),
+  'shelf-add': (d) => {
+    const input = document.querySelector('[data-suggest="shelf"]');
+    if (input) { input.value = ''; input.closest('form')?.querySelector('.suggest-box')?.replaceChildren(); input.setAttribute('aria-expanded', 'false'); }
+    closeSuggest();
+    addToShelf(d.id);
+  },
   'rv-skin': (d) => set({ rv: { ...state.rv, skin: d.v, limit: 20 } }),
   'rv-more': () => set({ rv: { ...state.rv, limit: (state.rv?.limit ?? 20) + 20 } }),
   'rv-clear': () => set({ rv: { sort: state.rv?.sort ?? 'newest' } }),
@@ -2493,6 +2526,8 @@ const actions = {
     if (gained) toast(`+50 pts  Step ${n} done`);
     go(n >= 4 ? 'setup/done' : `setup/${n + 1}`);
   },
+  'page-save': () => { set({ profileTab: 'rankings' }); go('profile'); toast('Your page is saved'); },
+  'setup-save': () => { set({ profileTab: 'rankings' }); go('profile'); toast('Skin profile saved. Your picks are re-ranked.'); },
   follow: (d) => { set({ following: { ...state.following, [d.id]: !state.following[d.id] } }); },
   audience: (d) => set({ audience: d.v }),
   'filters-toggle': () => set({ filterOpen: !state.filterOpen }),
@@ -2584,8 +2619,17 @@ const actions = {
   'moment-close': () => set({ moment: null }),
   'moment-aud': (d) => set({ momentAud: d.v }),
   'moment-photo': () => set({ momentPhoto: !state.momentPhoto }),
+  'diary-new': () => set({ moment: '__entry', momentText: '', momentPhoto: false, momentAud: 'Everyone' }),
   'moment-post': () => {
     const t = state.moment;
+    if (t === '__entry') {
+      const text = String(state.momentText ?? '').trim();
+      if (!text) { toast('Write something first'); return; }
+      const title = text.split(/(?<=[.!?])\s/)[0].slice(0, 48);
+      set({ moment: null, diary: [{ when: 'Today', kind: 'Update', title, text, aud: state.momentAud ?? 'Everyone', photo: state.momentPhoto ? 'assets/img/progress/w5.jpg' : null }, ...(state.diary ?? [])] });
+      toast('Posted to your diary');
+      return;
+    }
     const entry = { when: 'Today', kind: 'Challenge', title: `${t} complete`, text: state.momentText ?? MOMENT_TEXT[t] ?? '', aud: state.momentAud ?? 'Everyone', photo: state.momentPhoto ? 'assets/img/progress/w5.jpg' : null, product: (MOMENT_PRODUCTS[t] ?? [])[0] };
     set({ moment: null, diary: [entry, ...(state.diary ?? [])] });
     toast(entry.aud === 'Only me' ? 'Saved to your diary' : 'Posted to your page diary');
