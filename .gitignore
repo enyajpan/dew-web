@@ -7,3 +7,6 @@ scraper/out/
 .vercel
 .env*
 *.log
+
+# ABC Diatype Edu (Dinamo licence: no public repositories)
+assets/fonts/

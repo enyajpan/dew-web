@@ -311,6 +311,11 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 15, 2026: ABC Diatype fonts**
+
+- Type is ABC Diatype Edu Regular and Medium, with ABC Diatype Mono Edu Regular and Medium for the mono labels and buttons, in place of Geist. They're self-hosted WOFF2 files in `assets/fonts/` under Dinamo's educational licence. That folder is gitignored because the licence doesn't allow the fonts in a public repository, so copy the four WOFF2 files there on a new checkout; without them the app falls back to Geist.
+- The Want to try panel's "Show all" is an underlined mono link instead of a button.
+
 **November 15, 2026: Matched every screen to Hi-fi v10**
 
 - Explore: pick buttons are See all reviews, + Want to try, then Add to cart. The demo starts with a complete profile and 3 saved products ($91). The left panel hugs its content, My Shelf has a third shelf row, and clicking a product shows brand, name, weeks used and score. "People you follow who use this" and People like you rows match v10, and "Why this?" lists its reasons without dot meters.

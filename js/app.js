@@ -1,7 +1,7 @@
 import {
   PRODUCTS, SHELF, PICKS, LAUNCHES, REFILLS, PUBLIC_REVIEWS, COMMUNITY, CREATORS,
   ROUTINE, SAMPLE_SLOTS, CHALLENGES, MILESTONES, ASK_DEW_REPLIES, MEMBERS, PEER_ROUTINES,
-} from './data.js?v=14';
+} from './data.js?v=16';
 import { useJson, onData, productsUrl, reviewsUrl } from './api.js?v=2';
 import { auth, initAuth, currentUser, firstName, signUp, signIn, signOut, resetPassword, loadAppState, saveAppState, accessToken } from './auth.js?v=3';
 
@@ -418,7 +418,7 @@ function rightRail() {
             <span class="row" style="gap:8px">${P(id).price ? `<span class="mono" style="color:var(--ink)">${money(P(id).price)}</span>` : ''}<button class="link mono forest rail-link" data-act="add" data-id="${id}">${state.added[id] ? 'In cart ✓' : 'Add to cart'}</button></span>
           </div>
         </div>`).join('') : '<div class="empty" style="padding:20px 8px">Nothing saved yet. Tap “+ Want to try” on a pick or review.</div>'}
-      ${saved.length > 5 ? `<button class="btn block" data-act="saved-all">${state.savedAll ? 'Show fewer' : `Show all ${saved.length}`}</button>` : ''}
+      ${saved.length > 5 ? `<button class="link mono rail-more" data-act="saved-all">${state.savedAll ? 'Show fewer' : `Show all ${saved.length}`}</button>` : ''}
       ${saved.length ? `<button class="btn dark block" data-act="add-many" data-ids="${saved.join(',')}">Add all to cart${total ? ` — ${money(total)}` : ''}</button><button class="btn outline-forest block" data-act="rail-sample">Sample a routine</button>` : ''}
     </section>`;
 }
@@ -576,7 +576,7 @@ const BOX_ILLO = `<svg class="box-illo" viewBox="0 0 194 124" aria-hidden="true"
   </g>
   <image href="assets/img/hero.jpg" x="8.45" y="51.48" width="176" height="70.4" preserveAspectRatio="xMidYMid slice" clip-path="url(#box-clip)"/>
   <rect x="5.81" y="44" width="181.28" height="15.84" rx="5.28" fill="#A1A261"/>
-  <text x="96.5" y="89.1" text-anchor="middle" fill="#113916" font-family="Geist Mono, monospace" font-size="8.8" font-weight="500" letter-spacing="0.35">YOUR BOX</text>
+  <text x="96.5" y="89.1" text-anchor="middle" fill="#113916" font-family="Dew Mono, Geist Mono, monospace" font-size="8.8" font-weight="500" letter-spacing="0.35">YOUR BOX</text>
 </svg>`;
 
 function forYou() {

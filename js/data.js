@@ -237,7 +237,7 @@ export const ASK_DEW_REPLIES = [
 // Hi-fi v8: everyone who isn't a creator. Same shape as CREATORS so People pages, cards and
 // Compare shelves treat them alike. kind: friend (in your circle), member (matched to you),
 // fof (a friend of a friend). Members without a stock photo get an initials avatar.
-const INITIALS = (t, bg) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="${bg}"/><text x="40" y="49" font-family="Geist, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#113916">${t}</text></svg>`)}`;
+const INITIALS = (t, bg) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="${bg}"/><text x="40" y="49" font-family="ABC Diatype Edu, ABC Diatype, Geist, Arial, sans-serif" font-size="28" text-anchor="middle" fill="#113916">${t}</text></svg>`)}`;
 const M = (id, kind, name, avatar, match, location, age, skin, environment, top3, products, quote, extra = {}) => ({
   id, kind, name, handle: '@' + name.toLowerCase().replace(/[^a-z]/g, ''), followers: String(40 + (match * 7) % 300), avatar, match, location, age, skin, environment,
   tags: [...skin, environment], top3, holyGrail: top3[0][0], quote, products: [...new Set([...top3.map(([p]) => p), ...products])], ...extra,

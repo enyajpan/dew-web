@@ -1,3 +1,9 @@
+/* ABC Diatype Edu (Dinamo, educational licence). WOFF2 only, self-hosted from assets/fonts, which is gitignored
+   because the licence doesn't allow the fonts in a public repository. Without the files, the app falls back to Geist. */
+@font-face { font-family: 'Dew Sans'; font-weight: 400; font-display: swap; src: url('../assets/fonts/ABCDiatypeEdu-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Dew Sans'; font-weight: 500 700; font-display: swap; src: url('../assets/fonts/ABCDiatypeEdu-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Dew Mono'; font-weight: 400; font-display: swap; src: url('../assets/fonts/ABCDiatypeMonoEdu-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Dew Mono'; font-weight: 500 700; font-display: swap; src: url('../assets/fonts/ABCDiatypeMonoEdu-Medium.woff2') format('woff2'); }
 :root {
   --canvas: #f7f6f3;
   --surface: #ffffff;
@@ -23,8 +29,8 @@
   --radius-lg: 24px;
   --radius-full: 999px;
   --radius: var(--radius-md);
-  --sans: 'Geist', system-ui, sans-serif;
-  --mono: 'Geist Mono', ui-monospace, monospace;
+  --sans: 'Dew Sans', 'Geist', system-ui, sans-serif;
+  --mono: 'Dew Mono', 'Geist Mono', ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -969,3 +975,4 @@ span.follow-pill.on { cursor: default; }
 .profile-switch button { width: 216px; }
 .profile-switch button > .stack { flex: 1; justify-content: space-between; }
 .src-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--canvas); font: 500 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.rail-more { align-self: flex-start; font-size: 10px; color: var(--ink); text-decoration: underline; }
