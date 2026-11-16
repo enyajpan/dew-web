@@ -314,6 +314,7 @@ Newest first. Every major change gets an entry here.
 **November 15, 2026: Hi-fi v10**
 
 - Hover states on everything clickable: dark buttons get a slightly lighter shade, light buttons a slightly darker one, underlined text buttons turn black and people's names underline. Header nav tabs turn light blue on hover (the selected tab a slightly darker blue).
+- In cart buttons use the same format as the Completed check-in button: light green fill, #CBE0CD border and just "In cart".
 - Person pages (Kara and every creator or member) use the Explore layout: profile on the left, content in the middle and the Want to try + People like you rail on the right. The rail never suggests the person you're looking at.
 - Explore's right rail adds People like you under Want to try, plus a "Sample a routine" button that opens your Want to try routine as minis. The total reads "Add all to cart — $91".
 - Edit your page: the live preview shows Mia's shelf under her top recommendations.

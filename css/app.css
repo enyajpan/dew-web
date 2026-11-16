@@ -936,3 +936,8 @@ span.follow-pill.on { cursor: default; }
 .plink:hover, a.plink:hover { text-decoration: underline; }
 .btn.ghost-light:hover { background: rgb(255 255 255 / 12%); }
 .btn, .chip, .tab, .icon-btn, .seg button, .follow-pill, .link, .pts-pill, .askdew-pill { transition: background-color .15s ease-out, color .15s ease-out, border-color .15s ease-out; }
+
+/* In cart: same format as the Completed check-in button */
+.btn.in-cart, .btn.in-cart:disabled { opacity: 1; color: #59604f; background: #e5f4e6; border: 1px solid #cbe0cd; }
+.btn.in-cart:hover { background: #d6e5d7; }
+.btn.in-cart:disabled { cursor: default; }

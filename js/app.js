@@ -384,7 +384,7 @@ function runningLow() {
           ${thumb(r.id, 24, 30)}
           <div class="grow" style="min-width:0"><div class="xs low-name">${esc(P(r.id).name)}</div>${left}</div>
           ${inCart
-            ? '<button class="btn sm" disabled>In cart ✓</button>'
+            ? '<button class="btn sm in-cart" disabled>In cart</button>'
             : r.action === 'replace'
               ? `<a class="btn sm" href="#/product/${r.replaceWith}">Replace</a>`
               : `<button class="btn dark sm" data-act="refill" data-id="${r.id}">Refill${P(r.id).price ? ` ${money(P(r.id).price)}` : ''}</button>`}
@@ -537,7 +537,7 @@ function recommendationsCard() {
         </div>
         <div class="row wrap" style="gap:8px">
           <a class="btn" href="#/product/${pr.id}">See all reviews + ratings</a>
-          ${pr.price_usd ? `<button class="btn dark" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
+          ${pr.price_usd ? `<button class="btn ${state.added[pr.id] ? 'in-cart' : 'dark'}" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? 'In cart' : 'Add to cart'}</button>` : ''}
           <button class="btn" data-act="save" data-id="${pr.id}">${(state.saved ?? []).includes(pr.id) ? IC.saved : IC.want}</button>
           <span class="grow"></span>
           <button class="link mono why-link" data-act="why-open" data-id="${pr.id}" data-step="${esc(r.step ?? '')}" data-gap="${r.gap ? 1 : 0}" data-pct="${pl.pct_positive}" data-n="${pl.reviews}">Why this?</button>
@@ -1735,7 +1735,7 @@ function productPage(id) {
         ${liveRating(id)}
       </div>
       <div class="stack" style="gap:8px;align-self:flex-start">
-        ${p.price ? `<button class="btn dark" data-act="add" data-id="${id}">${state.added[id] ? '✓ In your cart' : 'Add to cart'}</button>` : ''}
+        ${p.price ? `<button class="btn ${state.added[id] ? 'in-cart' : 'dark'}" data-act="add" data-id="${id}">${state.added[id] ? 'In cart' : 'Add to cart'}</button>` : ''}
         <button class="btn" data-act="save" data-id="${id}">${(state.saved ?? []).includes(id) ? IC.saved : IC.want}</button>
       </div>
     </section>
@@ -2023,7 +2023,7 @@ function compareModal() {
         </div>
         <div class="cmp-grid">
           ${col(`Only ${esc(m.first)} uses`, 'theirs', only, (id) => item(id, `${esc(m.first)} rates it ${m.score[id].toFixed(1)}  ·  ${esc(m.bestFor(id))}`, `
-            <div class="row wrap" style="gap:6px;margin-top:4px"><button class="btn sm ${saved.includes(id) ? '' : ''}" data-act="save" data-id="${id}">${saved.includes(id) ? IC.saved : IC.want}</button><button class="btn sm dark" data-act="add" data-id="${id}">${state.added[id] ? 'In cart ✓' : 'Add to cart'}</button></div>`),
+            <div class="row wrap" style="gap:6px;margin-top:4px"><button class="btn sm ${saved.includes(id) ? '' : ''}" data-act="save" data-id="${id}">${saved.includes(id) ? IC.saved : IC.want}</button><button class="btn sm ${state.added[id] ? 'in-cart' : 'dark'}" data-act="add" data-id="${id}">${state.added[id] ? 'In cart' : 'Add to cart'}</button></div>`),
             only.length ? `<div class="row wrap" style="gap:8px"><button class="btn dark" data-act="add-many" data-ids="${only.join(',')}">Add all ${only.length} to cart</button><button class="btn" data-act="save-many" data-ids="${only.join(',')}">Save all to Want to try</button></div>` : '')}
           ${col('Both of you', 'both', both, (id) => item(id, `You ${(state.ratings[id] ?? 8).toFixed(1)}  ·  ${esc(m.first)} ${m.score[id].toFixed(1)}`))}
           ${col('Only you use', 'mine', onlyMe, (id) => item(id, `You rate it ${(state.ratings[id] ?? 8).toFixed(1)}`))}
