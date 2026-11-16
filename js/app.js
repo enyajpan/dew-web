@@ -21,7 +21,7 @@ IC.following = `${IC.check}Following`;
 IC.share = IC.arrow;
 
 // Hi-fi v9 round 3: smooth forest line charts (Catmull-Rom) with a soft fill, keeping the value and week labels.
-function lineChart(values, { labels, max, height = 140, cur = true, fmt = (v) => v } = {}) {
+function lineChart(values, { labels, max, height = 140, cur = true, dots = true, fmt = (v) => v } = {}) {
   const n = values.length;
   const top = max ?? Math.max(...values);
   const lo = Math.min(0, ...values);
@@ -36,7 +36,7 @@ function lineChart(values, { labels, max, height = 140, cur = true, fmt = (v) =>
   return `<div class="line-chart" style="height:${height}px">
     <div class="lc-plot">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#113916" stop-opacity=".18"/><stop offset="1" stop-color="#113916" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="#113916" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>
-      ${pts.map(([x, y], i) => `<i class="lc-dot ${cur && i === n - 1 ? 'cur' : ''}" style="left:${x}%;top:${y}%"></i><span class="mono lc-val" style="left:${x}%;top:${y}%">${fmt(values[i])}</span>`).join('')}
+      ${pts.map(([x, y], i) => `${dots ? `<i class="lc-dot ${cur && i === n - 1 ? 'cur' : ''}" style="left:${x}%;top:${y}%"></i>` : ''}<span class="mono lc-val" style="left:${x}%;top:${y}%">${fmt(values[i])}</span>`).join('')}
     </div>
     <div class="lc-labels">${(labels ?? values.map((_, i) => `W${i + 1}`)).map((l) => `<span class="mono">${l}</span>`).join('')}</div>
   </div>`;
@@ -48,7 +48,8 @@ const STORE_KEY = 'dew-state-v1';
 const REWARD_PTS = 1500;
 
 const defaultState = () => ({
-  setupStep: 2, // onboarding steps finished (0-4)
+  setupStep: 4, // onboarding steps finished (0-4); Hi-fi v10: Mia's profile is complete
+  saved: ['biodance_mask', 'farmacy_halo', 'laneige_lsm'], // Hi-fi v10 Explore: 3 saved, $91
   answers: {
     location: ['Miami, Florida'], climate: { place: 'Miami, Florida', humidity: { value: 74, label: 'Humid' }, uv: { value: 7.4, label: 'High UV' }, dryness: { label: 'Moist air' } }, diet: ['Dairy-free'],
     outdoors: ['1–2 hrs'], sleep: ['6–8 hrs'], stress: ['Medium'], hydration: ['Drinks 2L+ water'],
@@ -95,6 +96,7 @@ function migrate(s) {
   // Hi-fi v9 round 2: the Treat pick is the Biodance serum instead of The Mark.
   if (s.sample?.picks?.treat === 'eadem_mark' && !s.v9treat) s = { ...s, v9treat: true, sample: { ...s.sample, picks: { ...s.sample.picks, treat: 'biodance_serum' }, verdicts: {} } };
   if (s.routinePick && !s.v9routine) s = { ...s, v9routine: true, routinePick: Object.fromEntries(ROUTINE.map((r) => [r.step, 0])) };
+  if (!s.v10 && s.shelfDemo !== false) s = { ...s, v10: true, setupStep: Math.max(s.setupStep ?? 0, 4), saved: ['biodance_mask', 'farmacy_halo', 'laneige_lsm'] };
   if (!s.followSeeded) s = { ...s, followSeeded: true, following: { hana: true, ari: true, noor: true, ...(s.following ?? {}) } };
   // Hi-fi v7 #128: the Anua TXA pad is now Mia's top product (was 9.1).
   if (s.ratings?.anua_txa === 9.1) s = { ...s, ratings: { ...s.ratings, anua_txa: 9.5 } };
@@ -307,20 +309,23 @@ function shelfTip(s, i) {
   return `<span class="shelf-tip ${i < 2 ? 'tl' : i > 3 ? 'tr' : ''}" role="tooltip"><span class="mono">${esc(P(s.id).brand)}</span><span class="tip-name">${esc(P(s.id).name)}</span><span class="tip-meta">${s.arriving ? 'Arriving soon' : s.added ? 'Just added' : `${esc(P(s.id).step)}  ·  ${s.weeks} weeks`}${sc != null ? `<b>${sc.toFixed(1)}</b>` : ''}</span></span>`;
 }
 function shelfRows(items, { selectable = true, open } = {}) {
-  const rows = [items.slice(0, 6), items.slice(6, 12)].filter((r) => r.length);
+  const rows = (items.length > 12 ? [items.slice(0, 6), items.slice(6, 11), items.slice(11, 16)] : [items.slice(0, 6), items.slice(6, 12)]).filter((r) => r.length);
   return `<div class="shelf">${rows.map((r) => `<div class="plank-row">${r.map((s, i) => `
       <button class="slot ${open === s.id ? 'active' : ''}" ${selectable ? `data-act="shelf-open" data-id="${s.id}"` : ''} aria-label="${esc(P(s.id).name)}">
         <img src="${P(s.id).img}" alt="">${s.arriving ? '<span class="pill arriving" style="background:var(--lime)">new</span>' : ''}
       </button>`).join('')}</div>`).join('<div style="height:8px"></div>')}</div>`;
 }
 
+const V10_SHELF_EXTRA = [['boj_sun', 10], ['snail', 7], ['levelup', 5], ['cosrx_peptide', 3], ['new2', 4]].map(([id, weeks]) => ({ id, weeks, extra: true }));
 function myShelf() {
   const base = baseShelf();
   const added = (state.shelfAdds ?? []).filter((id) => !base.some((s) => s.id === id)).map((id) => ({ id, weeks: 0, since: 'today', use: 'Just added', added: true }));
   const onShelf = new Set([...base.map((s) => s.id), ...added.map((s) => s.id)]);
   const arriving = [...new Set(state.orders.flatMap((o) => o.items.map((i) => i.id)))].filter((id) => !onShelf.has(id)).map((id) => ({ id, arriving: true, score: null }));
-  const items = [...base, ...added, ...arriving].slice(0, 12);
-  const open = state.shelfOpen ? (shelfItem(state.shelfOpen) ?? added.find((x) => x.id === state.shelfOpen)) : null;
+  // Hi-fi v10: the demo shelf has a third row of products Mia keeps but hasn't ranked yet.
+  const extra = state.shelfDemo === false || added.length || arriving.length ? [] : V10_SHELF_EXTRA.filter((x) => !onShelf.has(x.id));
+  const items = [...base, ...added, ...arriving, ...extra].slice(0, 16);
+  const open = state.shelfOpen ? (shelfItem(state.shelfOpen) ?? added.find((x) => x.id === state.shelfOpen) ?? extra.find((x) => x.id === state.shelfOpen)) : null;
   const ranked = [...base, ...added].sort((a, b) => (state.ratings[b.id] ?? 0) - (state.ratings[a.id] ?? 0));
   const rank = open ? ranked.findIndex((s) => s.id === open.id) + 1 : 0;
   return `
@@ -332,11 +337,10 @@ function myShelf() {
       ${items.length ? shelfRows(items, { open: state.shelfOpen }) : '<div class="empty" style="padding:20px 8px">Your shelf is empty. Tap “+ Add” to add the products you use.</div>'}
       ${open ? `
         <div class="shelf-detail-tip stack" role="dialog" aria-label="${esc(P(open.id).name)}">
-          <div class="row" style="align-items:flex-start;gap:8px">
-            <div class="grow stack" style="gap:3px;min-width:0"><span class="mono faint">${esc(P(open.id).brand)}</span><span class="tip-name">${esc(P(open.id).name)}</span><span class="xs muted">${open.added ? 'Just added' : `Used for ${open.weeks} weeks`}  ·  #${rank} of ${ranked.length}</span></div>
+          <div class="row" style="align-items:center;gap:8px">
+            <div class="grow stack" style="gap:3px;min-width:0"><span class="mono faint">${esc(P(open.id).brand)}</span><span class="tip-name">${esc(P(open.id).name)}</span><span class="xs muted">${open.added ? 'Just added' : `Used for ${open.weeks} weeks`}</span></div>
             ${state.ratings[open.id] != null ? ring(state.ratings[open.id], true) : ''}
           </div>
-          <div class="row tip-actions"><span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= Math.round((state.ratings[open.id] ?? 0) / 2) ? 'on' : ''}" data-act="rate-shelf" data-id="${open.id}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span><span class="grow"></span><a class="link xs" href="#/check-in">Review</a><button class="link xs" data-act="refill" data-id="${open.id}">Log refill</button><button class="link xs" data-act="shelf-close" aria-label="Close">✕</button></div>
         </div>` : ''}
     </section>`;
 }
@@ -394,7 +398,7 @@ function runningLow() {
 }
 
 // Hi-fi v9: the daily check-in is its own card; the shelf panel below holds the shelf, running low and the hint.
-const leftCol = (extra = '', after = '') => `${quickCheckin()}<div class="side-panel">${myShelf()}${runningLow()}<p class="xs muted">Tap any product to rate it, review it or log a refill.</p>${extra}</div>${after}`;
+const leftCol = (extra = '', after = '') => `${quickCheckin()}<div class="side-panel">${myShelf()}<p class="xs muted">Tap any product to rate it, review it or log a refill.</p>${runningLow()}${extra}</div>${after}`;
 
 /* ================= right rail ================= */
 
@@ -537,8 +541,8 @@ function recommendationsCard() {
         </div>
         <div class="row wrap" style="gap:8px">
           <a class="btn" href="#/product/${pr.id}">See all reviews + ratings</a>
-          ${pr.price_usd ? `<button class="btn ${state.added[pr.id] ? 'in-cart' : 'dark'}" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? 'In cart' : 'Add to cart'}</button>` : ''}
           <button class="btn" data-act="save" data-id="${pr.id}">${(state.saved ?? []).includes(pr.id) ? IC.saved : IC.want}</button>
+          ${pr.price_usd ? `<button class="btn ${state.added[pr.id] ? 'in-cart' : 'dark'}" data-act="add" data-id="${pr.id}">${state.added[pr.id] ? 'In cart' : 'Add to cart'}</button>` : ''}
           <span class="grow"></span>
           <button class="link mono why-link" data-act="why-open" data-id="${pr.id}" data-step="${esc(r.step ?? '')}" data-gap="${r.gap ? 1 : 0}" data-pct="${pl.pct_positive}" data-n="${pl.reviews}">Why this?</button>
         </div>
@@ -826,7 +830,7 @@ function pageBanner(m, edit) {
     </section>`;
 }
 
-function holyBanner(m, who) {
+function holyBanner(m, who, own = false) {
   const h = m.holy;
   return `
     <section class="holy-banner row">
@@ -836,7 +840,7 @@ function holyBanner(m, who) {
         <span class="mono" style="color:#c8dcc9">${esc(P(h.id).brand)}</span>
         <span class="row wrap" style="gap:8px"><span class="h3" style="font-size:22px">${esc(P(h.id).name)}</span>${sponsoredChip(isSponsored(m, h.id))}</span>
         <span class="small" style="color:#dfe9df">“${esc(h.note)}”</span>
-        <div class="row" style="margin-top:4px"><button class="btn sm lime" data-act="add" data-id="${h.id}">Add to cart</button><button class="btn sm ghost-light" data-act="save" data-id="${h.id}">${(state.saved ?? []).includes(h.id) ? IC.saved : IC.want}</button></div>
+        <div class="row" style="margin-top:4px"><button class="btn sm lime" data-act="add" data-id="${h.id}">Add to cart</button>${own ? '' : `<button class="btn sm ghost-light" data-act="save" data-id="${h.id}">${(state.saved ?? []).includes(h.id) ? IC.saved : IC.want}</button>`}</div>
       </div>
       <span class="ring lg-ring">${h.score.toFixed(1)}</span>
     </section>`;
@@ -922,6 +926,13 @@ function pageReviews(m) {
       const helpful = 6 + (h % 58);
       const comments = h % 8;
       const saved = (state.saved ?? []).includes(r.id);
+      // Hi-fi v10 08b3: your own reviews use the compact card.
+      if (m.key === 'me') return `
+      <article class="card stack my-review" style="gap:10px">
+        <div class="row" style="gap:12px;align-items:flex-start">${thumb(r.id, 32, 36)}<div class="grow"><div class="mono faint">${esc(P(r.id).brand)}</div><div class="small">${esc(P(r.id).name)}</div></div>${ring(r.score, true)}</div>
+        <p class="small">“${esc(r.txt)}”</p>
+        <div class="row" style="gap:8px"><span class="src-chip">${esc(r.src || 'Dew')}</span><span class="xs muted">${esc(r.when)}</span><span class="out-chip">Used ${weeks} weeks</span></div>
+      </article>`;
       return `
       <article class="card stack review-card">
         <div class="row"><img class="avatar" src="${m.avatar}" alt=""><div class="grow"><div class="row"><span class="h4">${esc(m.name)}</span>${m.key === 'me' ? '' : kindTag(m.kind)}${followPill(m.key, m.kind)}</div><div class="xs muted">${esc(r.when)}</div></div>${m.match ? match(m.match) : ''}</div>
@@ -947,7 +958,7 @@ function pageMain(m, { who, top } = {}) {
   return `${top ?? ''}${pageBanner(m)}
     <div class="row between"><h1 class="h2">${esc(who)}’s ${tab === 'reviews' ? 'reviews' : tab === 'diary' ? 'diary' : 'products'}</h1>${toggle}</div>
     ${tab === 'diary' ? diaryTimeline(diaryFor(m), m.key === 'me' ? ((state.previewAs ?? 'public') === 'follower' ? 'follower' : 'public') : state.following[m.key] || m.kind === 'friend' ? 'follower' : 'public') : tab === 'reviews' ? pageReviews(m) : `
-      ${holyBanner(m, who)}
+      ${holyBanner(m, who, m.key === 'me')}
       <div><h2 class="h3">Top recommendations</h2><p class="xs muted">${esc(who)}’s five favorites, with notes on each.</p></div>
       ${recList(m)}
       ${pageShelf(m, { who })}
@@ -1099,7 +1110,7 @@ function pickedPage() {
     <section class="hero picked-hero">
       <div class="stack" style="gap:10px;flex:1;min-width:0">
         <h1 class="picked-title">${sample ? 'Your routine, sampled for you.' : 'Your routine, picked just for you.'}</h1>
-        <p class="picked-sub">${sample ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'One product per step. Built from your match pool.'}</p>
+        <p class="picked-sub">${sample ? (state.points >= REWARD_PTS ? 'Not ready to commit? Get your top 3 picks in travel sizes first. Enough for about 2 weeks, free with your points.' : 'Not ready to commit? Get your top 3 picks in travel sizes first, which is enough to last for 2 weeks.') : 'One product per step. Built from your match pool.'}</p>
         <div class="row wrap" style="gap:6px;margin-top:6px">${profileTags().map((t) => `<span class="tag">${t}</span>`).join('')}</div>
       </div>
       ${boxReveal()}
@@ -1116,10 +1127,10 @@ function pickedPage() {
       <div class="card stack step-card">
         <div class="row" style="gap:8px">${svg(r.icon, 24)}<span class="mono">${i + 1}: ${r.step}</span></div>
         <div class="thumb step-img"><img src="${P(id).img}" alt=""></div>
-        <div class="row" style="align-items:flex-start;gap:8px"><div class="grow" style="min-width:0"><div class="mono faint">${esc(P(id).brand)}</div><div class="small" style="font-weight:500">${esc(P(id).name)}</div></div>${ring(9.4 - i * 0.3 - state.routinePick[r.step] * 0.3)}</div>
+        <div class="row" style="align-items:flex-start;gap:8px"><div class="grow" style="min-width:0"><div class="mono faint">${esc(P(id).brand)}</div><div class="small" style="font-weight:500">${esc(P(id).name)}</div></div>${ring([9.4, 8.9, 8.8, 8.5][i] - state.routinePick[r.step] * 0.3)}</div>
         <div class="stack" style="gap:3px"><div class="buy-pct">${r.buy}% of people like you say BUY</div><div class="xs muted">Results in ${r.results}</div></div>
         <p class="xs muted grow">${r.why}</p>
-        <div class="row between">${owned ? '<span class="mono forest" style="font-size:12px">On your shelf</span>' : `<span class="mono" style="font-size:12px;color:var(--ink)">Est. ${money(P(id).price)}</span>`}${owned ? '<button class="btn" data-act="toast" data-msg="Kept on your shelf">Keep ✓</button>' : `<button class="btn outline-forest" data-act="routine-swap" data-step="${r.step}">${IC.swap}Swap</button>`}</div>
+        <div class="row between">${owned ? '<span class="mono forest" style="font-size:12px">On your shelf</span>' : `<span class="small" style="color:var(--ink)">${money(P(id).price)}</span>`}${owned ? '<button class="btn" data-act="toast" data-msg="Kept on your shelf">Keep ✓</button>' : `<button class="btn outline-forest" data-act="routine-swap" data-step="${r.step}">${IC.swap}Swap</button>`}</div>
       </div>`;
   }).join('');
   const stat = (k, v) => `<div class="stack" style="gap:2px"><span class="mono faint">${k}</span><span class="h4">${v}</span></div>`;
@@ -1145,7 +1156,7 @@ function sampleBuilder() {
         <div class="row" style="align-items:flex-start"><div class="grow"><div class="mono">${esc(P(id).brand)}</div><div style="font-size:15px">${esc(P(id).name)}</div></div>${ring(s.score[id])}</div>
         <div class="xs muted">${s.mini[id]} mini  full size ${P(id).size}</div>
         <div class="mono" style="color:var(--ink)">${s.buy[id]}% of people like you say buy</div>
-        <hr class="divider" style="margin-top:auto"><button class="btn outline-forest" style="align-self:flex-start" data-act="sample-cycle" data-key="${s.key}">${IC.swap}Swap</button>
+        <hr class="divider" style="margin-top:auto"><button class="btn outline-forest block" data-act="sample-cycle" data-key="${s.key}">${IC.swap}Swap</button>
       </div>`;
   }).join('');
   const pays = [['points', 'Free with 1,500 pts', `You have ${state.points.toLocaleString()} pts`, state.points >= 1500], ['mixed', '750 pts + $6', 'Keep 750 pts for later', state.points >= 750], ['cash', '$12', 'Save all your points', true]];
@@ -1155,10 +1166,10 @@ function sampleBuilder() {
     <section class="card row wrap" style="gap:24px">
       <div class="grow stack">
         <h3 class="h4" style="font-size:16px">Pay for your sample box</h3>
-        <div class="row" style="gap:8px;align-items:stretch">${pays.map(([k, a, b, ok]) => `<button class="opt ${sm.pay === k ? 'on' : ''}" data-act="sample-pay" data-v="${k}" ${ok ? '' : 'disabled style="opacity:.5"'}><span class="radio"></span><span><span class="small" style="font-weight:500;display:block">${a}</span><span class="xs muted">${ok ? b : `Needs ${k === 'points' ? 1500 : 750} pts`}</span></span></button>`).join('')}</div>
+        <div class="row" style="gap:8px;align-items:stretch">${pays.map(([k, a, b, ok]) => `<button class="opt ${sm.pay === k ? 'on' : ''}" data-act="sample-pay" data-v="${k}"><span class="radio"></span><span><span class="small" style="font-weight:500;display:block">${a}</span><span class="xs muted">${ok ? b : `Needs ${k === 'points' ? 1500 : 750} pts`}</span></span></button>`).join('')}</div>
         <p class="xs muted">Box value $18. Loved one? Its sample value comes off the full size later.</p>
       </div>
-      <div class="stack" style="align-items:flex-end"><button class="btn dark" data-act="sample-checkout" ${can ? '' : 'disabled'}>Get my sample box →</button><span class="xs muted">Ships free  arrives in 3 days</span></div>
+      <div class="stack" style="align-items:flex-end"><button class="btn dark" data-act="sample-checkout" data-ok="${can ? 1 : 0}">Get my sample box →</button><span class="xs muted">Ships free  arrives in 3 days</span></div>
     </section>
     <div class="notice"><span class="mono forest">Why samples?</span><span class="grow">Most people like you test a product for 2 weeks before buying full size. Your day-14 check-in decides what you keep.</span></div>`;
 }
@@ -1224,11 +1235,11 @@ function orderPlaced() {
   const main = `
     <section class="card stack" style="max-width:640px;width:100%;margin:48px auto 0;padding:40px">
       <div class="row">${svg('hydrate', 34)}${svg('treat', 34)}${svg('protect', 34)}</div>
-      <span class="mono forest">Order #${o.no.replace(/^Dew/i, '<span class="nc">Dew</span>')} placed</span>
+      <span class="mono forest">Order #${o.no.toUpperCase()} placed</span>
       <h1 class="h1">Your routine is on its way.</h1>
-      <p class="muted">${o.items.length} products, arriving Thu, Nov 12. We added them to your shelf as “arriving” and will start tracking on day 1.</p>
+      <p class="muted">Your order will arrive on Thursday, Nov 12. We added them to your shelf as “arriving” and will start tracking on Day 1.</p>
       <div class="row wrap">${o.items.map((i) => thumb(i.id, 52, 62)).join('')}</div>
-      <div class="card soft row" style="padding:12px">${svg('flame', 20)}<span class="small">+${o.earned} pts earned on this order. You have ${state.points.toLocaleString()} pts.</span></div>
+      <div class="card soft row" style="padding:12px">${svg('flame', 20)}<span class="small">+${o.earned} pts earned on this order. You now have ${state.points.toLocaleString()} pts.</span></div>
       <div class="row"><a class="btn dark" href="#/for-you">Back to Explore</a><button class="btn" data-act="toast" data-msg="Tracking: label created, ships tomorrow">Track order</button></div>
     </section>`;
   return { layout: 'layout-solo', main };
@@ -1245,10 +1256,9 @@ function sampleCheckout() {
   const main = `
     ${checkoutSteps(0)}
     <h1 class="h1">Your sample box</h1>
-    <p class="muted">Three travel-size minis of your top-matched picks, about 2 weeks of use. We check in on day 3, 7 and 14, then you decide what to buy full size.</p>
     <section class="card" style="padding:0">${SAMPLE_SLOTS.map((s, i) => { const id = sm.picks[s.key]; return `
       <div class="row" style="padding:18px;${i ? 'border-top:1px solid var(--line)' : ''}">${thumb(id, 60, 70)}
-        <div class="grow stack" style="gap:3px"><span class="pill" style="align-self:flex-start;background:var(--lime)">Mini  ${s.mini[id]}</span><span class="mono">${esc(P(id).brand)}</span><span style="font-size:15px">${esc(P(id).name)}</span><span class="xs muted">Step ${i + 1}  ${s.label}</span></div>
+        <div class="grow stack" style="gap:3px"><span class="pill" style="align-self:flex-start;background:var(--lime)">Mini  ${s.mini[id]}</span><span class="mono">${esc(P(id).brand)}</span><span style="font-size:15px">${esc(P(id).name)}</span></div>
         <span style="font-size:16px;font-weight:500">${money(s.value)}</span></div>`; }).join('')}</section>
     <p class="xs muted">Minis come in a recyclable Dew sample box. One free box per 1,500 pts.</p>
     <a class="btn" href="#/picked" data-act="picked-mode" data-v="sample" style="align-self:flex-start">← Change my picks</a>`;
@@ -1276,9 +1286,9 @@ function samplePlaced() {
     <div class="stack" style="max-width:640px;width:100%;margin:32px auto 0;gap:20px">
       <section class="card stack" style="padding:40px">
         <div class="row">${svg('hydrate', 34)}${svg('treat', 34)}${svg('protect', 34)}</div>
-        <span class="mono forest">Sample box #<span class="nc">Dew</span>-S0193 placed</span>
+        <span class="mono forest">Order #DEW-S0193 placed</span>
         <h1 class="h1">Your sample box is on its way.</h1>
-        <p class="muted">3 minis arriving Sat, Nov 7. Start them together on day 1 so your check-ins can tell what is working.</p>
+        <p class="muted">Your order will arrive Sat, Nov 7! Start them together on day 1 so your check-ins can tell what is working.</p>
         <div class="row">${SAMPLE_SLOTS.map((s) => thumb(sm.picks[s.key], 52, 62)).join('')}</div>
         <div class="card soft row" style="padding:12px">${svg('flame', 20)}<span class="small">Each trial check-in earns +10 pts toward your next box.</span></div>
         <div class="row"><a class="btn dark" href="#/sample/verdict">Skip to day 14 (demo) →</a><button class="btn" data-act="toast" data-msg="Your box ships tomorrow">Track box</button></div>
@@ -1316,14 +1326,14 @@ function sampleVerdict() {
   }).join('');
   const main = `
     <div class="stack" style="max-width:1200px;width:100%;margin:0 auto;gap:20px">
-      <span class="mono forest">Day 14 of 14  Sample box #<span class="nc">Dew</span>-S0193</span>
+      <span class="mono forest">Day 14 of 14</span>
       <h1 class="h1">How did your samples do?</h1>
-      <p class="muted">Your trial is done. Keep what worked, drop what didn’t. Your verdicts re-rank your picks and help 1,486 people like you.</p>
+      <p class="muted">Keep what worked, drop what didn’t. Your verdicts re-rank your picks and help 1,486 people like you.</p>
       <div class="verdict-grid">
         <div class="stack" style="gap:14px">${cards}</div>
         <section class="card dark stack go-full">
           <span class="mono lime">Go full size</span>
-          <h2 class="h2">${loved.length ? `Keep the ${loved.length} you loved` : 'Nothing loved yet'}</h2>
+          <h2 class="h2">${loved.length ? `Upgrade the ${loved.length} you loved` : 'Nothing loved yet'}</h2>
           ${loved.map((s) => `<div class="row" style="gap:12px">${thumb(sm.picks[s.key], 44, 52)}<div class="grow"><div class="small">${esc(P(sm.picks[s.key]).name)}</div><div class="xs" style="opacity:.75">Full size  ${P(sm.picks[s.key]).size}</div></div><span>${money(P(sm.picks[s.key]).price)}</span></div>`).join('')}
           ${loved.length ? `<hr class="divider" style="background:rgb(255 255 255 / 25%)"><div class="row between small" style="opacity:.75"><span>Sample credit (the minis you tried)</span><span>−${money(credit)}</span></div><div class="row between"><span>Total before points</span><span class="h3" style="color:var(--lime)">${money(full - credit)}</span></div>` : '<p class="small" style="opacity:.75">Mark a sample as Love it to buy the full size with your sample credit.</p>'}
           <button class="btn lime block" data-act="verdict-cart" ${loved.length ? '' : 'disabled'}>Add ${loved.length} full size${loved.length === 1 ? '' : 's'} to cart →</button>
@@ -1344,31 +1354,37 @@ function checkinParts() {
   const scale = ['Much worse', 'Worse', 'Same', 'Better', 'Much better'];
   const rate = [['goodal_toner', 'Week 6  AM'], ['anua_guasha', 'Week 4  PM'], ['boj_glow', 'Week 6  AM + PM'], ['cerave_int', 'Week 3  PM']];
   const status = (id) => state.stars[`st_${id}`] || (state.ratings[id] >= 6 ? 'Working' : 'Not working');
+  // Hi-fi v10: the score card sits beside the feel ratings; no photo, no part tags.
   return `
-    <section class="card stack" style="gap:16px">
-      <div class="row between"><div><h2 class="h4" style="font-size:16px">Overall skin health</h2><p class="xs muted">Your whole routine, not one product</p></div><span class="pill" style="background:var(--lime)">Part 1: you</span></div>
-      <div class="row" style="align-items:stretch">
-        <div class="card soft grow stack"><span class="mono">Skin health score</span><div class="row" style="align-items:baseline"><span style="font-size:52px;line-height:1">8.4</span><span class="xs" style="color:var(--forest)">▲ 0.6 vs last week</span></div>
-          ${lineChart([38, 50, 58, 66, 74, 92], { height: 110, max: 100, fmt: () => '' })}</div>
-        <div class="stack" style="width:200px"><div class="photo"><img src="assets/img/progress/w5.jpg" alt="This week’s progress photo"><span class="private" style="position:absolute;top:8px;left:8px">🔒 Private</span></div><span class="xs muted">Only you can see this. <button class="link" data-act="toast" data-msg="Open the Dew app to retake">Retake ↺</button></span></div>
+    <section class="card stack ci-part" style="gap:16px">
+      <h2 class="h4" style="font-size:16px">Overall skin health</h2>
+      <div class="ci-health">
+        <div class="ci-score stack">
+          <span class="mono faint">Skin health score</span>
+          <div class="row" style="align-items:baseline;gap:10px"><span style="font-size:52px;line-height:1;letter-spacing:-.02em">8.4</span><span class="mono" style="font-size:12px;color:var(--ink)">▲ 0.6 vs last week</span></div>
+          ${lineChart([38, 50, 58, 66, 74, 92], { height: 120, max: 100, fmt: () => '', dots: false })}
+          <span class="xs faint">Built from your feel ratings, photos and streak</span>
+        </div>
+        <div class="stack grow" style="gap:10px;min-width:0">
+          <span class="small">How does your skin feel vs last week?</span>
+          ${Object.keys(c.feel).map((k) => `<div class="row" style="gap:10px"><span class="small" style="width:62px">${k}</span><div class="ci-scale grow">${scale.map((v) => `<button class="scale-seg ${c.feel[k] === v ? 'on' : ''}" data-act="ci-feel" data-k="${k}" data-v="${v}">${v}</button>`).join('')}</div></div>`).join('')}
+          <span class="small" style="margin-top:4px">Anything different this week?</span>
+          <div class="row wrap" style="gap:6px">${['Poor sleep', 'Stressed', 'Traveled', 'Period week', 'Lots of sun', 'Tried something new'].map((x) => `<button class="chip ${c.extra.includes(x) ? 'on' : ''}" data-act="ci-extra" data-v="${x}">${x}</button>`).join('')}</div>
+        </div>
       </div>
-      <span class="field-label">How does your skin feel vs last week?</span>
-      ${Object.keys(c.feel).map((k) => `<div class="row"><span class="small" style="width:90px">${k}</span><div class="grid-3 grow" style="grid-template-columns:repeat(5,1fr);gap:6px">${scale.map((s, i) => `<button class="scale-seg ${c.feel[k] === s ? 'on' : i < 3 ? 'low' : ''}" data-act="ci-feel" data-k="${k}" data-v="${s}">${s}</button>`).join('')}</div></div>`).join('')}
-      <span class="field-label">Anything different this week?</span>
-      <div class="row wrap" style="gap:6px">${['Poor sleep', 'Stressed', 'Traveled', 'Period week', 'Lots of sun', 'Tried something new'].map((x) => `<button class="chip ${c.extra.includes(x) ? 'on' : ''}" data-act="ci-extra" data-v="${x}">${x}</button>`).join('')}</div>
     </section>
-    <section class="card stack">
-      <div class="row between"><div><h2 class="h4" style="font-size:16px">Rate your products</h2><p class="xs muted">Quick taps. Each rating updates your shelf ranking.</p></div><span class="pill" style="background:var(--lime)">Part 2: products</span></div>
+    <section class="card stack ci-part">
+      <h2 class="h4" style="font-size:16px">Rate your products</h2>
       ${rate.map(([id, when]) => { const st = Math.round(state.ratings[id] / 2); return `
-        <div class="row card soft" style="padding:12px">${thumb(id, 30, 38)}<div class="grow"><div class="small" style="font-weight:500">${esc(P(id).brand)} ${esc(P(id).name)}</div><div class="xs muted">${when}</div></div>
-          <span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= st ? 'on' : ''}" data-act="rate-shelf" data-id="${id}" data-v="${i}" aria-label="${i} stars">★</button>`).join('')}</span>
-          ${['Working', 'Not sure', 'Not working'].map((s) => `<button class="chip sm ${status(id) === s ? 'on' : ''}" data-act="ci-status" data-id="${id}" data-v="${s}">${s}</button>`).join('')}
+        <div class="row ci-rate">${thumb(id, 38, 46)}<div class="grow"><div class="small">${esc(P(id).brand)} ${esc(P(id).name)}</div><div class="xs muted">${when}</div></div>
+          <span class="stars">${[1, 2, 3, 4, 5].map((i) => `<button class="${i <= st ? 'on' : ''}" data-act="rate-shelf" data-id="${id}" data-v="${i}" aria-label="${i} stars">${i <= st ? '★' : '☆'}</button>`).join('')}</span>
+          ${['Working', 'Not sure', 'Not working'].map((v) => `<button class="chip sm ${status(id) === v ? 'on' : ''}" data-act="ci-status" data-id="${id}" data-v="${v}">${v}</button>`).join('')}
         </div>`; }).join('')}
     </section>
-    <section class="card stack">
-      <h2 class="small" style="font-size:13px;font-weight:500">Part 3  Your Anua TXA Brightening Pad hit week 6. Buy or don’t buy?</h2>
+    <section class="card stack ci-part">
+      <h2 class="small" style="font-size:14px;font-weight:500">Your Anua TXA Brightening Pad hit week 6. Buy or don’t buy?</h2>
       <p class="xs muted">Only asked when a product reaches its typical results week. This is the first thing people like you see on your review.</p>
-      <div class="grid-2">${[['buy', '✓ BUY', 'It worked for me and I’d repurchase'], ['skip', '✕ DON’T BUY', 'Didn’t work, or not worth it']].map(([k, a, b]) => `<button class="card stack" data-act="ci-verdict" data-v="${k}" style="text-align:left;${c.verdict === k ? 'background:var(--forest);color:#fff;border-color:var(--forest)' : ''}"><span style="font-size:28px">${a}</span><span class="xs" style="opacity:.8">${b}</span></button>`).join('')}</div>
+      <div class="grid-2">${[['buy', '✓ Buy'], ['skip', '✕ Don’t buy']].map(([k, a]) => `<button class="ci-verdict ${c.verdict === k ? 'on' : ''}" data-act="ci-verdict" data-v="${k}">${a}</button>`).join('')}</div>
       <div class="row"><span class="mono">Your score</span><span class="buybar grow" style="height:6px"><span style="width:91%"></span></span><span style="font-size:22px">9.1</span><span class="tag">Re-ranks to #2 of 11</span></div>
       <textarea data-input="ci-note" placeholder="Add a note for people like you (optional)…" style="min-height:70px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;font:inherit;resize:vertical">${esc(c.note)}</textarea>
     </section>`;
@@ -1396,7 +1412,7 @@ function weeklyModal() {
     <div class="scrim" data-act="weekly-later">
       <section class="modal weekly-modal" role="dialog" aria-label="Weekly check-in" data-stop>
         <div class="row" style="gap:12px;align-items:flex-start">
-          <div class="grow stack" style="gap:4px"><span class="mono forest">Week 6 check-in  ·  Nov 3  ·  ~2 min</span><h2 class="h1" style="font-size:40px">How’s your skin this week?</h2><p class="small muted">Two parts: how your skin is doing overall, then how each product is working. Both sharpen your picks.</p></div>
+          <div class="grow stack" style="gap:4px"><span class="mono forest">Week 6 check-in</span><h2 class="h1" style="font-size:40px">How’s your skin this week?</h2></div>
           <span class="pill" style="background:var(--lime)">+60 pts</span>
           <button class="link mono" data-act="weekly-later">Later ✕</button>
         </div>
@@ -1421,10 +1437,7 @@ function trackerRail() {
       <button class="card soft row" style="padding:10px;text-align:left" data-act="${toGo ? 'toast' : 'reward-open'}" data-msg="Earn ${toGo} more pts with check-ins and orders">${thumb('anua_toner', 30, 38)}<span><span class="mono">Prize: free sample box</span><span class="small" style="display:block">Minis of your top cleanser, treatment and moisturizer</span></span></button>
       ${toGo ? '<button class="link" data-act="demo-points">Demo: jump to 1,500 pts</button>' : ''}
     </section>
-    <section class="card stack"><span class="mono">Today</span>${[['hydrate', 'AM routine', '5/5'], ['treat', 'PM routine', '3/4'], ['protect', 'SPF reapply', '1/2']].map(([i, a, b]) => `<div class="row small">${svg(i, 18)}<span class="grow">${a}</span><span class="mono" style="color:var(--ink)">${b}</span></div>`).join('')}</section>
-    <section class="card stack"><span class="mono">Skin score</span><div class="row" style="align-items:baseline"><span style="font-size:44px;line-height:1">8.4</span><span class="xs" style="color:var(--forest)">+1.9 since wk 1</span></div>
-      <svg viewBox="0 0 200 50" style="width:100%;height:50px"><polyline fill="none" stroke="#113916" stroke-width="2" points="0,44 30,40 60,36 90,30 120,24 150,18 180,12 200,8"/></svg></section>
-    <button class="link" data-act="reset" style="align-self:flex-start;margin-top:8px">Reset demo data</button>`;
+    ${downloadApp()}`;
 }
 
 function profilePage() {
@@ -1436,14 +1449,14 @@ function profilePage() {
         <div class="row"><h1 class="h2">${esc(currentUser() ? firstName() || 'You' : 'Mia Tan')}</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
         <div class="row wrap" style="gap:6px">${profileTags([state.answers.musts?.[0], state.answers.budget?.[0]]).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
-        <div class="row wrap profile-actions"><a class="btn dark" href="#/setup/1">Update skin profile</a><a class="btn lime" href="#/profile/edit">Edit your page</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
+        <div class="row wrap profile-actions"><a class="btn dark" href="#/setup/1">Update skin profile</a><a class="btn" href="#/profile/edit">Edit your page</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
       </div>
     </section>
     <div class="notice">Moved, changed your diet or started a new medication? Update your skin profile and we’ll re-rank your picks.</div>
     <div class="profile-switch" role="tablist">${[
-      ['rankings', 'My page', 'Public  ·  what other people see', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z" stroke="currentColor" stroke-width="1.8"/></svg>'],
-      ['progress', 'My progress', 'Private  ·  only you can see this', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg>'],
-    ].map(([k, l, sub, icon]) => `<button role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''} ${k}" data-act="profile-tab" data-v="${k}"><span class="ps-icon">${icon}</span><span class="stack" style="gap:2px;align-items:flex-start"><span class="ps-title">${l}</span><span class="ps-sub">${sub}</span></span>${k === 'progress' ? '<span class="ps-lock">🔒 Private</span>' : ''}</button>`).join('')}</div>`;
+      ['rankings', 'My page', 'Public', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z" stroke="currentColor" stroke-width="1.8"/></svg>'],
+      ['progress', 'My progress', 'Private', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8"/></svg>'],
+    ].map(([k, l, sub, icon]) => `<button role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''} ${k}" data-act="profile-tab" data-v="${k}"><span class="ps-icon">${icon}</span><span class="stack" style="gap:2px;align-items:flex-start"><span class="ps-title">${l}</span><span class="ps-sub">${sub}</span></span></button>`).join('')}</div>`;
   let body;
   if (tab === 'rankings') {
     body = myPageView();
@@ -1468,7 +1481,7 @@ function profilePage() {
         </div>
       </section>
       <section class="card stack">
-        <div class="row between"><div class="row"><h3 class="h4">Progress photos</h3><span class="private">🔒 Private</span></div><button class="link mono" data-act="toast" data-msg="Add this week’s photo in the Dew app">Add this week +</button></div>
+        <div class="row between"><div class="row"><h3 class="h4">Progress photos</h3></div><button class="link mono" data-act="toast" data-msg="Add this week’s photo in the Dew app">Add this week +</button></div>
         <p class="xs muted">Only you can see these. Pick any photo to attach it to a review, or keep them all private.</p>
         <div class="grid-3" style="grid-template-columns:repeat(6,1fr);gap:8px">${['w0', 'w1', 'w2', 'w3', 'w4', 'w5'].map((p, i) => `<div class="photo"><img src="assets/img/progress/${p}.jpg" alt="Week ${i + 1}"><span class="mono">Wk ${i + 1}</span></div>`).join('')}</div>
       </section>
@@ -1479,7 +1492,7 @@ function profilePage() {
         <div class="row small" style="gap:28px"><span><span class="mono">Consistency</span><br>92%</span><span><span class="mono">Streak</span><br>${state.streak} days</span><span><span class="mono">Skin score</span><br>8.4 ▲0.6</span><span><span class="mono">Points</span><br>+60</span></div>
         <div class="grid-2"><div class="photo" style="aspect-ratio:4/3"><img src="assets/img/progress/w0.jpg" alt="Week 1"><span class="mono">Week 1</span></div><div class="photo" style="aspect-ratio:4/3"><img src="assets/img/progress/w5.jpg" alt="Week 6"><span class="mono">Week 6</span></div></div>
         <p>Redness around my nose is basically gone. Breakouts down to one this week.</p>
-        <div class="row"><span class="private">🔒 Private</span><span class="xs muted grow">Only you can see this check-in</span><button class="btn" data-act="toast" data-msg="Attached to your TXA pad review">Attach to a review</button></div>
+        <div class="row"><button class="btn" data-act="toast" data-msg="Attached to your TXA pad review">Attach to a review</button></div>
       </section>
       <h2 class="h3">My reviews</h2>
       <div class="grid-2">${[['anua_txa', 'buy', 'Week 6', 'My dark spots from summer are noticeably lighter.'], ['boj_glow', 'buy', 'Week 3', 'Glass-skin glow by week 3, and it sits fine under my Bioré.'], ['anua_guasha', 'skip', 'None by week 4', 'Stung on retinol nights and pilled under my lotion.']].map(([id, v, w, t]) => `
@@ -1487,7 +1500,7 @@ function profilePage() {
           <div class="row">${thumb(id, 28, 36)}<div><div class="mono">${esc(P(id).brand)}</div><div class="small">${esc(P(id).name)}</div></div></div>
           <span class="mono">Results seen: ${w}</span><p class="small">“${t}”</p><span class="xs muted">Public: helped 48 people like you</span></div>`).join('')}</div>`;
   }
-  return { layout: '', left: leftCol('', downloadApp()), main: header + body, right: trackerRail() };
+  return { layout: '', left: leftCol(), main: header + body, right: trackerRail() };
 }
 
 /* ================= public reviews ================= */
@@ -1790,7 +1803,7 @@ function rewardModal() {
         <div class="row">${svg('flame', 30)}${svg('star', 26)}</div>
         <span class="mono forest">1,500 pts reached</span>
         <h2 class="h2" style="font-size:34px">Your free sample box is unlocked</h2>
-        <p class="muted">Try before you commit. We picked your top-matched cleanser, treatment and moisturizer (the same ones in your Picked by Dew routine) and shrunk them to travel size, enough for about 2 weeks. Free with your points.</p>
+        <p class="muted">Try before you commit. We picked your top-matched cleanser, treatment and moisturizer and shrunk them to travel size, enough for about 2 weeks.</p>
         <div class="card soft row" style="justify-content:center;gap:24px;align-items:flex-end">${SAMPLE_SLOTS.map((s) => `<div class="stack" style="align-items:center;gap:4px"><img src="${P(state.sample.picks[s.key]).img}" alt="" style="height:88px;width:70px;object-fit:contain"><span class="small" style="font-weight:500">${s.label}</span><span class="mono">${s.mini[state.sample.picks[s.key]]}</span></div>`).join('')}</div>
         <div class="row between small"><span class="muted">Box value $18</span><span style="color:var(--forest);font-weight:500">Yours for 1,500 pts</span></div>
         <div class="row"><button class="btn dark grow" data-act="reward-build">Build my sample box →</button><button class="btn" data-act="reward-later">Later</button></div>
@@ -1849,7 +1862,7 @@ function findPeoplePage(tab = state.findTab ?? 'creators') {
 
 // Creator posts in the People feed: each creator's latest update or their holy-grail note.
 function creatorPosts() {
-  return [...CREATORS].sort((a, b) => b.match - a.match).slice(0, 4).map((c, i) => ({
+  return [...CREATORS].filter((c) => !['mina', 'malik', 'isabela'].includes(c.id)).sort((a, b) => b.match - a.match).slice(0, 4).map((c, i) => ({
     pid: c.id, name: c.name, avatar: c.avatar, rel: 'Creator', when: ['3 days ago', '4 days ago', '1 week ago', '2 weeks ago'][i], product: c.holyGrail,
     usage: `Holy grail  ${c.location ?? ''}`, score: c.top3?.find(([p]) => p === c.holyGrail)?.[1] ?? 9, similar: c.match, tags: c.tags.slice(0, 3),
     text: c.announcement?.[0] ?? c.quote, helpful: 64 + i * 37, comments: 6 + i * 3, photos: c.postPhotos, weeks: c.postWeeks ?? 12 + i * 4,
@@ -1882,8 +1895,8 @@ function peopleRail(exclude) {
       ${sug.map((p) => `
         <div class="row" style="gap:10px;align-items:flex-start">
           <a href="#/people/${p.id}"><img class="avatar" style="width:36px;height:36px" src="${p.avatar}" alt=""></a>
-          <div class="grow stack" style="gap:3px;min-width:0"><div class="row wrap" style="gap:6px"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}</div><span class="xs muted">${p.match}% like you  ·  ${esc(why(p))}</span></div>
-          ${p.kind === 'friend' ? '' : `<button class="btn sm ${state.following[p.id] ? '' : 'dark'}" data-act="follow" data-id="${p.id}">${state.following[p.id] ? IC.following : 'Follow'}</button>`}
+          <div class="grow stack" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}</div><span class="xs muted">${p.match}% like you</span>
+            ${p.kind === 'friend' ? '' : `<button class="btn sm ${state.following[p.id] ? '' : 'dark'}" data-act="follow" data-id="${p.id}" style="align-self:flex-start">${state.following[p.id] ? IC.following : 'Follow'}</button>`}</div>
         </div>`).join('')}
       <a class="btn block" href="#/people/find">Find more people like you</a>
     </section>`;
@@ -1916,14 +1929,14 @@ function peoplePage() {
       <button class="btn ${state.filterOpen ? 'dark' : ''}" data-act="filters-toggle">${state.filterOpen ? '✕' : '⚲'}  Filter + sort  ${active}</button>
     </div>
     ${panel}
-    <div class="notice match-banner"><span class="forest">●</span><span class="grow">Friends, creators and members, ranked by similarity to you: ${profileTags().join(' ')}</span><a href="#/setup/2" class="edit-link">Edit skin profile</a></div>
+    <div class="notice match-banner"><span class="grow">Friends, creators and members, ranked by similarity to you: ${profileTags().map((t) => t.replace(' · Miami', '')).join(', ')}</span><a href="#/setup/2" class="edit-link">Edit skin profile</a></div>
     ${feed.map((r, i) => `
       <article class="card stack review-card">
         <div class="row"><a href="#/people/${r.pid}"><img class="avatar" src="${r.avatar}" alt=""></a><div class="grow"><div class="row"><a class="h4 plink" href="#/people/${r.pid}">${esc(r.name)}</a>${kindTag(kindOf[r.rel])}${followPill(r.pid, kindOf[r.rel])}</div><div class="xs muted">${r.when}</div></div>${match(r.similar)}</div>
         <div class="row" style="gap:12px">${thumb(r.product, 56, 56)}<div class="grow"><div class="mono faint">${esc(P(r.product).brand)}</div><div class="row wrap" style="gap:8px"><span class="h4">${esc(P(r.product).name)}</span>${sponsoredChip(r.sponsored)}</div><div class="row wrap" style="gap:8px;margin-top:4px">${weeksChip(r.weeks)}<span class="xs muted">${r.weeks ? r.usage.replace(/\s*\d+ weeks?/, '') : r.usage}</span></div></div>${ring(r.score)}</div>
         <p style="font-size:13px">${esc(r.text)}</p>
         <div class="row wrap" style="gap:6px">${r.tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
-        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Tracked progress: ${r.photos.length} check-ins via <span class="nc">Dew</span> tracker</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="${photoSrc(p)}" alt=""><span class="mono">Week ${[1, 2, Math.round((r.weeks ?? 6) * 0.6), r.weeks ?? 6][j]}</span></div>`).join('')}</div></div>` : ''}
+        ${r.photos ? `<div class="stack" style="gap:6px"><span class="mono faint">Progress photos</span><div class="row" style="gap:8px">${r.photos.map((p, j) => `<div class="photo review-photo"><img src="${photoSrc(p)}" alt=""><span class="mono">Week ${[1, 2, Math.round((r.weeks ?? 6) * 0.6), r.weeks ?? 6][j]}</span></div>`).join('')}</div></div>` : ''}
         <div class="row small muted review-actions" style="gap:18px">
           <button class="link helpful-btn ${state.helpful[r.name + i] ? 'on' : ''}" data-act="helpful" data-k="${esc(r.name + i)}">▲ Helpful  ${r.helpful + (state.helpful[r.name + i] ? 1 : 0)}</button>
           <button class="link comments-btn ${state.openComments?.[r.name + i] ? 'on' : ''}" data-act="comments" data-k="${esc(r.name + i)}">${IC.chat}${r.comments + (state.comments?.[r.name + i]?.length ?? 0)}</button><button class="link" style="text-decoration:none" data-act="toast" data-msg="Link copied">${IC.share}Share</button><span class="grow"></span>
@@ -2038,7 +2051,15 @@ const FOLLOW_NOTES = ['Holy grail territory for me.', 'Took a few weeks, but it�
 function followedPeople() {
   return [...MEMBERS.filter((m) => m.kind === 'friend'), ...CREATORS.filter((c) => state.following[c.id]).map((c) => ({ ...c, kind: 'creator' }))];
 }
+// Hi-fi v10 Explore: the exact people, scores and notes shown on the top 3 picks.
+const V10_FOLLOW = {
+  'Green Plum Refreshing Toner : AHA + BHA': [['ari', 9.1, 6, 'Took a few weeks, but it’s staying.'], ['mayac', 9.3, 9, 'Gentle enough to use every day.'], ['priya', 8.8, 10, 'Repurchased twice already.']],
+  'SOS Recovery Cream': [['ari', 8.6, 5, 'Took a few weeks, but it’s staying.'], ['leo', 8.4, 4, 'Gentle enough to use every day.']],
+  'The Mark': [['noor', 8.3, 6, 'Took a few weeks, but it’s staying.'], ['leo', 8.9, 4, 'Gentle enough to use every day.'], ['ari', 9.2, 8, 'Repurchased twice already.']],
+};
 function followersUsing(id) {
+  const fixed = V10_FOLLOW[P(id)?.name];
+  if (fixed) return fixed.map(([who, score, weeks, note]) => ({ p: personById(who), score, weeks, note })).filter((x) => x.p);
   const pool = followedPeople();
   const friends = pool.filter((p) => p.kind === 'friend'), creators = pool.filter((p) => p.kind === 'creator');
   const h = hashOf(id);
@@ -2058,7 +2079,7 @@ function followUse(id) {
       ${people.map(({ p, score, weeks, note }) => `
         <div class="row" style="gap:10px">
           <a href="#/people/${p.id}"><img class="avatar" style="width:28px;height:28px" src="${p.avatar}" alt=""></a>
-          <div class="grow row wrap" style="gap:6px;min-width:0"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}${match(p.match)}<span class="xs muted">used ${weeks} weeks</span>${followPill(p.id, p.kind)}<span class="small muted" style="flex-basis:100%">“${esc(note)}”</span></div>
+          <div class="grow row wrap" style="gap:6px;min-width:0"><a class="small plink" style="font-weight:500" href="#/people/${p.id}">${esc(p.name)}</a>${kindTag(p.kind)}${match(p.match)}<span class="xs muted">Used for ${weeks} weeks</span><span class="small muted" style="flex-basis:100%">“${esc(note)}”</span></div>
           ${ring(score, true)}
         </div>`).join('')}
     </div>`;
@@ -2081,8 +2102,7 @@ function whyModal() {
       <section class="modal" role="dialog" aria-label="Why this pick" data-stop>
         <div class="row between"><span class="mono forest">Why this?</span><button class="link mono" data-act="why-close">Close ✕</button></div>
         <div class="row" style="gap:14px">${thumb(w.id, 56, 56)}<div><div class="mono faint">${esc(P(w.id).brand)}</div><h2 class="h3">${esc(P(w.id).name)}</h2></div></div>
-        <span class="mono faint">Because</span>
-        ${reasons.map(([k, t]) => `<div class="row" style="gap:12px;align-items:flex-start"><span class="mono forest" style="width:34px;flex:none">${dots(k)}</span><p class="small">${t}</p></div>`).join('')}
+        <div class="stack" style="gap:8px">${reasons.map(([, t]) => `<p class="small">${t}</p>`).join('')}</div>
         <div class="notice row" style="gap:8px"><span class="mono" style="color:var(--ink)">${n > 200 ? 'High' : 'Medium'} confidence</span><span class="xs muted">Based on ${n.toLocaleString()} reviews from people with ${skin} skin, your shelf and your profile.</span></div>
         <div class="row wrap" style="gap:8px"><button class="btn" data-act="why-own" data-id="${w.id}">I already own it</button><button class="btn" data-act="why-hide" data-id="${w.id}">Not interested</button><button class="btn" data-act="why-fewer">Show fewer like this</button></div>
       </section>
@@ -2093,7 +2113,7 @@ function whyModal() {
 
 function sourceToggle() {
   const src = state.pickedSource ?? 'dew';
-  return `<span class="seg source-seg" style="align-self:flex-start">${[['dew', 'Picked by Dew', 'One product per step, from 1,486 people like you'], ['people', 'From a friend’s routine', 'Start from a real routine that worked'], ['wants', 'From your Want To Try', 'A routine from what you saved']].map(([k, l, s]) => `<button class="${src === k ? 'on' : ''}" data-act="picked-source" data-v="${k}">${l}<small>${s}</small></button>`).join('')}</span>`;
+  return `<span class="seg source-seg" style="align-self:flex-start">${[['dew', 'Picked by Dew', 'From 1,486 people like you'], ['people', 'From people you follow', 'Start from a real routine that worked'], ['wants', 'From your Want To Try', 'A routine from what you saved']].map(([k, l, s]) => `<button class="${src === k ? 'on' : ''}" data-act="picked-source" data-v="${k}">${l}<small>${s}</small></button>`).join('')}</span>`;
 }
 const routineIdsOf = (r) => r.products.map((x) => (Array.isArray(x) ? x[0] : x));
 
@@ -2119,7 +2139,7 @@ function peerRoutinesPage() {
     <div class="row wrap" style="gap:6px"><span class="mono faint">Goal</span>${goals.map((g) => `<button class="chip ${g === goal ? 'on' : ''}" data-act="peer-goal" data-v="${g}">${g}</button>`).join('')}</div>
     ${common ? `
     <section class="peer-common row">
-      <div class="grow stack" style="gap:6px"><span class="mono lime">Most common routine, used by ${common.users} people like you</span><span class="h3" style="color:#fff">${common.products.length} products, ${common.kept}% kept it after 8 weeks</span><span class="small" style="color:#dfe9df">Median ${common.weeks} weeks to results for “${esc(goal.toLowerCase())}”.</span></div>
+      <div class="grow stack" style="gap:6px"><span class="h3" style="color:#fff">Most common routine, used by ${common.users} people like you</span><span class="small" style="color:#dfe9df">${common.kept}% kept it after 8 weeks</span></div>
       <div class="row" style="gap:8px">${common.products.map((id) => `<span class="peer-thumb">${thumb(id, 52, 52)}</span>`).join('')}</div>
       <a class="btn lime" href="#/picked/routine/${common.id}/mine">Use this routine</a>
     </section>` : ''}
@@ -2128,11 +2148,9 @@ function peerRoutinesPage() {
   return { layout: 'layout-wide', left: leftCol(), main };
 }
 
-function routineDetail(id) {
-  const r = PEER_ROUTINES.find((x) => x.id === id && !x.common) ?? PEER_ROUTINES.find((x) => !x.common);
-  const p = personById(r.who);
-  const max = Math.max(...r.trend);
-  const left = `
+// The person card on a peer routine and on Make it yours (Hi-fi v10 06e/06f).
+function peerSide(r, p) {
+  return `
     <section class="card stack">
       <a class="mono" href="#/picked" style="text-decoration:none">← Routines like yours</a>
       <div class="row"><img class="avatar" style="width:72px;height:72px" src="${p.avatar}" alt=""><div><div class="h2" style="font-size:24px">${esc(p.name)}</div>${kindTag(p.kind)}</div></div>
@@ -2141,19 +2159,26 @@ function routineDetail(id) {
       <span class="xs muted">Tracked ${r.tracked} weeks  ·  ${r.tracked} check-ins</span>
       <div class="row wrap" style="gap:8px">${p.kind === 'friend' ? `<span class="btn" style="cursor:default">${IC.following}</span>` : `<button class="btn ${state.following[p.id] ? '' : 'dark'}" data-act="follow" data-id="${p.id}">${state.following[p.id] ? IC.following : 'Follow'}</button>`}<a class="btn outline-forest" href="#/people/${p.id}">View profile</a></div>
     </section>`;
+}
+
+function routineDetail(id) {
+  const r = PEER_ROUTINES.find((x) => x.id === id && !x.common) ?? PEER_ROUTINES.find((x) => !x.common);
+  const p = personById(r.who);
+  const max = Math.max(...r.trend);
+  const left = peerSide(r, p);
   const main = `
     <div class="stack" style="gap:4px"><span class="mono faint">Goal: ${esc(r.goal.toLowerCase())}  ·  started with ${esc(r.start.toLowerCase())}</span><h1 class="h2">${esc(r.result)}</h1></div>
     <div class="routine-grid">
       <div class="stack" style="gap:16px">
         <section class="card stack"><div class="row between"><h2 class="h4">Weekly check-ins</h2><span class="xs muted">Lower is better</span></div>
-          ${lineChart(r.trend, { height: 160, max })}
+          ${lineChart(r.trend, { height: 160, max, dots: false })}
           ${r.dip ? `<span class="xs muted">${esc(r.dip)}</span>` : ''}</section>
         <section class="card stack"><h2 class="h4">Their routine</h2>
           ${r.products.map(([pid, when, note]) => `<div class="row" style="gap:12px">${thumb(pid, 44, 50)}<div class="grow stack" style="gap:2px;min-width:0"><span class="mono faint">${esc(P(pid).brand)}  ·  ${esc(P(pid).step)}</span>${productLink(pid, `<span class="small">${esc(P(pid).name)}</span>`)}<span class="xs muted">“${esc(note)}”</span></div><span class="tag">${esc(when)}</span></div>`).join('')}
         </section>
       </div>
       <div class="stack" style="gap:16px">
-        <section class="card stack" style="background:#f9f6c9;border-color:transparent"><span class="mono" style="color:var(--ink)">What I’d change</span><p>“${esc(r.change)}”</p></section>
+        <section class="card stack" style="background:var(--surface-soft);border-color:transparent"><span class="mono" style="color:var(--ink)">What I’d change</span><p>“${esc(r.change)}”</p></section>
         <section class="card stack"><span class="h4">${r.users} people like you used this routine</span><span class="small muted">${r.kept}% kept it after 8 weeks</span></section>
         <a class="btn dark block" href="#/picked/routine/${r.id}/mine">Make it mine →</a>
       </div>
@@ -2176,11 +2201,19 @@ function routineMine(id) {
   const main = `
     <a class="mono" href="${r.common ? '#/picked' : `#/picked/routine/${r.id}`}" style="text-decoration:none">← Back</a>
     <div class="stack" style="gap:4px"><h1 class="h2">Make it yours</h1><p class="small muted">Starting from ${esc(who)}, merged with your shelf. You only buy what you don’t already have.</p></div>
-    <div class="mine-grid">
+    <section class="card stack" style="gap:16px">
+      <div class="row" style="gap:12px">
+        ${r.common ? '' : `<span class="cmp-avatars"><img class="avatar" src="assets/img/progress/w5.jpg" alt=""><img class="avatar" src="${personById(r.who).avatar}" alt=""></span>`}
+        <div class="grow"><div class="mono faint">Compare products</div><h2 class="h2" style="font-size:28px">You and ${r.common ? 'the most common routine' : esc(personById(r.who).name)}</h2></div>
+        ${r.common ? '' : `<span class="pill gap">${personById(r.who).match}% skin match</span>`}
+        <a class="link mono" href="${r.common ? '#/picked' : `#/picked/routine/${r.id}`}">Close ✕</a>
+      </div>
+      <div class="mine-grid">
       ${col(`You already have (${have.length})`, 'have', have.map((x) => row(x, `${P(x).step}  ·  on your shelf`)).join(''))}
       ${col(`Close enough (${close.length})`, 'close', close.map(([x, m]) => row(x, `Your ${esc(P(m).name)} covers ${esc(P(x).step.toLowerCase())}`, `<button class="link mono" style="align-self:flex-start" data-act="add" data-id="${x}">${state.added[x] ? 'In cart ✓' : 'Swap it in anyway'}</button>`)).join(''))}
       ${col(`Add to your box (${add.length})`, 'add', add.map((x) => row(x, `${P(x).step}  ·  ${money(P(x).price)}`)).join(''))}
     </div>
+    </section>
 `;
   const based = r.common ? `${r.users} people like you` : `${esc(personById(r.who).name)}  ·  ${personById(r.who).match}% match`;
   const right = `
@@ -2194,7 +2227,7 @@ function routineMine(id) {
       ${add.length ? `<button class="btn lime block" data-act="routine-mine-cart" data-ids="${add.join(',')}">Add ${add.length} to cart</button><button class="btn ghost-light block" data-act="save-many" data-ids="${add.join(',')}">Save to Want to try</button>` : '<span class="small" style="color:#dfe9df">You already have everything in this routine.</span>'}
       <span class="xs" style="color:#c8dcc9">Based on: ${based}</span>
     </section>`;
-  return { layout: '', left: leftCol(), main, right };
+  return { layout: '', left: r.common ? leftCol() : peerSide(r, personById(r.who)), main, right };
 }
 
 /* ---- Hi-fi v9: a routine curated from your Want to try list, full size or as samples ---- */
@@ -2234,7 +2267,7 @@ function wantsRoutinePage() {
     ? `<section class="card row wrap box-summary"><div class="stack" style="gap:2px"><span class="mono faint">Sample box</span><span class="h4">${used.length} minis  ·  value ${money(boxValue)}</span></div><div class="stack" style="gap:2px"><span class="mono faint">Trial</span><span class="h4">2 weeks</span></div><div class="stack" style="gap:2px"><span class="mono faint">Pay with</span><span class="h4">1,500 pts or $12</span></div><span class="grow"></span><button class="btn dark" data-act="toast" data-msg="Your Want to try sample box is ready to check out">Get my sample box →</button></section>`
     : `<section class="card row wrap box-summary"><div class="stack" style="gap:2px"><span class="mono faint">Products</span><span class="h4">${used.length}</span></div><div class="stack" style="gap:2px"><span class="mono faint">Est. total</span><span class="h4">${money(total)}</span></div><div class="stack" style="gap:2px"><span class="mono faint">Checked against</span><span class="h4">1,486 people like you</span></div><span class="grow"></span><button class="btn dark" data-act="add-many" data-ids="${used.join(',')}">Add routine to cart</button></section>`;
   const main = `${sourceToggle()}
-    <div class="stack" style="gap:4px"><h1 class="h2">Your Want to try list, as a routine</h1><p class="small muted">We picked the saved products that work together, one per step, and checked them against people with your skin. Try them full size or as minis first.</p></div>
+    <div class="stack" style="gap:4px"><h1 class="h2">Your ${sample ? 'Want to try' : 'Want To Try'} list, as a routine</h1><p class="small muted">We picked the saved products that work together, one per step, and checked them against people with your skin. Try them full size or as minis first.</p></div>
     ${saved.length ? `${toggle}<div class="grid-2" style="grid-template-columns:repeat(${Math.min(4, picks.length)},minmax(0,1fr))">${cards}</div>${summary}
     ${skipped.length ? `<div class="notice"><span class="mono forest">Left out</span><span class="grow">${skipped.map((id) => esc(P(id).name)).join(', ')}: extras (masks, lips) or the same step as a product people like you rate higher. Swap any time.</span></div>` : ''}` : empty}`;
   return { layout: '', left: leftCol(), main, right: rightRail() };
@@ -2261,7 +2294,7 @@ function myPageView() {
     <p class="xs muted">Only your blurb, recommendations, shelf, diary posts and public reviews are shown to others.</p>`;
 }
 
-const previewAsSeg = (as) => `<span class="seg">${[['public', 'Public'], ['follower', 'Follower'], ['matched', 'Matched visitor · 94%']].map(([k, l]) => `<button class="${as === k ? 'on' : ''}" data-act="preview-as" data-v="${k}">${l}</button>`).join('')}</span>`;
+const previewAsSeg = (as) => `<span class="seg">${[['public', 'Public'], ['follower', 'Follower']].map(([k, l]) => `<button class="${as === k ? 'on' : ''}" data-act="preview-as" data-v="${k}">${l}</button>`).join('')}</span>`;
 // Edit your page (Hi-fi v8 comment: the A2 layout, hi-fi for Mia): the editor beside a live preview.
 function bgPicker(m) {
   const c = { ...DEFAULT_CUSTOM, ...(m.custom ?? {}) };
@@ -2308,12 +2341,10 @@ function myPageEditScreen() {
         </aside>
         <div class="stack preview-main">
           ${pageBanner(m)}
-          ${holyBanner(m, m.first)}
+          ${holyBanner(m, m.first, true)}
           <div><h3 class="h3">Top recommendations</h3><p class="xs muted">${esc(m.first)}’s five favorites, with notes on each.</p></div>
           ${recList(m)}
           ${pageShelf(m, { who: m.first })}
-          <div><h3 class="h3">Diary</h3><p class="xs muted">${viewer === 'follower' ? 'Followers see posts shared with everyone and with followers.' : 'The public sees posts shared with everyone.'}</p></div>
-          ${diaryTimeline(myDiary(), viewer)}
         </div>
       </div>
     </div>`;
@@ -2372,13 +2403,13 @@ function view() {
   if (a === 'creators') return { tab: 'people', ...(b ? personPage(b) : findPeoplePage('creators')) };
   if (a === 'community') return { tab: 'people', ...peoplePage() };
   if (a === 'picked') return { tab: 'picked', ...(b === 'routine' ? (c4 === 'mine' ? routineMine(c3) : PEER_ROUTINES.find((x) => x.id === c3)?.common ? routineMine(c3) : routineDetail(c3)) : pickedPage()) };
-  if (a === 'cart') return { tab: '', ...cartPage() };
-  if (a === 'order-placed') return { tab: '', ...orderPlaced() };
+  if (a === 'cart') return { tab: 'picked', ...cartPage() };
+  if (a === 'order-placed') return { tab: 'picked', ...orderPlaced() };
   if (a === 'sample') return { tab: 'picked', ...(b === 'placed' ? samplePlaced() : b === 'verdict' ? sampleVerdict() : sampleCheckout()) };
   if (a === 'check-in') return { tab: '', ...checkinPage() };
   if (a === 'profile') return { tab: '', ...(b === 'public' ? myPublicPage() : b === 'edit' ? myPageEditScreen() : profilePage()) };
   if (a === 'search') return { tab: '', ...searchPage() };
-  if (a === 'product' && b) return { tab: '', ...productPage(b) };
+  if (a === 'product' && b) return { tab: 'reviews', ...productPage(b) };
   return { tab: 'for-you', ...forYou() };
 }
 
@@ -2486,7 +2517,7 @@ const actions = {
   'sample-cycle': (d) => { const sl = SAMPLE_SLOTS.find((x) => x.key === d.key); const cur = state.sample.picks[d.key]; const next = sl.options[(sl.options.indexOf(cur) + 1) % sl.options.length]; set({ sample: { ...state.sample, picks: { ...state.sample.picks, [d.key]: next } } }); toast(`Swapped in ${P(next).name}`); },
   'sample-swap': (d) => set({ sample: { ...state.sample, picks: { ...state.sample.picks, [d.key]: d.id } } }),
   'sample-pay': (d) => set({ sample: { ...state.sample, pay: d.v } }),
-  'sample-checkout': () => go('sample/checkout'),
+  'sample-checkout': (d) => { if (d.ok === '0') { toast(`You need ${Math.max(0, REWARD_PTS - state.points).toLocaleString()} more pts for a free box. Pick another way to pay.`); return; } go('sample/checkout'); },
   'sample-place': () => {
     const cost = { points: 1500, mixed: 750, cash: 0 }[state.sample.pay];
     if (cost > state.points) { toast(`You need ${cost - state.points} more pts for this option`); return; }

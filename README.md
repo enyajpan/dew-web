@@ -311,6 +311,16 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 15, 2026: Matched every screen to Hi-fi v10**
+
+- Explore: pick buttons are See all reviews, + Want to try, then Add to cart. The demo starts with a complete profile and 3 saved products ($91). The left panel hugs its content, My Shelf has a third shelf row, and clicking a product shows brand, name, weeks used and score. "People you follow who use this" and People like you rows match v10, and "Why this?" lists its reasons without dot meters.
+- Weekly check-in: the score card sits beside the feel ratings, with no photo or part tags, and Buy / Don't buy are plain buttons.
+- Routines for you: v10 scores and prices on the step cards, a full-width Swap on sample cards, all three ways to pay always selectable, the "From people you follow" source, a simpler most-common-routine banner, a light blue "What I'd change" card and dotless charts. Make it yours shows the person on the left and the columns inside a "You and Riley Torres" comparison card. The nav highlights Routines for you on the cart and order pages.
+- My profile: Edit your page is an outline button, a compact My page / My progress switch, the tracker rail holds streak, points and the app card, My reviews use a compact card, and the Edit your page preview drops the Diary and the "Matched visitor" option.
+- People: the feed subtitle is comma-separated, photos read "Progress photos" and are smaller, and the three new creators only appear on Find people.
+- Sample box: v10 copy on the reward pop-up, checkout, order placed and day 14 screens; "Not sure" uses the forest style and the side card reads "Upgrade the 2 you loved".
+- Product pages highlight Public reviews in the nav.
+
 **November 15, 2026: Hi-fi v10**
 
 - Hover states on everything clickable: dark buttons get a slightly lighter shade, light buttons a slightly darker one, underlined text buttons turn black and people's names underline. Header nav tabs turn light blue on hover (the selected tab a slightly darker blue).
