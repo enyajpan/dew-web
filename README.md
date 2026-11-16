@@ -320,6 +320,7 @@ Newest first. Every major change gets an entry here.
 - The weekly check-in pop-up is 1040 × 660 and centered like v10 02a (it scrolls inside), and it opens untouched: nothing is selected until you answer.
 - Clicking a product on My Shelf no longer shows "N products ranked by you" above the shelf.
 - Public reviews, product pages and search results show People like you under Want to try in the right panel, like Explore.
+- Pop-ups keep their scroll position: tapping an answer lower down in the weekly check-in no longer jumps back to the top.
 
 **November 16, 2026: Location and follow counts on profiles**
 

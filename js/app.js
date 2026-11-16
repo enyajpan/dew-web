@@ -2463,7 +2463,14 @@ function render() {
   }
   playBoxReveal(lastRoute !== r);
   // Ask Dew is pinned to the bottom right on every page, signed in or not.
+  // Keep each pop-up's scroll position when it re-renders (e.g. after tapping an answer in the weekly check-in).
+  const overlay = document.getElementById('overlay');
+  const modalScroll = [...overlay.querySelectorAll('.modal, .modal *')].filter((e) => e.scrollTop > 0).map((e) => [e.getAttribute('aria-label') ?? e.className, e.scrollTop]);
   document.getElementById('overlay').innerHTML = `${askDew()}${weeklyModal()}${rewardModal()}${compareModal()}${whyModal()}${momentModal()}`;
+  for (const [key, top] of modalScroll) {
+    const el = [...overlay.querySelectorAll('.modal, .modal *')].find((e) => (e.getAttribute('aria-label') ?? e.className) === key);
+    if (el) el.scrollTop = top;
+  }
   const chat = document.getElementById('chat');
   if (chat) chat.scrollTop = chat.scrollHeight;
   lastRoute = r;
