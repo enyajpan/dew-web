@@ -807,7 +807,7 @@ function creatorModel(c) {
   const reviews = [...(c.publicReviews ?? []), ...(c.moreReviews ?? [])].map(([id, src, when, txt]) => ({ id, src, when, txt, score: score[id] ?? 8 }));
   if (!reviews.length) recs.forEach((r, i) => reviews.push({ id: r.id, src: SOURCES[i % 4], when: AGO[i % AGO.length], txt: r.note, score: r.score }));
   return {
-    key: c.id, kind: c.kind ?? 'creator', location: c.location, skinTags: [...(c.skin ?? []), c.environment].filter(Boolean), first, name: c.name, avatar: c.avatar, sponsored: c.sponsored ?? [], diary: c.diary, handle: c.handle, followers: c.followers, match: c.match, tags: c.tags,
+    key: c.id, kind: c.kind ?? 'creator', location: c.location, age: c.age, skinTags: [...(c.skin ?? []), c.environment].filter(Boolean), first, name: c.name, avatar: c.avatar, sponsored: c.sponsored ?? [], diary: c.diary, handle: c.handle, followers: c.followers, match: c.match, tags: c.tags,
     matchNote: `Matched on ${[...(c.skin ?? []), c.environment].filter(Boolean).join(', ').toLowerCase()} climate, age ${c.age ?? '25–29'} and ${((n) => `${n} shared product${n === 1 ? '' : 's'}`)(ids.filter((p) => SHELF.some((s) => s.id === p)).length)}.`,
     blurb: c.blurb ?? `Hi, I’m ${first}. ${(c.skin ?? c.tags.slice(0, 2)).join(', ')} skin${c.location ? ` in ${c.location.split(',')[0]}` : ''}. ${c.quote} Everything here is something I’ve used for at least a month.`,
     announcement: c.announcement, theme: c.theme ?? ['sky', 'lime', 'sand', 'blush'][c.id.length % 4],
@@ -972,7 +972,7 @@ function pageSide(m, { back, actions, note }) {
   return `
     <section class="card stack">
       ${back}
-      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div>${m.location ? `<div class="small">${esc(m.location)}</div>` : ''}<div class="xs muted">${esc(m.handle)}  ·  ${followLine(m)}</div>${m.kind && m.kind !== 'creator' ? `<div style="margin-top:4px">${kindTag(m.kind)}</div>` : ''}</div></div>
+      <div class="row"><img class="avatar" style="width:72px;height:72px" src="${m.avatar}" alt=""><div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="small">${esc(m.handle)}  ·  ${esc(m.followers)} followers${m.following != null ? `  ·  ${m.following} following` : ''}</div>${placeLine(m.location, m.age) ? `<div class="small faint">${esc(placeLine(m.location, m.age))}</div>` : ''}${m.kind && m.kind !== 'creator' ? `<div style="margin-top:4px">${kindTag(m.kind)}</div>` : ''}</div></div>
       ${m.match ? `<div class="card" style="background:var(--lime);border-color:var(--lime);padding:14px"><span class="mono" style="color:var(--ink)">${m.match}% like you</span><p class="xs" style="margin-top:6px">${esc(m.matchNote)}</p></div>` : (m.sideNote ?? '')}
       <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h2">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>
@@ -1009,7 +1009,7 @@ function myModel() {
   const recs = MY_RECS.filter(([id]) => shelf.includes(id)).map(([id, best, note]) => ({ id, best, note: notes[id] ?? note, score: score[id] })).sort((a, b) => pos(a.id) - pos(b.id) || b.score - a.score);
   const name = currentUser() ? firstName() || 'You' : 'Mia Tan';
   return {
-    key: 'me', first: name.split(' ')[0], name, avatar: 'assets/img/progress/w5.jpg', handle: '@miatan', followers: '38', following: myFollowing(), location: myLocation(), match: 0,
+    key: 'me', first: name.split(' ')[0], name, avatar: 'assets/img/progress/w5.jpg', handle: '@miatan', followers: '38', following: myFollowing(), location: myLocation(), age: state.answers.age?.[0], match: 0,
     tags: profileTags([state.answers.musts?.[0]]).slice(0, 5),
     blurb: pg.blurb ?? MY_BLURB, theme: pg.theme ?? 'sky', custom: pg.custom,
     announcement: pg.announcement === '' ? null : [pg.announcement ?? 'Week 6 check-in: redness is down and my chin finally cleared. The retinol night cream is staying.', 'Posted today', 'Shelf updated today'],
@@ -1448,6 +1448,7 @@ const US_STATES = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', 
 const shortPlace = (place) => { if (!place) return ''; const [city, region] = String(place).split(',').map((x) => x.trim()); return region && US_STATES[region] ? `${city}, ${US_STATES[region]}` : String(place); };
 const myLocation = () => shortPlace(state.answers.climate?.place ?? state.answers.location?.[0]);
 const myFollowing = () => MEMBERS.filter((m) => m.kind === 'friend').length + Object.values(state.following ?? {}).filter(Boolean).length;
+const placeLine = (loc, age) => [loc, age ? `Age ${age}` : ''].filter(Boolean).join(' · ');
 const followLine = (m) => `<b style="font-weight:500">${esc(m.followers)}</b> <span class="muted">followers</span>${m.following != null ? `  ·  <b style="font-weight:500">${m.following}</b> <span class="muted">following</span>` : ''}`;
 
 function profilePage() {
@@ -1457,7 +1458,7 @@ function profilePage() {
       <img class="avatar" style="width:88px;height:88px" src="assets/img/progress/w5.jpg" alt="">
       <div class="grow stack">
         <div class="row"><h1 class="h2">${esc(currentUser() ? firstName() || 'You' : 'Mia Tan')}</h1><span class="pill" style="background:var(--lime)">Skin profile ${strength()}%</span></div>
-        <div class="stack profile-id" style="gap:2px">${myLocation() ? `<span class="small">${esc(myLocation())}</span>` : ''}<span class="small"><b style="font-weight:500">38</b> <span class="muted">followers</span>  ·  <b style="font-weight:500">${myFollowing()}</b> <span class="muted">following</span></span></div>
+        <div class="stack profile-id" style="gap:2px"><span class="small">@miatan  ·  38 followers  ·  ${myFollowing()} following</span>${placeLine(myLocation(), state.answers.age?.[0]) ? `<span class="small faint">${esc(placeLine(myLocation(), state.answers.age?.[0]))}</span>` : ''}</div>
         <div class="row wrap" style="gap:6px">${profileTags([state.answers.musts?.[0], state.answers.budget?.[0]]).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row small" style="gap:24px"><span><b style="font-weight:500">${state.streak}</b> <span class="muted">day streak</span></span><span><b style="font-weight:500">${state.points.toLocaleString()}</b> <span class="muted">points</span></span><span><b style="font-weight:500">6</b> <span class="muted">weeks tracked</span></span><span><b style="font-weight:500">4</b> <span class="muted">reviews</span></span></div>
         <div class="row wrap profile-actions"><a class="btn dark" href="#/setup/1">Update skin profile</a><a class="btn" href="#/profile/edit">Edit your page</a><button class="btn" data-act="toast" data-msg="Profile link copied">Share profile</button>${currentUser() ? '<button class="btn" data-act="log-out">Log out</button>' : ''}</div>
@@ -1847,7 +1848,7 @@ function personCard(c) {
     <div class="row top3-row ${i === 0 ? 'holy' : ''}"><span class="top3-n">${i + 1}</span>${thumb(pid, 30, 36)}<div class="grow" style="min-width:0">${i === 0 ? '<div class="mono forest">★ Holy grail</div>' : `<div class="mono faint">${esc(P(pid).brand)}</div>`}<div class="small top3-name">${esc(P(pid).name)}</div></div>${ring(s, true)}</div>`).join('');
   return `
     <article class="card stack creator-card">
-      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><a class="h4 plink" href="#/people/${c.id}">${esc(c.name)}</a>${kindTag(c.kind)}</div>${c.location ? `<div class="small">${esc(c.location)}  ·  Age ${c.age}</div>` : ''}<div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div><div class="xs faint">${esc(c.handle)}  ${c.followers} followers</div>${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
+      <div class="row" style="align-items:flex-start;gap:12px"><img class="avatar" style="width:52px;height:52px" src="${c.avatar}" alt=""><div class="stack grow" style="gap:4px;min-width:0"><div class="row wrap" style="gap:6px"><a class="h4 plink" href="#/people/${c.id}">${esc(c.name)}</a>${kindTag(c.kind)}</div><div class="small">${esc(c.handle)}  ${c.followers} followers</div>${c.location ? `<div class="small faint">${esc(placeLine(c.location, c.age))}</div>` : ''}<div class="row wrap" style="gap:6px"><span class="pill gap">${c.match}% like you</span></div>${c.via ? `<div class="xs forest">${esc(c.via)}</div>` : ''}</div></div>
       <div class="stack" style="gap:8px">
         <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Skin type</span>${(c.skin ?? c.tags.slice(0, 2)).map((t) => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="row wrap" style="gap:6px"><span class="mono faint creator-k">Environment</span><span class="tag">${c.environment ?? c.tags[2]}</span></div>
@@ -2344,7 +2345,7 @@ function myPageEditScreen() {
       <div class="preview-frame preview-page">
         <aside class="stack preview-side">
           <img class="avatar" style="width:64px;height:64px" src="${m.avatar}" alt="">
-          <div><div class="h2" style="font-size:26px">${esc(m.name)}</div>${m.location ? `<div class="small">${esc(m.location)}</div>` : ''}<div class="xs muted">${esc(m.handle)}  ·  ${followLine(m)}</div></div>
+          <div><div class="h2" style="font-size:26px">${esc(m.name)}</div><div class="small">${esc(m.handle)}  ·  ${esc(m.followers)} followers${m.following != null ? `  ·  ${m.following} following` : ''}</div>${placeLine(m.location, m.age) ? `<div class="small faint">${esc(placeLine(m.location, m.age))}</div>` : ''}</div>
           ${as === 'matched' ? '<span class="pill gap" style="align-self:flex-start">94% skin match with you</span>' : ''}
           <div class="row wrap" style="gap:6px">${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
           <div class="row between">${m.stats.map(([n, l]) => `<div><div class="h3">${n}</div><div class="xs muted">${l}</div></div>`).join('')}</div>

@@ -313,7 +313,7 @@ Newest first. Every major change gets an entry here.
 
 **November 16, 2026: Location and follow counts on profiles**
 
-- Every profile shows its location under the name: your profile header, your public page and its live preview, creator, member and friend-of-a-friend pages, and the cards on Find people.
+- Every profile shows the handle and followers first, then the location and age range in gray (e.g. "Miami, FL · Age 25–29"): your profile header, your public page and its live preview, creator, member and friend-of-a-friend pages, and the cards on Find people.
 - Your location comes from your skin profile, so moving from Miami, Florida to Denver, Colorado changes it from "Miami, FL" to "Denver, CO".
 - Your profile also shows your followers and how many people you follow.
 
