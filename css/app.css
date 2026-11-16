@@ -987,3 +987,8 @@ span.follow-pill.on { cursor: default; }
 .shelf-detail .best-chip { color: var(--ink-2); }
 .shelf-detail .pop-review { background: rgb(255 255 255 / 55%); }
 .shelf-detail .mine-box-rule { border-top-color: #a1a261; }
+/* Hi-fi v10 type sizes at desktop widths (the fluid sizes above are for smaller screens) */
+@media (min-width: 1100px) {
+  .hero-title { font-size: 30px; line-height: 36px; }
+  .done-banner .h1 { font-size: 38.4px; line-height: 43px; }
+}

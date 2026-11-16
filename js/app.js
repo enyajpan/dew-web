@@ -2454,7 +2454,7 @@ function render() {
   if (keep?.sel) {
     const el = document.querySelector(keep.sel);
     if (el) {
-      el.value = keep.value; el.focus();
+      el.value = keep.value; el.focus({ preventScroll: true });
       try { el.setSelectionRange(keep.start, keep.end); } catch (e) { /* not a text field */ }
       const box = el.closest('form')?.querySelector('.suggest-box');
       if (box && keep.box) { box.innerHTML = keep.box; box.classList.add('open'); el.setAttribute('aria-expanded', 'true'); }

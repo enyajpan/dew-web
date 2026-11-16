@@ -314,6 +314,8 @@ Newest first. Every major change gets an entry here.
 **November 16, 2026: Light-blue product panel on profile shelves**
 
 - Tapping a product on someone's shelf (or your own) opens its details in a light-blue panel with dark text, matching Hi-fi v10 05b, instead of the dark green one.
+- At desktop widths the Explore hero title is 30px and the profile-complete heading 38.4px, matching v10, instead of scaling with the window.
+- Fixed: after typing in a field, tapping a chip no longer jumps the page back up to that field.
 
 **November 16, 2026: Location and follow counts on profiles**
 
