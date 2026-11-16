@@ -976,3 +976,14 @@ span.follow-pill.on { cursor: default; }
 .profile-switch button > .stack { flex: 1; justify-content: space-between; }
 .src-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--canvas); font: 500 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
 .rail-more { align-self: flex-start; font-size: 10px; color: var(--ink); text-decoration: underline; }
+
+/* Hi-fi v10 05b: the product panel beside a profile shelf is light blue with dark text. */
+.shelf-detail { background: var(--surface-soft); color: var(--ink); box-shadow: 0 8px 20px rgb(17 57 22 / 12%); }
+.shelf-split:not(.open) .shelf-detail { box-shadow: none; }
+.shelf-detail .mono { color: var(--ink-2); }
+.shelf-detail .k { color: var(--forest); }
+.shelf-detail .link.mono { color: var(--ink); }
+.shelf-detail .out-chip.sp { background: #fff; color: var(--ink); border-color: #9a9e92; }
+.shelf-detail .best-chip { color: var(--ink-2); }
+.shelf-detail .pop-review { background: rgb(255 255 255 / 55%); }
+.shelf-detail .mine-box-rule { border-top-color: #a1a261; }

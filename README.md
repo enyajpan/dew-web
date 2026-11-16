@@ -311,6 +311,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 16, 2026: Light-blue product panel on profile shelves**
+
+- Tapping a product on someone's shelf (or your own) opens its details in a light-blue panel with dark text, matching Hi-fi v10 05b, instead of the dark green one.
+
 **November 16, 2026: Location and follow counts on profiles**
 
 - Every profile shows the handle and followers first, then the location and age range in gray (e.g. "Miami, FL · Age 25–29"): your profile header, your public page and its live preview, creator, member and friend-of-a-friend pages, and the cards on Find people.

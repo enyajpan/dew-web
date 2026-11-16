@@ -882,7 +882,7 @@ function pageShelf(m, { edit, who } = {}) {
           <button class="slot ${open === id ? 'active' : ''}" data-act="page-shelf" data-key="${m.key}" data-id="${id}" aria-label="${esc(P(id).name)}"><img src="${P(id).img}" alt="">${isSponsored(m, id) ? '<span class="sp-dot" title="Sponsored">S</span>' : ''}</button>`).join('')}${edit && ri === rows.length - 1 ? '<a class="slot add-slot" href="#/search" aria-label="Add product"><span>+<br>Add product</span></a>' : ''}</div>`).join('<div style="height:8px"></div>')}</div>
         <aside class="shelf-detail" aria-live="polite">${open ? `
           <div class="stack" style="gap:10px">
-            <div class="row between"><span class="mono">${esc(P(open).brand)}</span><button class="link mono" style="color:#fff" data-act="page-shelf" data-key="${m.key}" data-id="${open}">Close ✕</button></div>
+            <div class="row between"><span class="mono">${esc(P(open).brand)}</span><button class="link mono" data-act="page-shelf" data-key="${m.key}" data-id="${open}">Close ✕</button></div>
             <div class="h3" style="font-size:20px">${esc(P(open).name)}</div>
             <div class="row wrap" style="gap:6px">${bestChip(m.bestFor(open))}${sponsoredChip(isSponsored(m, open))}</div>
             <div class="row" style="gap:22px">
@@ -891,12 +891,12 @@ function pageShelf(m, { edit, who } = {}) {
               <div><div class="k">Using for</div><div class="v">${m.using(open)}</div></div>
             </div>
             <div class="row wrap">${edit
-              ? `<a class="btn sm lime" href="#/check-in">Rate it</a><button class="btn sm ghost-light" data-act="edit-note" data-id="${open}">Edit note</button>`
-              : `<a class="btn sm lime" href="#/product/${open}">See all reviews</a><button class="btn sm ghost-light" data-act="save" data-id="${open}">${(state.saved ?? []).includes(open) ? IC.saved : IC.want}</button>`}</div>
+              ? `<a class="btn sm lime" href="#/check-in">Rate it</a><button class="btn sm outline-forest" data-act="edit-note" data-id="${open}">Edit note</button>`
+              : `<a class="btn sm lime" href="#/product/${open}">See all reviews</a><button class="btn sm outline-forest" data-act="save" data-id="${open}">${(state.saved ?? []).includes(open) ? IC.saved : IC.want}</button>`}</div>
             <hr class="mine-box-rule">
-            <span class="mono" style="color:#c8dcc9">Reviews</span>
-            <div class="pop-review"><p class="small">“${esc(m.noteFor(open))}”</p><span class="mono" style="color:#c8dcc9">${edit ? 'Your note' : esc(m.first)}  ·  ${m.using(open)} in</span></div>
-            ${peer ? `<div class="pop-review"><p class="small">“${esc(peer.text)}”</p><span class="mono" style="color:#c8dcc9">Combination skin  ·  ${peer.similar ?? 88}% like you</span></div>` : ''}
+            <span class="mono">Reviews</span>
+            <div class="pop-review"><p class="small">“${esc(m.noteFor(open))}”</p><span class="mono faint">${edit ? 'Your note' : esc(m.first)}  ·  ${m.using(open)} in</span></div>
+            ${peer ? `<div class="pop-review"><p class="small">“${esc(peer.text)}”</p><span class="mono faint">Combination skin  ·  ${peer.similar ?? 88}% like you</span></div>` : ''}
           </div>` : ''}</aside>
       </div>
     </section>`;
