@@ -926,7 +926,8 @@ span.follow-pill.on { cursor: default; }
 .btn.dark:hover, .chip.on:hover { background: #37593b; border-color: #37593b; }
 .btn.lime:hover { background: #bedb3f; border-color: #bedb3f; }
 .btn:has(.saved-lbl):hover, .btn.saved:hover, .quick-checkin .done-btn[disabled]:hover { background: #d6e5d7; }
-.tab:hover, .icon-btn:hover { background: #efefee; }
+.tab:hover { background: var(--surface-soft); }
+.icon-btn:hover { background: #efefee; }
 .tab.active:hover, .askdew-pill:hover { background: #dce7eb; }
 .pts-pill:hover { background: #efddda; }
 .follow-pill:hover { background: #37593b; border-color: #37593b; }
