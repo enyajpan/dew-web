@@ -2268,7 +2268,7 @@ function wantsRoutinePage() {
   const cards = picks.map((x, i) => `
     <div class="card stack step-card">
       <div class="row" style="gap:8px">${svg(x.icon, 24)}<span class="mono">${i + 1}: ${x.label}</span></div>
-      <div class="thumb step-img"><img src="${P(x.id).img}" alt="">${sample ? `<span class="pill mini-pill">Mini  ${miniOf(x.id)[0]}</span>` : ''}</div>
+      <div class="thumb step-img want-img"><img src="${P(x.id).img}" alt="">${sample ? `<span class="pill mini-pill">Mini  ${miniOf(x.id)[0]}</span>` : ''}</div>
       <div class="row" style="align-items:flex-start;gap:8px"><div class="grow" style="min-width:0"><div class="mono faint">${esc(P(x.id).brand)}</div><div class="small" style="font-weight:500">${esc(P(x.id).name)}</div></div>${ring(scoreOf(x.id))}</div>
       <span class="out-chip" style="align-self:flex-start">From your Want to try</span>
       <p class="xs muted grow">${why[x.label] ?? ''}</p>

@@ -995,3 +995,6 @@ span.follow-pill.on { cursor: default; }
 
 /* Hi-fi v10 02a: the weekly check-in is 1040 x 660, centered, and scrolls inside */
 .modal.weekly-modal { height: min(660px, calc(100vh - 32px)); max-height: none; }
+
+/* Hi-fi v10 06g/06h: Want To Try products sit small and uncropped in their box (max about 90 x 90) */
+.want-img img { width: auto; height: auto; max-width: 92px; max-height: 90px; object-fit: contain; }
