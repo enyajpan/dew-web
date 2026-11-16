@@ -311,6 +311,46 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 15, 2026: Hi-fi v10**
+
+- Hover states on everything clickable: dark buttons get a slightly lighter shade, light buttons a slightly darker one, underlined text buttons turn black and people's names underline.
+- Person pages (Kara and every creator or member) use the Explore layout: profile on the left, content in the middle and the Want to try + People like you rail on the right. The rail never suggests the person you're looking at.
+- Explore's right rail adds People like you under Want to try, plus a "Sample a routine" button that opens your Want to try routine as minis. The total reads "Add all to cart — $91".
+- Edit your page: the live preview shows Mia's shelf under her top recommendations.
+- Copy from v10: the nav tab is "Routines for you", the Explore hero reads "We'll pick a personalized routine for you…", the routine sources read "From a friend's routine" and "From your Want To Try", and the people-you-follow routines page has its v10 title. My Shelf only shows "N products ranked by you" while a product is open.
+
+**November 14, 2026: Hi-fi v9 comments, round 3**
+
+- Buttons: Completed check-in is light green (#E5F4E6) with a #CBE0CD outline. Saved buttons use the same style with a bookmark icon. Following buttons and pills show a check icon. "+ Want to try" and View profile buttons have a forest outline and forest text.
+- Reviews and posts: comment counts use a chat icon with just the number, and Share uses an up-right arrow icon.
+- Find people > Creators: three new creators Mia doesn't follow (Mina Cho, Malik Greene, Isabela Duarte, with new portraits). Ari, Noor and Hana are hidden there while Mia follows them.
+- People like you sidebar suggests Kara Lim instead of Hana. Riley Torres and Grace Kim are now Friends.
+- Charts: the check-in skin score, the week-by-week routine chart and the weekly check-ins on a peer routine are smooth forest line charts with a soft fill.
+- Sample it first: each card has one Swap button that cycles through the step's options, in place of the "Swap for" chips. Swap and Remove on Want to try, and Swap on Picked by Dew, use the forest outline.
+
+**November 13, 2026: Hi-fi v9 comments, round 2**
+
+- Picked for you: the Treat step is now Biodance Pore Perfecting Collagen Peptide Serum (in place of Eadem The Mark) in Picked by Dew, Sample it first, the cart and the sample box. The Mark is still a swap option. Old saved sample picks move over once.
+- Want to try routine: every step card has a Swap button beside Remove that cycles through the other products you saved for that step. The Want to try rail now reads "Buy them, or sample them with points."
+- Follow status on every profile: friends and people you follow show "✓ Following"; everyone else gets a "+ Follow" pill beside their role chip (People feed, Explore's "People you follow who use this", routines from people like you, and creator review cards).
+- Creator pages: each top recommendation has "+ Want to try", and All reviews uses the People feed card (product, weeks used, location and source, skin tags, Helpful, comments, Share, Want to try).
+- The free sample box pop-up opens on Explore right after the daily check-in that reaches 1,500 pts. "Demo: jump to 1,500 pts" now takes you to Explore 10 pts short so you can log it.
+- My Shelf: tapping a product opens its details under the shelf (light blue card with score, rating stars, Review and Log refill) and pushes Running low down. The hover tooltip is gone.
+- The "✓ Completed" check-in button is #CBE0CD with no border, and the old #E6F1FA backgrounds use the surface-soft token (#EBF6FB).
+
+**November 13, 2026: Hi-fi v9 (comments on Hi-fi v8)**
+
+- Left column on every page: the daily check-in is its own card above the shelf panel, and turns into "✓ Completed" once you log it (soft green #CBE0CD button, no border). Running low shows full product names (wrapping to two lines) with a bit more space between rows. Hovering a product on your shelf shows a tooltip with the product, how long you've used it and your score.
+- Explore: the weekly check-in ("How's your skin this week?") opens as a pop-up over Explore on your first visit; submitting it completes today's check-in on the left. Each top pick shows what it solves and what people like you say on the left, and who you follow who uses it on the right.
+- People feed: "Save" is now "+ Want to try" (it shows up in the Want to try rail on the right). Comments open a thread you can post to, Helpful toggles, and reviews show "Used N weeks" and, for creators, a Sponsored chip (white with a gray outline). More reviews have progress photos (Priya, Kara, Ari, Maya).
+- New photos: Priya Nair (her profile photo and progress photos are the same person), Kara Lim, Ari Santos, Maya Chen, Jun Park, Hana Mori, Sofia Marin, Kai Nakamura and Priyanka Rao.
+- Find people: every card says "View profile". All creators and members have combination skin and/or breakouts or redness, live somewhere humid and are 25–29. Friends of friends has 12 people (three rows).
+- Kara's page: Sponsored chips on sponsored products; her shelf has 24 products (Sulwhasoo and more COSRX added); tapping a product opens its details on the right third while the shelf slides left. Her diary has about four entries a week with photos.
+- Picked for you: Picked by Dew now uses The Mark and SOS Recovery Cream from Explore's top picks, and Sample it first is the same routine as minis. A third tab, "From your Want to try", builds a routine from what you saved, full size or as samples. The day-14 sample verdict stacks the products on the left with Go full size as a column on the right.
+- Profile: My page (public) and My progress (private, with a lock) are two big switch cards instead of a pill toggle. My page has All products / Diary / All reviews. My progress drops the Day/Week/Month toggle; the daily log takes a third of the width and the weekly chart two thirds.
+- Edit your page: recommendation rows have drag handles and can be dragged to reorder. Expand opens the full public page, which has the Viewing as toggle (Public / Follower / Matched visitor) and a Collapse button back to the editor. Mia's diary has more posts about different products, with photos.
+- Skin profile step 4 starts with an empty shelf that fills as you search and add products.
+
 **November 11, 2026: Hi-fi v8 comments, round 2**
 
 - Explore says "Welcome back, Mia!". In "People you follow who use this" the similarity is a chip, creators you follow are mixed in with friends, and a bug that could show negative weeks or low scores is fixed. Mia follows three creators by default (Hana, Ari, Noor).
