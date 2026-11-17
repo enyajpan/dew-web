@@ -311,9 +311,13 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 16, 2026: Same step-bar colors at checkout**
+
+- The Cart → Shipping → Payment → Done bar (cart and sample box checkout) now matches skin profile setup: finished steps lime, the current step dark green.
+
 **November 16, 2026: New step-bar colors in skin profile setup**
 
-- In the four skin profile steps, finished steps now show a lime bar and the current step a dark green bar, matching Hi-fi v10 01a–01d. The checkout step bar is unchanged.
+- In the four skin profile steps, finished steps now show a lime bar and the current step a dark green bar, matching Hi-fi v10 01a–01d.
 
 **November 16, 2026: Light-blue product panel on profile shelves**
 

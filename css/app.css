@@ -261,10 +261,11 @@ h1, h2, h3, p { margin: 0; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .steps-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .steps-bar div { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: var(--ink-3); }
+/* Step bars (skin profile setup and checkout): finished steps lime, the current step forest */
 .steps-bar div::before { content: ''; height: 4px; border-radius: var(--radius-full); background: #dddfd6; }
-.steps-bar .done::before { background: var(--forest); }
+.steps-bar .done::before { background: var(--lime); }
 .steps-bar .cur { color: var(--ink); font-weight: 500; }
-.steps-bar .cur::before { background: var(--lime); }
+.steps-bar .cur::before { background: var(--forest); }
 .steps-bar .done { color: var(--ink); }
 .field-label { font-size: 13px; font-weight: 500; }
 .meter { height: 8px; border-radius: var(--radius-full); background: rgb(255 255 255 / 15%); overflow: hidden; }
@@ -999,6 +1000,3 @@ span.follow-pill.on { cursor: default; }
 /* Hi-fi v10 06g/06h: Want To Try products sit small and uncropped in their box (max about 90 x 90) */
 .want-img img { width: auto; height: auto; max-width: 92px; max-height: 90px; object-fit: contain; }
 
-/* Hi-fi v10 01a-01d: skin profile steps — finished steps lime, the current step forest */
-.steps-bar.setup-steps .done::before { background: var(--lime); }
-.steps-bar.setup-steps .cur::before { background: var(--forest); }
