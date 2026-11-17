@@ -311,6 +311,10 @@ Open http://localhost:3000/?demo to use the full app without signing in (localho
 
 Newest first. Every major change gets an entry here.
 
+**November 16, 2026: New step-bar colors in skin profile setup**
+
+- In the four skin profile steps, finished steps now show a lime bar and the current step a dark green bar, matching Hi-fi v10 01a–01d. The checkout step bar is unchanged.
+
 **November 16, 2026: Light-blue product panel on profile shelves**
 
 - Tapping a product on someone's shelf (or your own) opens its details in a light-blue panel with dark text, matching Hi-fi v10 05b, instead of the dark green one.

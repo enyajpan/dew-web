@@ -697,7 +697,7 @@ function emptySetupShelf() {
 function setupPage(n) {
   if (n === 'done') return setupDone();
   const s = SETUP[n - 1];
-  const bar = `<div class="steps-bar">${SETUP.map((x) => `<div class="${x.n < n ? 'done' : x.n === n ? 'cur' : ''}">${x.n}  ${x.name}</div>`).join('')}</div>`;
+  const bar = `<div class="steps-bar setup-steps">${SETUP.map((x) => `<div class="${x.n < n ? 'done' : x.n === n ? 'cur' : ''}">${x.n}  ${x.name}</div>`).join('')}</div>`;
   const body = s.groups ? s.groups.map(([t, icon, fields]) => `
       <section class="card stack" style="gap:16px">
         <div class="row">${svg(icon, 24)}<h3 class="h4" style="font-size:16px">${t}</h3></div>

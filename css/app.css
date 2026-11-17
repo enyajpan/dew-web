@@ -998,3 +998,7 @@ span.follow-pill.on { cursor: default; }
 
 /* Hi-fi v10 06g/06h: Want To Try products sit small and uncropped in their box (max about 90 x 90) */
 .want-img img { width: auto; height: auto; max-width: 92px; max-height: 90px; object-fit: contain; }
+
+/* Hi-fi v10 01a-01d: skin profile steps — finished steps lime, the current step forest */
+.steps-bar.setup-steps .done::before { background: var(--lime); }
+.steps-bar.setup-steps .cur::before { background: var(--forest); }
